@@ -11,6 +11,11 @@ Welcome to Sherpa's documentation!
     :height: 132px
     :target: http://cxc.harvard.edu/sherpa/
 
+.. note::
+
+   This is an *experimental build* of the Sherpa documentation. The
+   information presented here is not guaranteed to be correct.
+
 Welcome to the Sherpa documentation! Sherpa is a Python package for
 modeling and fitting data. It was originally developed by the
 `Chandra X-ray Center <http://cxc.harvard.edu/>`_ for use in

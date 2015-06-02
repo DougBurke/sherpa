@@ -10,6 +10,12 @@ Using the high-level interface
    it seems that using ``:okwarning:`` or ``:doctest:`` in a 
    ``ipython`` block hides the output!
 
+.. note::
+
+   The screen output from ``fit`` and ``conf`` is not included in the
+   HTML. This is presumably due to the output going via the
+   logger. How to change this?
+
 The high-level "UI" is provided by either the 
 :mod:`sherpa.ui` or :mod:`sherpa.astro.ui` modules. 
 For this run through the "general" version
@@ -21,6 +27,34 @@ will be used, rather than the Astronomy-specific version:
 
     In [2]: import numpy as np
 
+    In [3]: import logging
+
+    In [4]: logger = logging.getLogger('sherpa')
+
+    In [5]: print(logger.getEffectiveLevel())
+
+    In [6]: print(logging.INFO)
+
+It is possible that loading Sherpa for the first time - whether
+:mod:`sherpa.ui` or :mod:`sherpa.astro.ui` - will result in one or
+more warning messages. These identify optional packages which are not
+supported in the current environment.
+
+The basic steps are going to be:
+
+ 1. load data
+ 2. define the model
+ 3. chose the statistic
+ 4. chose the optimisation method
+ 5. fit the data
+ 6. error analysis
+
+The steps do not need to be run in this order, although there are
+obviously some dependencies. It is also possible to iterate through
+several steps, such as to tweak the model after a fit, or to change
+the range of data included in a fit. The following example runs
+through these steps.
+
 Loading data
 ============
 
@@ -28,7 +62,7 @@ The example uses the same data as the
 `Frequentism and Bayesianism II: When Results Differ <http://jakevdp.github.io/blog/2014/06/06/frequentism-and-bayesianism-2-when-results-differ/#Example-#2:-Linear-Fit-with-Outliers>`_
 post by 
 `Jake VanderPlas <http://www.astro.washington.edu/users/vanderplas/>`_. The
-``y`` array contains the independent variable - that is, the variable
+``y`` array contains the dependent variable - that is, the variable
 to be modelled - and ``e`` the error on that value.
 
 .. ipython::
@@ -74,7 +108,7 @@ pages 336-346 <http://adsabs.harvard.edu/abs/1986ApJ...303..336G>`_.
     Out[9]: Chi Squared with Gehrels variance
 
 .. note::
-    The data does not have to be sorted by the dependent value (in
+    The data does not have to be sorted by the independent value (in
     this case ``x``); that is, the following is valid
 
         >>> ui.load_arrays("test", [10,5,20], [12,18,-5])
