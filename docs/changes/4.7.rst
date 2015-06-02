@@ -1,0 +1,12 @@
+.. _changes-4.7:
+
+=========================
+What's new in Sherpa 4.7?
+=========================
+
+Overview
+--------
+
+The 4.7 release of Sherpa is the first to include the "standalone"
+code.
+

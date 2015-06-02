@@ -95,3 +95,7 @@ extern/region-4.7/src/regparser.h
 extern/region-4.7/src/regparser.tab.h
 extern/region-4.7/src/regparser.tab.c
 extern/region-4.7/src/reglexer.c.tmp
+
+# Sphinx document artifacts (not convinced this is a sensible
+# way to go)
+docs/_static/_autogen*
