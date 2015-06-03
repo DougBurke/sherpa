@@ -157,7 +157,8 @@ Building documentation
 ======================
 
 At present the documentation is being built with Sphinx_,
-and requires that IPython_ and matplotlib_ be installed. It is in the
+and requires that IPython_ , matplotlib_, and 
+`numpydoc <https://github.com/numpy/numpydoc>`_ be installed. It is in the
 *very-early* stages (as you can see), so additional
 requirements may be added.
 
