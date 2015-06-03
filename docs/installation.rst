@@ -198,5 +198,3 @@ run with the command::
 Note that the number of tests that are run depend on what
 Python packages and external software are installed, such as
 matplotlib_, AstroPy_, and DS9_.
-
-.. include:: links.txt

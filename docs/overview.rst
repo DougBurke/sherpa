@@ -70,7 +70,7 @@ Reading and writing data
 ------------------------
 
 Data reading and writing is provided by the io backend, as defined by the
-``options.io_pkg`` setting in the user's ``.sherpa.rc`` file. This
+``options.io_pkg`` setting in the user's |sherparc| file. This
 can either be ``pyfits``, which uses the PyFITS_ package, 
 or ``crates``, which uses the 
 CIAO_ Data Model libary. Uses of the *standalone* version should
@@ -91,9 +91,7 @@ Visualization
 Sherpa uses ChIPS_ and DS9_ as default packages for 1- and 2-D
 visualization in CIAO, respectively, however the Sherpa plotting
 functions are also compatible with the matplotlib_ package.
-Users can specify in the "plot_pkg"
-field of the ``.sherpa.rc`` preferences file which plotting package should
-be used by Sherpa when plot commands are issued; it is "``chips``" by
-default, but may be changed to "``pylab``".
-
-.. include:: links.txt
+Users can specify in the ``plot_pkg``
+field of the |sherparc| preferences file which plotting package should
+be used by Sherpa when plot commands are issued; it is ``chips`` by
+default, but may be changed to ``pylab``.

@@ -129,6 +129,30 @@ def add_logger(stdout):
 
 ipython_process_stream = add_logger
 
+rst_prolog = """
+
+.. |sherparc| replace:: ``.sherpa-standalone.rc``
+
+"""
+
+rst_epilog = """
+
+.. _AstroPy: http://www.astropy.org/
+.. _ChIPS: http://cxc.harvard.edu/chips/
+.. _CIAO: http://cxc.harvard.edu/ciao/
+.. _crates: http://cxc.harvard.edu/ciao/ahelp/crates.html
+.. _CXC: http://cxc.harvard.edu/
+.. _DS9: http://ds9.si.edu/
+.. _FFTW: http://www.fftw.org/
+.. _FITS: http://fits.gsfc.nasa.gov/
+.. _IPython: http://ipython.org/
+.. _matplotlib: http://matplotlib.org/
+.. _PyFITS: http://www.stsci.edu/institute/software_hardware/pyfits
+.. _Sphinx: http://sphinx.pocoo.org/
+.. _Xspec: https://heasarc.gsfc.nasa.gov/xanadu/xspec/
+
+"""
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
