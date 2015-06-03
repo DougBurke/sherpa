@@ -7,14 +7,15 @@ Using the high-level interface
 
 .. note::
 
-   it seems that using ``:okwarning:`` or ``:doctest:`` in a 
-   ``ipython`` block hides the output!
+   Can I set up logging so there's no screen output from the fit/import?
+   Or perhaps it's worth it as a visual cue. This refers to the screen
+   output during the documentation build.
 
 .. note::
 
-   The screen output from ``fit`` and ``conf`` is not included in the
-   HTML. This is presumably due to the output going via the
-   logger. How to change this?
+   It is not clear to me whether this will be a good example for the
+   documentation (at least in the form as presented). It does
+   provide some good test cases for the documentation system though.
 
 The high-level "UI" is provided by either the 
 :mod:`sherpa.ui` or :mod:`sherpa.astro.ui` modules. 
@@ -26,14 +27,6 @@ will be used, rather than the Astronomy-specific version:
     In [1]: from sherpa import ui
 
     In [2]: import numpy as np
-
-    In [3]: import logging
-
-    In [4]: logger = logging.getLogger('sherpa')
-
-    In [5]: print(logger.getEffectiveLevel())
-
-    In [6]: print(logging.INFO)
 
 It is possible that loading Sherpa for the first time - whether
 :mod:`sherpa.ui` or :mod:`sherpa.astro.ui` - will result in one or
@@ -61,9 +54,15 @@ Loading data
 The example uses the same data as the
 `Frequentism and Bayesianism II: When Results Differ <http://jakevdp.github.io/blog/2014/06/06/frequentism-and-bayesianism-2-when-results-differ/#Example-#2:-Linear-Fit-with-Outliers>`_
 post by 
-`Jake VanderPlas <http://www.astro.washington.edu/users/vanderplas/>`_. The
-``y`` array contains the dependent variable - that is, the variable
+`Jake VanderPlas <http://www.astro.washington.edu/users/vanderplas/>`_.
+The ``y`` array contains the dependent variable - that is, the variable
 to be modelled - and ``e`` the error on that value.
+
+.. note::
+
+   How much of this should be a comparison to Jake's post? I think I may
+   move away from this example since it invites too much discussion rather
+   than just focussing on the steps and analysis.
 
 .. ipython::
 
@@ -101,6 +100,7 @@ pages 336-346 <http://adsabs.harvard.edu/abs/1986ApJ...303..336G>`_.
 
 .. ipython::
 
+    @doctest
     In [8]: ui.get_stat_name()
     Out[8]: 'chi2gehrels'
 
@@ -185,11 +185,13 @@ The Sherpa name for this model is `leastsq`, and it is set with the
 
     In [13]: ui.set_stat('leastsq')
 
+    @doctest float
     In [14]: ui.calc_stat()
     Out [14]: 51862.0
 
     In [15]: mdl.c1 = 2
 
+    @doctest float
     In [16]: ui.calc_stat()
     Out [16]: 49718.0
 
@@ -236,6 +238,7 @@ which can be one of
 
 .. ipython::
 
+    @doctest
     In [17]: ui.get_method_name()
     Out [17]: levmar
 
@@ -305,17 +308,22 @@ statistic is chosen:
 
 .. ipython::
 
-    In [21]: ui.load_arrays(1, x, y, e)
+    In [21]: ui.load_arrays(2, x, y, e)
 
-    In [22]: ui.set_stat('chi2datavar')
+    In [22]: ui.set_source(2, ui.polynom1d.mdl2)
+
+    In [23]: ui.thaw(mdl2.c1)
+   
+    In [22]: ui.set_stat('chi2')
 
     In [23]: ui.get_stat()
-    Out [23]: Chi Squared with data variance
+    Out [23]: Chi Squared statistic.
 
 .. note::
    Although the data has been changed for dataset ``1``, the
    model expression - set by the earlier ``ui.set_source`` call -
-   remains.
+   remains. This is now *outdated* since I am using a different
+   data set.
 
 Repeating the fit changes the values slightly, and also provides
 some measure of the
@@ -325,45 +333,61 @@ based on the reduced chi-squared value; in this case it is
 
 .. ipython::
 
-    In [24]: ui.fit()
-    Dataset               = 1
+    In [24]: ui.fit(2)
+    Dataset               = 2
     Method                = levmar
     Statistic             = chi2
-    Initial fit statistic = 212.492
+    Initial fit statistic = 5794.07
     Final fit statistic   = 201.417 at function evaluation 6
     Data points           = 20
     Degrees of freedom    = 18
     Probability [Q-value] = 5.2159e-33
     Reduced statistic     = 11.1899
-    Change in statistic   = 11.0744
-       mdl.c0         39.6998     
-       mdl.c1         0.236211    
+    Change in statistic   = 5592.65
+       mdl2.c0        39.6998     
+       mdl2.c1        0.236211    
 
-    @savefig _autogen_chisq_fit_resid.png width=5in
-    In [25]: ui.plot_fit_resid()
+    In [25]: ui.plot_fit(2)
 
-Since there are now errors, the residuals can also be plotted relative
-to the error value:
+    @savefig _autogen_compare_fits.png width=5in
+    In [26]: ui.plot_model(1, overplot=True)
+
+Here the best-fit from the original case has been added to the plot,
+as the red line.
+
+As before, the residuals can also be shown, either as ``data - model``:
+
+.. ipython ::
+    
+    @savefig _autogen_chisq_resid.2.png width=5in
+    In [25]: ui.plot_resid(2)
+
+or as relative errors, namely ``(data - model) / error`` (with
+"errors" of ±1):
 
 .. ipython::
 
-    @savefig _autogen_chisq_fit_delchi.png width=5in
-    In [26]: ui.plot_fit_delchi()
+    @savefig _autogen_chisq_delchi.2.png width=5in
+    In [26]: ui.plot_delchi(2)
 
-    In [27]: print(mdl)
-    polynom1d.mdl
+The model parameters can be accessed by the instance name, as before:
+   
+.. ipython::
+   
+    In [27]: print(mdl2)
+    polynom1d.mdl2
        Param        Type          Value          Min          Max      Units
        -----        ----          -----          ---          ---      -----
-       mdl.c0       thawed      39.6998 -3.40282e+38  3.40282e+38           
-       mdl.c1       thawed     0.236211 -3.40282e+38  3.40282e+38           
-       mdl.c2       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c3       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c4       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c5       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c6       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c7       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c8       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.offset   frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c0      thawed      39.6998 -3.40282e+38  3.40282e+38           
+       mdl2.c1      thawed     0.236211 -3.40282e+38  3.40282e+38           
+       mdl2.c2      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c3      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c4      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c5      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c6      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c7      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c8      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.offset  frozen            0 -3.40282e+38  3.40282e+38           
 
 The parameter values have been updated by the fit, and can be accessed
 directly (note the use of the ``.val`` accessor, rather than just the
@@ -371,11 +395,11 @@ parameter name):
 
 .. ipython::
     
-    In [28]: print("Offset = {}".format(mdl.c0.val))
-    Offset = 39.6997908931
+    In [28]: print("Offset = {}".format(mdl2.c0.val))
+    Offset = 39.6997908926
 
-    In [29]: print("Slope  = {}".format(mdl.c1.val))
-    Slope  = 0.236211139183
+    In [29]: print("Slope  = {}".format(mdl2.c1.val))
+    Slope  = 0.236211139189
 
 Removing points manually
 ------------------------
@@ -388,8 +412,9 @@ of \"reduced chi square\"; that is the square of
 
 .. ipython::
 
-    In [30]: resid = ui.calc_chisqr()
+    In [30]: resid = ui.calc_chisqr(2)
 
+    @doctest
     In [31]: x[resid > 25]
     Out [31]: array([ 3, 19, 72])
 
@@ -400,20 +425,22 @@ five-sigma from the model
 
 .. ipython::
 
-    In [32]: ui.calc_stat()
-    Out [32]: 201.417424785
+    @doctest float
+    In [32]: ui.calc_stat(2)
+    Out [32]: 201.41742478507388
 
-    In [33]: ui.ignore(2, 4)
+    In [33]: ui.ignore_id(2, 2, 4)
 
-    In [34]: ui.ignore(18, 20)
+    In [34]: ui.ignore_id(2, 18, 20)
 
-    In [35]: ui.ignore(70, 75)
+    In [35]: ui.ignore_id(2, 70, 75)
 
-    In [36]: ui.calc_stat()
-    Out [36]: 49.8257387139
+    @doctest float
+    In [36]: ui.calc_stat(2)
+    Out [36]: 49.82573871224715
 
-    In [37]: ui.fit()
-    Dataset               = 1
+    In [37]: ui.fit(2)
+    Dataset               = 2
     Method                = levmar
     Statistic             = chi2
     Initial fit statistic = 49.8257
@@ -423,11 +450,11 @@ five-sigma from the model
     Probability [Q-value] = 0.786884
     Reduced statistic     = 0.689707
     Change in statistic   = 40.1698
-       mdl.c0         32.1562     
-       mdl.c1         0.45577 
+       mdl2.c0        32.1562     
+       mdl2.c1        0.45577 
 
-    @savefig _autogen_ignore_fit_delchi.png width=5in
-    In [38]: ui.plot_fit_delchi()
+    @savefig _autogen_ignore_fit_delchi.2.png width=5in
+    In [38]: ui.plot_fit_delchi(2)
 
 Removing points using an iterative fit algorithm
 ------------------------------------------------
@@ -443,39 +470,42 @@ iterative method set up using :func:`set_iter_method`:
 
     In [39]: ui.notice(None, None)
 
+    @doctest
     In [49]: ui.get_iter_method_name()
     Out [49]: 'none'
 
     In [50]: ui.set_iter_method('sigmarej')
 
+    @doctest
     In [51]: ui.get_iter_method_name()
     Out [51]: 'sigmarej'
 
+    @doctest
     In [52]: ui.get_iter_method_opt()
     Out [52]: {'grow': 0, 'hrej': 3, 'lrej': 3, 'maxiters': 5}
 
 Since the model is already close to the best fit, the parameters
 are reset, which uses the last set of values set by the user, in this
-case with ``mdl.c1`` free to vary and set to 2:
+case with ``mdl2.c1`` free to vary and set to 2:
 
 .. ipython::
 
-    In [53]: mdl.reset()
+    In [53]: mdl2.reset()
 
     In [54]: print(mdl)
     polynom1d.mdl
        Param        Type          Value          Min          Max      Units
        -----        ----          -----          ---          ---      -----
-       mdl.c0       thawed            1 -3.40282e+38  3.40282e+38           
-       mdl.c1       thawed            2 -3.40282e+38  3.40282e+38           
-       mdl.c2       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c3       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c4       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c5       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c6       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c7       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.c8       frozen            0 -3.40282e+38  3.40282e+38           
-       mdl.offset   frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c0      thawed            1 -3.40282e+38  3.40282e+38           
+       mdl2.c1      thawed            0 -3.40282e+38  3.40282e+38           
+       mdl2.c2      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c3      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c4      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c5      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c6      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c7      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.c8      frozen            0 -3.40282e+38  3.40282e+38           
+       mdl2.offset  frozen            0 -3.40282e+38  3.40282e+38           
 
 Since the residuals show some values around ``-4 sigma``, the limits
 are relaxed using :func:`set_iter_method_opt`:
@@ -490,30 +520,30 @@ and the data is re-fit:
 
 .. ipython::
 
-    In [57]: ui.fit()
-    Dataset               = 1
+    In [57]: ui.fit(2)
+    Dataset               = 2
     Iterative Fit Method  = Sigmarej
     Method                = levmar
     Statistic             = chi2
-    Initial fit statistic = 6071.37
+    Initial fit statistic = 5794.07
     Final fit statistic   = 12.8399 at function evaluation 12
     Data points           = 17
     Degrees of freedom    = 15
     Probability [Q-value] = 0.614666
     Reduced statistic     = 0.85599
-    Change in statistic   = 6058.53
-       mdl.c0         31.185      
-       mdl.c1         0.471133    
+    Change in statistic   = 5781.23
+       mdl2.c0        31.185      
+       mdl2.c1        0.471133    
 
-    @savefig _autogen_sigmarej_fit_resid.png width=5in
-    In [57]: ui.plot_fit_resid()
+    @savefig _autogen_sigmarej_fit_resid.2.png width=5in
+    In [57]: ui.plot_fit_resid(2)
 
 The fit results can be accessed via the best-fit model parameter
 values:
 
 .. ipython::
 
-    In [58]: print("Offset = {}\nSlope  = {}".format(mdl.c0.val, mdl.c1.val))
+    In [58]: print("Offset = {}\nSlope  = {}".format(mdl2.c0.val, mdl2.c1.val))
     Offset = 31.1850002829
     Slope  = 0.471132988676
 
@@ -523,17 +553,21 @@ or directly:
 
     In [59]: fr = ui.get_fit_results()
 
+    @doctest
     In [60]: fr.succeeded
     Out [60]: True
 
+    @doctest float
     In [61]: fr.statval
-    Out [61]: 12.839856998617968
+    Out [61]: 12.839856998617966
 
+    @doctest
     In [62]: fr.dof
     Out [62]: 15
 
+    @doctest float
     In [63]: fr.rstat
-    Out [63]: 0.8559904665745312
+    Out [63]: 0.855990466574531
 
 This is a much-better fit than earlier.
 
@@ -545,11 +579,12 @@ routine (note that this means that the statistic value will change):
 
     In [64]: ui.notice(None, None)
 
-    In [65]: ui.calc_stat()
-    Out [65]: 272.57606375125397
+    @doctest float
+    In [65]: ui.calc_stat(2)
+    Out [65]: 272.57606375120804
 
-    @savefig _autogen_sigmarej_fit_delchi_all.png width=5in
-    In [66]: ui.plot_fit_delchi()
+    @savefig _autogen_sigmarej_fit_delchi_all.2.png width=5in
+    In [66]: ui.plot_fit_delchi(2)
 
 Error analysis
 ==============
@@ -563,8 +598,8 @@ error values for the parameters:
 
 .. ipython::
 
-    In [67]: ui.fit()
-    Dataset               = 1
+    In [67]: ui.fit(2)
+    Dataset               = 2
     Iterative Fit Method  = Sigmarej
     Method                = levmar
     Statistic             = chi2
@@ -575,15 +610,15 @@ error values for the parameters:
     Probability [Q-value] = 0.614666
     Reduced statistic     = 0.85599
     Change in statistic   = 259.736
-       mdl.c0         31.185      
-       mdl.c1         0.471133    
+       mdl2.c0        31.185      
+       mdl2.c1        0.471133    
 
-    In [68]: ui.conf()
-    mdl.c0 lower bound:	-1.38059
-    mdl.c1 lower bound:	-0.0338185
-    mdl.c0 upper bound:	1.38059
-    mdl.c1 upper bound:	0.0338185
-    Dataset               = 1
+    In [68]: ui.conf(2)
+    mdl2.c0 lower bound:	-1.38059
+    mdl2.c1 lower bound:	-0.0338185
+    mdl2.c0 upper bound:	1.38059
+    mdl2.c1 upper bound:	0.0338185
+    Dataset               = 2
     Confidence Method     = confidence
     Iterative Fit Method  = Sigmarej
     Fitting Method        = levmar
@@ -591,8 +626,8 @@ error values for the parameters:
     confidence 1-sigma (68.2689%) bounds:
        Param            Best-Fit  Lower Bound  Upper Bound
        -----            --------  -----------  -----------
-       mdl.c0             31.185     -1.38059      1.38059
-       mdl.c1           0.471133   -0.0338185    0.0338185
+       mdl2.c0            31.185     -1.38059      1.38059
+       mdl2.c1          0.471133   -0.0338185    0.0338185
 
 The errors can also be viewed graphically: for instance
 the :func:`reg_proj` routine shows the variation of two parameters
@@ -602,8 +637,8 @@ are no free parameters):
 
 .. ipython::
 
-    @savefig _autogen_sigmarej_reg_proj.png width=5in
-    In [69]: ui.reg_proj(mdl.c0, mdl.c1, nloop=[41,41])
+    @savefig _autogen_sigmarej_reg_proj.2.png width=5in
+    In [69]: ui.reg_proj(mdl2.c0, mdl2.c1, id=2, nloop=[41,41])
 
 and a one-dimensional profile can be calculated for a single
 parameter using :func:`int_proj`, where the solid horizontal
@@ -612,13 +647,13 @@ the parameter:
 
 .. ipython::
 
-    In [70]: ui.int_proj(mdl.c1, min=0.4, max=0.54, nloop=101)
+    In [70]: ui.int_proj(mdl2.c1, id=2, min=0.4, max=0.54, nloop=101)
 
     In [71]: (xlo, xhi) = plt.xlim()
 
     In [72]: plt.hlines(fr.statval + 1, xlo, xhi)
 
-    @savefig _autogen_sigmarej_int_proj_c1.png width=5in
+    @savefig _autogen_sigmarej_int_proj_c1.2.png width=5in
     In [73]: plt.hlines(fr.statval + 4, xlo, xhi)
 
 .. note::

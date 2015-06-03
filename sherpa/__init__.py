@@ -60,7 +60,11 @@ handler.setFormatter(Formatter())
 log.addHandler(handler)
 log.setLevel(logging.INFO)
 
-del Formatter, log, handler
+# Leave the formatter so that other code can access it if required;
+# in particular, the Sphinx documentation system.
+#
+# del Formatter, log, handler
+del log, handler
 
 
 _banner = """

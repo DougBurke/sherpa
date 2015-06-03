@@ -6,7 +6,7 @@
 Welcome to Sherpa's documentation!
 ==================================
 
-.. image:: _static/sherpa_logo.png
+.. image:: images/sherpa_logo.png
     :width: 350px
     :height: 132px
     :target: http://cxc.harvard.edu/sherpa/

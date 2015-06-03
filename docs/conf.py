@@ -21,6 +21,12 @@ import shlex
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+import logging
+import sherpa
+
+# For sherpaext
+sys.path.insert(0, os.path.abspath('.'))
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -34,8 +40,9 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinx.ext.autodoc',
-    'IPython.sphinxext.ipython_directive',
     'IPython.sphinxext.ipython_console_highlighting',
+    ##'IPython.sphinxext.ipython_directive',
+    'sherpaext.ipython_directive_logging',
     'numpydoc.numpydoc',
 ]
 
@@ -111,6 +118,16 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# Set the ipython directive to include the sherpa logging output
+
+def add_logger(stdout):
+    logger = logging.getLogger('sherpa')
+    handler = logging.StreamHandler(stdout)
+    handler.setFormatter(sherpa.Formatter())
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+ipython_process_stream = add_logger
 
 # -- Options for HTML output ----------------------------------------------
 
