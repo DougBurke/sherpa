@@ -3,6 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. hide the title (based on astropy)
+.. raw:: html
+
+    <style media="screen" type="text/css">h1 { display: none; }</style>
+
 Welcome to Sherpa's documentation!
 ==================================
 
@@ -35,6 +40,12 @@ Contents:
    installation
    examples
    changes/index
+
+.. toctree::
+   :maxdepth: 1
+
+   stats/index
+   api/modules
 	      
 Indices and tables
 ==================

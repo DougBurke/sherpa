@@ -40,6 +40,8 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+
     'IPython.sphinxext.ipython_console_highlighting',
     ##'IPython.sphinxext.ipython_directive',
     'sherpaext.ipython_directive_logging',
@@ -117,6 +119,11 @@ pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
+
+# Does this remove the autosummary warnings like
+#    <autosummary>:None: WARNING: toctree contains reference to nonexisting document u'api/sherpa.utils.numpytest.NumpyTest.warn'
+# NOPE.
+autosummary_generate = False
 
 # Set the ipython directive to include the sherpa logging output
 
