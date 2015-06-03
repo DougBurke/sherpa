@@ -485,14 +485,15 @@ iterative method set up using :func:`set_iter_method`:
     Out [52]: {'grow': 0, 'hrej': 3, 'lrej': 3, 'maxiters': 5}
 
 Since the model is already close to the best fit, the parameters
-are reset, which uses the last set of values set by the user, in this
-case with ``mdl2.c1`` free to vary and set to 2:
+are reset, which uses the last set of values set by the user. In this
+case the only change to the default settings is that ``mdl2.c1``
+is free to vary.
 
 .. ipython::
 
     In [53]: mdl2.reset()
 
-    In [54]: print(mdl)
+    In [54]: print(mdl2)
     polynom1d.mdl
        Param        Type          Value          Min          Max      Units
        -----        ----          -----          ---          ---      -----
@@ -573,7 +574,9 @@ This is a much-better fit than earlier.
 
 The :func:`notice` function can be used to select all the points, and
 so display the residuals of those points excluded by the sigma-rejection
-routine (note that this means that the statistic value will change):
+routine (note that this means that the statistic value will change).
+The best-fit results (from the sigma-rejection fit, and from the
+first dataset) are displayed compared to the full data set:
 
 .. ipython::
 
@@ -583,8 +586,12 @@ routine (note that this means that the statistic value will change):
     In [65]: ui.calc_stat(2)
     Out [65]: 272.57606375120804
 
-    @savefig _autogen_sigmarej_fit_delchi_all.2.png width=5in
     In [66]: ui.plot_fit_delchi(2)
+
+    In [67]: plt.subplot(2, 1, 1)
+
+    @savefig _autogen_sigmarej_fit_delchi_all.2.png width=5in
+    In [67]: ui.plot_model(1, overplot=True)
 
 Error analysis
 ==============

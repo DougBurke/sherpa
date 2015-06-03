@@ -60,7 +60,7 @@ Any errors should be reported to the
 Building from source
 ====================
 
-Sherpa requires::
+Sherpa requires:
 
   - Setuptools
   - gcc, g++, and gfortran
@@ -198,16 +198,4 @@ Note that the number of tests that are run depend on what
 Python packages and external software are installed, such as
 matplotlib_, AstroPy_, and DS9_.
 
-.. _AstroPy: http://astropy.readthedocs.en/
-.. _ChIPS: http://cxc.harvard.edu/chips/
-.. _CIAO: http://cxc.harvard.edu/ciao/
-.. _crates: http://cxc.harvard.edu/ciao/ahelp/crates.html
-.. _CXC: http://cxc.harvard.edu/
-.. _DS9: http://ds9.si.edu/
-.. _FFTW: http://www.fftw.org/
-.. _FITS: http://fits.gsfc.nasa.gov/
-.. _IPython: http://ipython.org/
-.. _matplotlib: http://matplotlib.org/
-.. _PyFITS: http://www.stsci.edu/institute/software_hardware/pyfits
-.. _Sphinx: http://sphinx.pocoo.org/
-.. _Xspec: https://heasarc.gsfc.nasa.gov/xanadu/xspec/
+.. include:: links.txt

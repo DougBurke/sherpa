@@ -96,16 +96,4 @@ field of the ``.sherpa.rc`` preferences file which plotting package should
 be used by Sherpa when plot commands are issued; it is "``chips``" by
 default, but may be changed to "``pylab``".
 
-.. _AstroPy: http://astropy.readthedocs.en/
-.. _ChIPS: http://cxc.harvard.edu/chips/
-.. _CIAO: http://cxc.harvard.edu/ciao/
-.. _crates: http://cxc.harvard.edu/ciao/ahelp/crates.html
-.. _CXC: http://cxc.harvard.edu/
-.. _DS9: http://ds9.si.edu/
-.. _FFTW: http://www.fftw.org/
-.. _FITS: http://fits.gsfc.nasa.gov/
-.. _IPython: http://ipython.org/
-.. _matplotlib: http://matplotlib.org/
-.. _PyFITS: http://www.stsci.edu/institute/software_hardware/pyfits
-.. _Sphinx: http://sphinx.pocoo.org/
-.. _Xspec: https://heasarc.gsfc.nasa.gov/xanadu/xspec/
+.. include:: links.txt
