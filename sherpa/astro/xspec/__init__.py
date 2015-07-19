@@ -3225,6 +3225,10 @@ class XSzbabs(XSMultiplicativeModel):
 # such as `load_xscflux`, and these are exported, rather than
 # the classes below.
 #
+# The parameter names are converted to start with a lower-case
+# character; this differs from the models above, but should not
+# change the user interface (which is case insensitive).
+#
 class XScflux(XSConvolutionKernel):
     "XSpec cflux model (convolution)."
 
@@ -3237,19 +3241,258 @@ class XScflux(XSConvolutionKernel):
     # as the wrapper code works differently here, the xs prefix
     # is explicitly included).
     def __init__(self, name='xscflux'):
-        self.Emin = Parameter(name, 'emin', 0.5, min=0.0, max=1e6,
+        self.emin = Parameter(name, 'emin', 0.5, min=0.0, max=1e6,
                               hard_min=0.0, hard_max=1e6, frozen=True,
                               units='keV')
-        self.Emax = Parameter(name, 'emax', 10.0, min=0.0, max=1e6,
+        self.emax = Parameter(name, 'emax', 10.0, min=0.0, max=1e6,
                               hard_min=0.0, hard_max=1e6, frozen=True,
                               units='keV')
         self.lg10Flux = Parameter(name, 'lg10Flux', -12.0, min=-100.0,
                                   max=100.0, hard_min=-100.0, hard_max=100.0,
                                   frozen=False, units='cgs')
-        XSConvolutionKernel.__init__(self, name, (self.Emin
-                                                  , self.Emax
+        XSConvolutionKernel.__init__(self, name, (self.emin
+                                                  , self.emax
                                                   , self.lg10Flux
                                                   ))
+
+
+class XSgsmooth(XSConvolutionKernel):
+    "XSpec gsmooth model (convolution)."
+
+    _calc = _xspec.C_xsgsmt
+
+    def __init__(self, name='xsgsmooth'):
+        self.sigAt6keV = Parameter(name, 'sigAt6keV', 1.0, min=0.0, max=10.0,
+                                   hard_min=0.0, hard_max=20.0, frozen=False,
+                                   units='keV')
+        self.index = Parameter(name, 'index', 0.0, min=-1.0, max=1.0,
+                               hard_min=-1.0, hard_max=1.0, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.sigAt6keV, self.index))
+
+
+class XSireflect(XSConvolutionKernel):
+    "XSpec ireflect model (convolution)."
+
+    _calc = _xspec.C_ireflct
+
+    def __init__(self, name='xsireflect'):
+        self.rel_refl = Parameter(name, 'rel_refl', 0.0, min=-1.0, max=1e6,
+                                  hard_min=-1.0, hard_max=1e6, frozen=False)
+        self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
+                                  hard_min=-0.999, hard_max=10.0, frozen=True)
+        self.abund = Parameter(name, 'abund', 1.0, min=0.0, max=1e6,
+                               hard_min=0.0, hard_max=1e6, frozen=True)
+        self.fe_abund = Parameter(name, 'fe_abund', 1.0, min=0.0, max=1e6,
+                                  hard_min=0.0, hard_max=1e6, frozen=True)
+        self.cosIncl = Parameter(name, 'cosIncl', 0.45, min=0.05, max=0.95,
+                                 hard_min=0.05, hard_max=0.95, frozen=True)
+        self.t_disk = Parameter(name, 't_disk', 3e4, min=1e4, max=1e6,
+                                hard_min=1e4, hard_max=1e6, frozen=True,
+                                units='K')
+        self.xi = Parameter(name, 'xi', 1.0, min=0.0, max=1e3, hard_min=0.0,
+                            hard_max=5e3, frozen=True, units='erg cm/s')
+        XSConvolutionKernel.__init__(self, name, (self.rel_refl
+                                                  , self.redshift
+                                                  , self.abund
+                                                  , self.fe_abund
+                                                  , self.cosIncl
+                                                  , self.t_disk
+                                                  , self.xi
+                                                  ))
+
+
+class XSkdblur(XSConvolutionKernel):
+    "XSpec kdblur model (convolution)."
+
+    _calc = _xspec.C_kdblur
+
+    def __init__(self, name='xskdblur'):
+        self.index = Parameter(name, 'index', 3.0, min=-10.0, max=10.0,
+                               hard_min=-10.0, hard_max=10.0, frozen=True)
+        self.rin_G = Parameter(name, 'rin_G', 4.5, min=1.235, max=400.0,
+                               hard_min=1.235, hard_max=400.0, frozen=True)
+        self.rout_G = Parameter(name, 'rout_G', 100.0, min=1.235, max=400.0,
+                                hard_min=1.235, hard_max=400.0, frozen=True)
+        self.incl = Parameter(name, 'incl', 30.0, min=0.0, max=90.0,
+                              hard_min=0.0, hard_max=90.0, frozen=False,
+                              units='deg')
+        XSConvolutionKernel.__init__(self, name, (self.index
+                                                  , self.rin_G
+                                                  , self.rout_G
+                                                  , self.incl
+                                                  ))
+
+
+class XSkdblur2(XSConvolutionKernel):
+    "XSpec kdblur2 model (convolution)."
+
+    _calc = _xspec.C_kdblur2
+
+    def __init__(self, name='xskdblur2'):
+        self.index = Parameter(name, 'index', 3.0, min=-10.0, max=10.0,
+                               hard_min=-10.0, hard_max=10.0, frozen=True)
+        self.rin_G = Parameter(name, 'rin_G', 4.5, min=1.235, max=400.0,
+                               hard_min=1.235, hard_max=400.0, frozen=True)
+        self.rout_G = Parameter(name, 'rout_G', 100.0, min=1.235, max=400.0,
+                                hard_min=1.235, hard_max=400.0, frozen=True)
+        self.incl = Parameter(name, 'incl', 30.0, min=0.0, max=90.0,
+                              hard_min=0.0, hard_max=90.0, frozen=False,
+                              units='deg')
+        self.rbreak = Parameter(name, 'rbreak', 20.0, min=1.235, max=400.0,
+                                hard_min=1.235, hard_max=400.0, frozen=True)
+        self.index1 = Parameter(name, 'index1', 3.0, min=-10.0, max=10.0,
+                                hard_min=-10.0, hard_max=10.0, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.index,
+                                                  self.rin_G,
+                                                  self.rout_G,
+                                                  self.incl,
+                                                  self.rbreak,
+                                                  self.index1))
+
+
+class XSkerrconv(XSConvolutionKernel):
+    "XSpec kerrconv model (convolution)."
+
+    _calc = _xspec.C_spinconv
+
+    def __init__(self, name='xskerrconv'):
+        self.index = Parameter(name, 'index', 3.0, min=-10.0, max=10.0,
+                               hard_min=-10.0, hard_max=10.0, frozen=True)
+        self.index1 = Parameter(name, 'index1', 3.0, min=-10.0, max=10.0,
+                                hard_min=-10.0, hard_max=10.0, frozen=True)
+        self.r_br_g = Parameter(name, 'r_br_g', 6.0, min=1.0, max=400.0,
+                                hard_min=1.0, hard_max=400.0, frozen=True)
+        self.a = Parameter(name, 'a', 0.998, min=0.0, max=0.998,
+                           hard_min=0.0, hard_max=0.998, frozen=False)
+        self.incl = Parameter(name, 'incl', 30.0, min=0.0, max=90.0,
+                              hard_min=0.0, hard_max=90.0, frozen=False,
+                              units='deg')
+        self.rin_ms = Parameter(name, 'rin_ms', 1.0, min=1.0, max=400.0,
+                                hard_min=1.0, hard_max=400.0, frozen=True)
+        self.rout_ms = Parameter(name, 'rout_ms', 400.0, min=1.0, max=400.0,
+                                 hard_min=1.0, hard_max=400.0, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.index
+                                                  , self.index1
+                                                  , self.r_br_g
+                                                  , self.a
+                                                  , self.incl
+                                                  , self.rin_ms
+                                                  , self.rout_ms
+                                                  ))
+
+
+class XSlsmooth(XSConvolutionKernel):
+    "XSpec lsmooth model (convolution)."
+
+    _calc = _xspec.C_xslsmt
+
+    def __init__(self, name='xslsmooth'):
+        self.sigAt6keV = Parameter(name, 'sigAt6keV', 1.0, min=0.0, max=10.0,
+                                   hard_min=0.0, hard_max=20.0, frozen=False,
+                                   units='keV')
+        self.index = Parameter(name, 'index', 0.0, min=-1.0, max=1.0,
+                               hard_min=-1.0, hard_max=1.0, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.sigAt6keV, self.index))
+
+
+class XSpartcov(XSConvolutionKernel):
+    "XSpec partcov model (convolution)."
+
+    _calc = _xspec.C_PartialCovering
+
+    def __init__(self, name='xspartcov'):
+        self.cvrFract = Parameter(name, 'cvrFract', 0.5, min=0.05, max=0.95,
+                                  hard_min=0.0, hard_max=1.0, frozen=False)
+        XSConvolutionKernel.__init__(self, name, (self.cvrFract,))
+
+
+class XSrdblur(XSConvolutionKernel):
+    "XSpec rdblur model (convolution)."
+
+    _calc = _xspec.C_rdblur
+
+    def __init__(self, name='xsrdblur'):
+        self.betor10 = Parameter(name, 'betor10', -2.0, min=-10.0, max=20.0,
+                                 hard_min=-10.0, hard_max=20.0, frozen=True)
+        self.rin_M = Parameter(name, 'rin_M', 10.0, min=6.0, max=1000.0,
+                               hard_min=6.0, hard_max=10000.0, frozen=True)
+        self.rout_M = Parameter(name, 'rout_M', 1000.0, min=0.0,
+                                max=1000000.0, hard_min=0.0,
+                                hard_max=10000000.0, frozen=True)
+        self.incl = Parameter(name, 'incl', 30.0, min=0.0, max=90.0,
+                              hard_min=0.0, hard_max=90.0, frozen=False,
+                              units='deg')
+        XSConvolutionKernel.__init__(self, name, (self.betor10
+                                                  , self.rin_M
+                                                  , self.rout_M
+                                                  , self.incl
+                                                  ))
+
+
+class XSreflect(XSConvolutionKernel):
+    "XSpec reflect model (convolution)."
+
+    _calc = _xspec.C_reflct
+
+    def __init__(self, name='xsreflect'):
+        self.rel_refl = Parameter(name, 'rel_refl', 0.0, min=-1.0, max=1e6,
+                                  hard_min=-1.0, hard_max=1e6, frozen=False)
+        self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
+                                  hard_min=-0.999, hard_max=10.0, frozen=True)
+        self.abund = Parameter(name, 'abund', 1.0, min=0.0, max=1e6,
+                               hard_min=0.0, hard_max=1e6, frozen=True)
+        self.fe_abund = Parameter(name, 'fe_abund', 1.0, min=0.0, max=1e6,
+                                  hard_min=0.0, hard_max=1e6, frozen=True)
+        self.cosIncl = Parameter(name, 'cosIncl', 0.45, min=0.05, max=0.95,
+                                 hard_min=0.05, hard_max=0.95, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.rel_refl
+                                                  , self.redshift
+                                                  , self.abund
+                                                  , self.fe_abund
+                                                  , self.cosIncl
+                                                  ))
+
+
+class XSsimpl(XSConvolutionKernel):
+    "XSpec simpl model (convolution)."
+
+    _calc = _xspec.C_simpl
+
+    def __init__(self, name='xssimpl'):
+        # have I understood min/max ranges here for Gamma?
+        self.gamma = Parameter(name, 'gamma', 2.3, min=1.1, max=4.0,
+                               hard_min=1.1, hard_max=5.0, frozen=False)
+        self.fracSctr = Parameter(name, 'fracSctr', 0.05, min=0.0, max=0.4,
+                                  hard_min=0.0, hard_max=1.0, frozen=False)
+        self.upScOnly = Parameter(name, 'upScOnly', 1.0, min=0.0, max=100.0,
+                                  hard_min=0.0, hard_max=100.0, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.gamma
+                                                  , self.fracSctr
+                                                  , self.upScOnly
+                                                  ))
+
+
+class XSzashift(XSConvolutionKernel):
+    "XSpec zashift model (convolution)."
+
+    _calc = _xspec.C_zashift
+
+    def __init__(self, name='xszashift'):
+        self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
+                                  hard_min=-0.999, hard_max=10, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.redshift,))
+
+
+class XSzmshift(XSConvolutionKernel):
+    "XSpec zmshift model (convolution)."
+
+    _calc = _xspec.C_zmshift
+
+    def __init__(self, name='xszmshift'):
+        self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
+                                  hard_min=-0.999, hard_max=10, frozen=True)
+        XSConvolutionKernel.__init__(self, name, (self.redshift,))
+
 
 # Wrappers for the convolution models
 #
@@ -3296,6 +3539,546 @@ def load_xscflux(modelname):
 
     """
     load_xsconv(XScflux, modelname)
+
+
+def load_xsgsmooth(modelname):
+    """Create an instance of the XSpec gsmooth convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelGsmooth.html
+
+    Examples
+    --------
+
+    >>> load_xsgsmooth("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSgsmooth, modelname)
+
+
+def load_xsireflect(modelname):
+    """Create an instance of the XSpec ireflect convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelIreflect.html
+
+    Examples
+    --------
+
+    >>> load_xsireflect("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSireflect, modelname)
+
+
+def load_xskdblur(modelname):
+    """Create an instance of the XSpec kdblur convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelKdblur.html
+
+    Examples
+    --------
+
+    >>> load_xskdblur("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSkdblur, modelname)
+
+
+def load_xskdblur2(modelname):
+    """Create an instance of the XSpec kdblur2 convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelKdblur2.html
+
+    Examples
+    --------
+
+    >>> load_xskdblur2("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSkdblur2, modelname)
+
+
+def load_xskerrconv(modelname):
+    """Create an instance of the XSpec kerrconv convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelKerrconv.html
+
+    Examples
+    --------
+
+    >>> load_xskerrconv("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSkerrconv, modelname)
+
+
+def load_xslsmooth(modelname):
+    """Create an instance of the XSpec lsmooth convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelLsmooth.html
+
+    Examples
+    --------
+
+    >>> load_xslsmooth("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSlsmooth, modelname)
+
+
+def load_xspartcov(modelname):
+    """Create an instance of the XSpec partcov convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelPartcov.html
+
+    Examples
+    --------
+
+    >>> load_xspartcov("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSpartcov, modelname)
+
+
+def load_xsrdblur(modelname):
+    """Create an instance of the XSpec rdblur convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelRdblur.html
+
+    Examples
+    --------
+
+    >>> load_xsrdblur("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSrdblur, modelname)
+
+
+def load_xsreflect(modelname):
+    """Create an instance of the XSpec reflect convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelReflect.html
+
+    Examples
+    --------
+
+    >>> load_xsreflect("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSreflect, modelname)
+
+
+def load_xssimpl(modelname):
+    """Create an instance of the XSpec simpl convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelSimpl.html
+
+    Examples
+    --------
+
+    >>> load_xssimpl("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSsimpl, modelname)
+
+
+def load_xszashift(modelname):
+    """Create an instance of the XSpec zashift convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelZashift.html
+
+    Examples
+    --------
+
+    >>> load_xszashift("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSzashift, modelname)
+
+
+def load_xszmshift(modelname):
+    """Create an instance of the XSpec zmshift convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelZmshift.html
+
+    Examples
+    --------
+
+    >>> load_xszmshift("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XSzmshift, modelname)
 
 
 ##TODO: remove XSConvolutionKernel from the following

@@ -54,7 +54,7 @@ class test_xspec(SherpaTestCase):
                 m = cls()
                 count += 1
 
-        self.assertEqual(count, 165)
+        self.assertEqual(count, 177)
 
     def test_evaluate_model(self):
         import sherpa.astro.xspec as xs
