@@ -1,5 +1,5 @@
 // 
-//  Copyright (C) 2007  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2007, 2015  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -270,6 +270,7 @@ void xsmtbl(float* ear, int ne, float* param, const char* filenm, int ifl,
 
 // XSPEC convolution models
 void C_cflux(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
+void C_cpflux(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_xsgsmt(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_ireflct(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_kdblur(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
@@ -279,6 +280,7 @@ void C_xslsmt(const double* energy, int nFlux, const double* params, int spectru
 void C_PartialCovering(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_rdblur(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_reflct(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
+  // void C_rgsxsrc(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_simpl(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_zashift(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
 void C_zmshift(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
@@ -1264,6 +1266,7 @@ static PyMethodDef XSpecMethods[] = {
   XSPECTABLEMODEL_NORM( xsmtbl ),
   // XSPEC convolution models
   XSPECMODELFCT_C(C_cflux, 3),
+  XSPECMODELFCT_C(C_cpflux, 3),
   XSPECMODELFCT_C(C_xsgsmt, 2),
   XSPECMODELFCT_C(C_ireflct, 7),
   XSPECMODELFCT_C(C_kdblur, 4),
@@ -1273,6 +1276,7 @@ static PyMethodDef XSpecMethods[] = {
   XSPECMODELFCT_C(C_PartialCovering, 1),
   XSPECMODELFCT_C(C_rdblur, 4),
   XSPECMODELFCT_C(C_reflct, 5),
+  // XSPECMODELFCT_C(C_rgsxsrc, 1), not sure what this does
   XSPECMODELFCT_C(C_simpl, 3),
   XSPECMODELFCT_C(C_zashift, 1),
   XSPECMODELFCT_C(C_zmshift, 1),

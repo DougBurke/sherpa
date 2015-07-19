@@ -3256,6 +3256,28 @@ class XScflux(XSConvolutionKernel):
                                                   ))
 
 
+class XScpflux(XSConvolutionKernel):
+    "XSpec cpflux model (convolution)."
+
+    _calc = _xspec.C_cpflux
+
+    def __init__(self, name='xscpflux'):
+        self.emin = Parameter(name, 'emin', 0.5, min=0.0, max=1e6,
+                              hard_min=0.0, hard_max=1e6, frozen=True,
+                              units='keV')
+        self.emax = Parameter(name, 'emax', 10.0, min=0.0, max=1e6,
+                              hard_min=0.0, hard_max=1e6, frozen=True,
+                              units='keV')
+        self.flux = Parameter(name, 'flux', 1.0, min=0.0,
+                              # should hard_max be larger?
+                              max=1e10, hard_min=0, hard_max=1e10,
+                              frozen=False)
+        XSConvolutionKernel.__init__(self, name, (self.emin
+                                                  , self.emax
+                                                  , self.flux
+                                                  ))
+
+
 class XSgsmooth(XSConvolutionKernel):
     "XSpec gsmooth model (convolution)."
 
@@ -3539,6 +3561,51 @@ def load_xscflux(modelname):
 
     """
     load_xsconv(XScflux, modelname)
+
+
+def load_xscpflux(modelname):
+    """Create an instance of the XSpec cpflux convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelCpflux.html
+
+    Examples
+    --------
+
+    >>> load_xscpflux("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XScpflux, modelname)
 
 
 def load_xsgsmooth(modelname):
