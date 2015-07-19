@@ -1,4 +1,4 @@
-# 
+#
 #  Copyright (C) 2007, 2015  Smithsonian Astrophysical Observatory
 #
 #
@@ -49,11 +49,12 @@ class test_xspec(SherpaTestCase):
             cls = getattr(xs, cls)
 
             if is_proper_subclass(cls, (xs.XSAdditiveModel,
-                                        xs.XSMultiplicativeModel)):
+                                        xs.XSMultiplicativeModel,
+                                        xs.XSConvolutionKernel)):
                 m = cls()
                 count += 1
 
-        self.assertEqual(count, 164)
+        self.assertEqual(count, 165)
 
     def test_evaluate_model(self):
         import sherpa.astro.xspec as xs
@@ -69,11 +70,15 @@ class test_xspec(SherpaTestCase):
 
     def test_xspec_models(self):
         import sherpa.astro.xspec as xs
-        models = [model for model in dir(xs) if model[:2] == 'XS']
+        models = [model for model in xs.__all__ if model[:2] == 'XS' and
+                  not is_proper_subclass(getattr(xs, model),
+                                         xs.XSConvolutionKernel)]
         models.remove('XSModel')
         models.remove('XSMultiplicativeModel')
         models.remove('XSAdditiveModel')
         models.remove('XSTableModel')
+        models.remove('XSConvolutionModel')
+        models.remove('XSConvolutionKernel')
 
         xx = numpy.arange(0.1, 11.01, 0.01, dtype=float)
         xlo = numpy.array(xx[:-1])
@@ -119,6 +124,65 @@ class test_xspec(SherpaTestCase):
         xs.set_xsxset('fooBar', 'somevalue')
         self.assertEqual('somevalue', xs.get_xsxset('Foobar'))
 
+    # Copied from my xspec-contiguous branch and updated to use the Python
+    # interface rather than the low-level API.
+    def test_convolution_models(self):
+        # Use the cflux convolution model since this gives
+        # an "easily checked" result.
+        import sherpa.astro.xspec as xs
+
+        # Want the energy grid to extend beyond the energy grid
+        # used to evaluate the model, to avoid any edge effects.
+        # It also makes things easier if the elo/ehi values align
+        # with the egrid bins.
+        elo = 0.55
+        ehi = 1.45
+        egrid = numpy.linspace(0.5, 1.5, 101)
+
+        mdl1 = xs.XSpowerlaw()
+        mdl1.PhoIndex = 2
+
+        # flux of mdl1 over the energy range of interest; converting
+        # from a flux in photon/cm^2/s to erg/cm^2/s, when the
+        # energy grid is in keV.
+        y1 = mdl1(egrid)
+        idx, = numpy.where((egrid >= elo) & (egrid < ehi))
+
+        # To match XSpec, need to multiply by (Ehi^2-Elo^2)/(Ehi-Elo)
+        # which means that we need the next bin to get Ehi. Due to
+        # the form of the where statement, we should be missing the
+        # Ehi value of the last bin
+        e1 = egrid[idx]
+        e2 = egrid[idx+1]
+
+        f1 = 8.01096e-10 * ((e2*e2-e1*e1) * y1[idx] / (e2-e1)).sum()
+
+        # The cflux parameters are elo, ehi, and the log of the
+        # flux within this range (this is log base 10 of the
+        # flux in erg/cm^2/s). The parameters chosen for the
+        # powerlaw, and energy range, should have f1 ~ 1.5e-9
+        # (log 10 of this is -8.8).
+        lflux = -5.0
+        xs.load_xscflux("cmdl")
+
+        mid = 'test-conv'
+        ui.load_arrays(mid, egrid, egrid*0) # defaults to Data1D
+        ui.set_source(mid, cmdl(mdl1))
+
+        cmdl.emin = elo
+        cmdl.emax = ehi
+        cmdl.lg10flux = lflux
+
+        # What's the best way to evaluate the source model on
+        # the grid?
+        ##y2 = ui.get_data(mid).eval_model(cmdl(mdl1))
+        y2 = ui.get_model_plot(mid).y
+
+        expected = y1 * 10**lflux / f1
+        numpy.testing.assert_allclose(expected, y2)
+
+        # TODO: should test elo/ehi and wavelength
+        ui.clean()
 
 if __name__ == '__main__':
     import sherpa.astro.xspec as xs

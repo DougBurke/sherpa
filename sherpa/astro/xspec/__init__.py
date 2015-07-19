@@ -1,5 +1,5 @@
-# 
-#  Copyright (C) 2010  Smithsonian Astrophysical Observatory
+#
+#  Copyright (C) 2010, 2015  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -18,14 +18,18 @@
 #
 
 import string
-from sherpa.models import Parameter, ArithmeticModel, modelCacher1d
+
+import numpy as np
+
+from sherpa.models import Parameter, ArithmeticModel, CompositeModel, \
+    ArithmeticFunctionModel, modelCacher1d
 from sherpa.models.parameter import hugeval
 import sherpa.astro.xspec._xspec
 from sherpa.utils import guess_amplitude, param_apply_limits
 from sherpa.astro.utils import get_xspec_position
-from sherpa.astro.xspec._xspec import get_xschatter, get_xsabund, get_xscosmo, \
-     get_xsxsect, set_xschatter, set_xsabund, set_xscosmo, set_xsxsect, \
-     get_xsversion
+from sherpa.astro.xspec._xspec import get_xschatter, get_xsabund, \
+    get_xscosmo, get_xsxsect, set_xschatter, set_xsabund, set_xscosmo, \
+    set_xsxsect, get_xsversion
 
 # Wrap the XSET function in Python, so that we can keep a record of
 # the strings the user sent as specific XSPEC model strings (if any) during
@@ -152,6 +156,76 @@ def set_xsstate(state):
         for name in state["modelstrings"].keys():
             set_xsxset(name, state["modelstrings"][name])
 
+# Based on sherpa.ui.utils.load_conv. This routine is not expected
+# to be exported. Instead, the model-specific versions are, so
+# that users do not have to get the right case for the model
+# (alternatively, a string could be supported for the model argument
+# as an option).
+#
+def load_xsconv(model, modelname):
+    """Create an instance of a XSpec convolution model.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    model
+       The XSConvolutionKernel class to create an instance of.
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    The interface is different to `sherpa.ui.utils.load_conv`,
+    since here the class is given, whereas in @load_conv@ an
+    instance of the model is given.
+
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    There is no validation of model - i.e. that it is a valid
+    model instance (a sub-class of XSConvolutionKernel).
+
+    A wrapper can be created around this for each convolution
+    kernel - e.g.
+
+      def load_cflux(modelname):
+          load_xsconv(XScflux, modelname)
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/Convolution.html
+
+    Examples
+    --------
+
+    >>> load_xsconv(XSzashift, "cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+
+    # Is there a better way of adding the model to the session?
+    from sherpa.astro import ui
+    cmdl = model(name=modelname)
+    ui._session._add_model_component(cmdl)
+
+
 # The model classes are added to __all__ at the end of the file
 __all__ = ('get_xschatter', 'get_xsabund', 'get_xscosmo', 'get_xsxsect',
            'set_xschatter', 'set_xsabund', 'set_xscosmo', 'set_xsxsect',
@@ -227,6 +301,96 @@ class XSAdditiveModel(XSModel):
 
 class XSMultiplicativeModel(XSModel):
     pass
+
+
+class XSConvolutionKernel(XSModel):
+    """The kernel for XSpec convolution models.
+
+    This model creates a XSConvolutionModel instance, which is then
+    evaluated by Sherpa. Instances of the convolution kernel are
+    created by the load_xsconvolve() command rather than the normal
+    modelname.instancename syntax.
+
+    This approach is designed to follow the existing psf/convolution
+    models in Sherpa (e.g. load_psf/load_convolve).
+    """
+
+    def __repr__(self):
+        return "<{} kernel instance '{}'>".format(type(self).__name__,
+                                                  self.name)
+
+    def __call__(self, model):
+        return XSConvolutionModel(model, self)
+
+    def calc(self, pars, rhs, *args, **kwargs):
+        """Convolve the model.
+
+        Note that this method is not cached by
+        sherpa.models.modelCacher1d (may change in
+        the future).
+        """
+
+        npars = len(self.pars)
+        lpars = pars[:npars]
+        rpars = pars[npars:]
+
+        fluxes = np.asarray(rhs(rpars, *args, **kwargs))
+
+        # The Sherpa-provided interfaces to the XSpec convolution
+        # models require that lo/hi values are given, so we need
+        # to check on args. This will change when the XSpec model
+        # interface is updated (https://github.com/sherpa/sherpa/pull/63)
+        #
+        if len(args) == 0:
+            emsg = "Model {} sent no grid!".format(self.name)
+            raise TypeError(emsg)
+
+        elif len(args) == 1:
+            elo = args[0][:-1]
+            ehi = args[0][1:]
+            fluxes = fluxes[:-1]
+
+        elif len(args) == 2:
+            elo = args[0]
+            ehi = args[1]
+
+        else:
+            emsg = "Too many arguments ({}) for model {}".format(len(args),
+                                                                 self.name)
+            raise TypeError(emsg)
+
+        out = self._calc(lpars, elo, ehi, fluxes)
+
+        if len(args) == 1:
+            return np.append(out, 0)
+        else:
+            return out
+
+
+class XSConvolutionModel(CompositeModel, ArithmeticModel):
+    """An internal class for use by XSConvolutionKernel.
+
+    Users should not be creating instances of this class.
+    """
+
+    @staticmethod
+    def wrapobj(obj):
+        if isinstance(obj, ArithmeticModel):
+            return obj
+        else:
+            return ArithmeticFunctionModel(obj)
+
+    def __init__(self, model, wrapper):
+        self.model  = self.wrapobj(model)
+        self.wrapper = wrapper
+        name = "{}({})".format(self.wrapper.name, self.model.name)
+        CompositeModel.__init__(self, name,
+                                (self.wrapper, self.model))
+
+    # for now this is not cached
+    def calc(self, p, *args, **kwargs):
+        return self.wrapper.calc(p, self.model.calc,
+                                 *args, **kwargs)
 
 
 class XSapec(XSAdditiveModel):
@@ -3055,5 +3219,87 @@ class XSzbabs(XSMultiplicativeModel):
         self.redshift = Parameter(name, 'redshift', 0.0, 0.0, 1.0e5, 0.0, 1.0e6)
         XSMultiplicativeModel.__init__(self, name, (self.nH, self.nHeI, self.nHeII, self.redshift))
 
+# Convolution models. These are initialized by the user by
+# calling the load_xsconv routine. To make things (possibly)
+# easier for the user, specific `load_xxx` routines are created,
+# such as `load_xscflux`, and these are exported, rather than
+# the classes below.
+#
+class XScflux(XSConvolutionKernel):
+    "XSpec cflux model (convolution)."
+
+    _calc = _xspec.C_cflux
+
+    # Unlike the Additive/Multiplicative clases, the name
+    # attribute starts with 'xs'. This is intentional (the wrapper
+    # class used that lets users create an instance with
+    # ui.xsapec.mdl1, then print(mdl1) includes the xs prefix;
+    # as the wrapper code works differently here, the xs prefix
+    # is explicitly included).
+    def __init__(self, name='xscflux'):
+        self.Emin = Parameter(name, 'emin', 0.5, min=0.0, max=1e6,
+                              hard_min=0.0, hard_max=1e6, frozen=True,
+                              units='keV')
+        self.Emax = Parameter(name, 'emax', 10.0, min=0.0, max=1e6,
+                              hard_min=0.0, hard_max=1e6, frozen=True,
+                              units='keV')
+        self.lg10Flux = Parameter(name, 'lg10Flux', -12.0, min=-100.0,
+                                  max=100.0, hard_min=-100.0, hard_max=100.0,
+                                  frozen=False, units='cgs')
+        XSConvolutionKernel.__init__(self, name, (self.Emin
+                                                  , self.Emax
+                                                  , self.lg10Flux
+                                                  ))
+
+# Wrappers for the convolution models
+#
+def load_xscflux(modelname):
+    """Create an instance of the XSpec cflux convolution model [1]_.
+
+    The instance is applied to a model expression (a single
+    component or a combination of components) using the
+    syntax::
+
+       modelname(expression)
+
+    This is an *experimental* interface to the XSpec convolution
+    models [1]_. Please take care when using this model, in
+    particular at the edges of the analysis grid.
+
+    Parameters
+    ----------
+    modelname : str
+       The name of the instance (a variable will be created
+       with this name containing the model instance).
+
+    See Also
+    --------
+    sherpa.ui.utils.load_conv - Load a 1D convolution model.
+
+    Notes
+    -----
+    This model *must* be used with a contiguous energy (or
+    wavelength) grid. It will raise an error if this condition
+    does not hold.
+
+    References
+    ----------
+
+    .. [1] https://heasarc.gsfc.nasa.gov/docs/xanadu/xspec/manual/XSmodelCflux.html
+
+    Examples
+    --------
+
+    >>> load_xscflux("cmdl")
+    >>> print(cmdl)
+    >>> set_source(1, cmdl(powlaw1d.pl + xsgaussian.line))
+
+    """
+    load_xsconv(XScflux, modelname)
+
+
+##TODO: remove XSConvolutionKernel from the following
+
 # Add model classes to __all__
-__all__ += tuple(n for n in globals() if n.startswith('XS'))
+#__all__ += tuple(n for n in globals() if n.startswith('XS'))
+__all__ += tuple(n for n in dir() if n.startswith('XS'))
