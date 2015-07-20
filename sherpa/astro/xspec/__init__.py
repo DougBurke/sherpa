@@ -4152,4 +4152,5 @@ def load_xszmshift(modelname):
 
 # Add model classes to __all__
 #__all__ += tuple(n for n in globals() if n.startswith('XS'))
-__all__ += tuple(n for n in dir() if n.startswith('XS'))
+__all__ += tuple(n for n in dir() if n.startswith('XS') or \
+                 (n.startswith('load_xs') and n != 'load_xsconvolve'))
