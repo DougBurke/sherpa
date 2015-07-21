@@ -48,7 +48,9 @@ _session._add_model_types(sherpa.astro.instrument)
 if hasattr(sherpa.astro, 'xspec'):
     _session._add_model_types(sherpa.astro.xspec,
                               (sherpa.astro.xspec.XSAdditiveModel,
-                               sherpa.astro.xspec.XSMultiplicativeModel))
+                               sherpa.astro.xspec.XSMultiplicativeModel,
+                               sherpa.astro.xspec.XSConvolutionKernel)
+                              )
 
     # Perhaps everything exported by the xspec module should be exported
     # here?
@@ -63,6 +65,8 @@ if hasattr(sherpa.astro, 'xspec'):
     # Add in convolution models; I don't want to hard-code in the
     # names, to make it easier to support different versions of
     # the XSpec library.
+    #
+    # Is this still needed now that the models are added directly?
     #
     for n in [n for n in dir(sherpa.astro.xspec) if
               n.startswith('load_xs') and n != 'load_xsconvolve']:

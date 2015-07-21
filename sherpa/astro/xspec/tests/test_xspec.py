@@ -164,7 +164,8 @@ class test_xspec(SherpaTestCase):
         # (log 10 of this is -8.8).
         lflux = -5.0
         #xs.load_xscflux("cmdl")
-        ui.load_xscflux("cmdl")
+        #ui.load_xscflux("cmdl")
+        ui.create_model_component('xscflux', 'cmdl')
 
         # If the test is run directly, this is not needed (i.e. the
         # variable cmdl is defined), but if run via 'python setup.py test'
