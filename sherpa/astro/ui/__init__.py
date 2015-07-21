@@ -1,5 +1,5 @@
-# 
-#  Copyright (C) 2007  Smithsonian Astrophysical Observatory
+#
+#  Copyright (C) 2007, 2015  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -29,10 +29,11 @@ from sherpa.logposterior import Prior
 
 
 # We build up __all__ as we go along
-__all__ = ['DataARF', 'DataRMF','DataPHA', 'DataIMG', 'DataIMGInt', 'Data1D',
-           'Data1DInt','Data2D', 'Data2DInt', 'calc_mlr', 'calc_ftest', 'rebin',
-           'histogram1d', 'histogram2d', 'gamma', 'lgam', 'erf', 'igamc',
-           'igam', 'incbet', 'Prior', 'multinormal_pdf', 'multit_pdf']
+__all__ = ['DataARF', 'DataRMF','DataPHA', 'DataIMG', 'DataIMGInt',
+           'Data1D', 'Data1DInt','Data2D', 'Data2DInt', 'calc_mlr',
+           'calc_ftest', 'rebin', 'histogram1d', 'histogram2d', 'gamma',
+           'lgam', 'erf', 'igamc', 'igam', 'incbet', 'Prior',
+           'multinormal_pdf', 'multit_pdf']
 
 _session = utils.Session()
 _session._add_model_types(sherpa.models.basic)
@@ -49,6 +50,8 @@ if hasattr(sherpa.astro, 'xspec'):
                               (sherpa.astro.xspec.XSAdditiveModel,
                                sherpa.astro.xspec.XSMultiplicativeModel))
 
+    # Perhaps everything exported by the xspec module should be exported
+    # here?
     from sherpa.astro.xspec import get_xsabund, get_xscosmo, get_xsxsect, \
          set_xsabund, set_xscosmo, set_xsxsect, set_xsxset, get_xsxset, \
          get_xschatter, set_xschatter
@@ -56,6 +59,15 @@ if hasattr(sherpa.astro, 'xspec'):
                     'get_xsxsect', 'set_xsabund', 'set_xschatter',
                     'set_xscosmo', 'set_xsxsect', 'set_xsxset',
                     'get_xsxset'))
+
+    # Add in convolution models; I don't want to hard-code in the
+    # names, to make it easier to support different versions of
+    # the XSpec library.
+    #
+    for n in [n for n in dir(sherpa.astro.xspec) if
+              n.startswith('load_xs') and n != 'load_xsconvolve']:
+        globals()[n] = getattr(sherpa.astro.xspec, n)
+        __all__.append(n)
 
 __all__.extend(_session._export_names(globals()))
 
