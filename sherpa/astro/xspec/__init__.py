@@ -3284,13 +3284,7 @@ class XScflux(XSConvolutionKernel):
 
     _calc = _xspec.C_cflux
 
-    # Unlike the Additive/Multiplicative clases, the name
-    # attribute starts with 'xs'. This is intentional (the wrapper
-    # class used that lets users create an instance with
-    # ui.xsapec.mdl1, then print(mdl1) includes the xs prefix;
-    # as the wrapper code works differently here, the xs prefix
-    # is explicitly included).
-    def __init__(self, name='xscflux'):
+    def __init__(self, name='cflux'):
         self.emin = Parameter(name, 'emin', 0.5, min=0.0, max=1e6,
                               hard_min=0.0, hard_max=1e6, frozen=True,
                               units='keV')
@@ -3311,7 +3305,7 @@ class XScpflux(XSConvolutionKernel):
 
     _calc = _xspec.C_cpflux
 
-    def __init__(self, name='xscpflux'):
+    def __init__(self, name='cpflux'):
         self.emin = Parameter(name, 'emin', 0.5, min=0.0, max=1e6,
                               hard_min=0.0, hard_max=1e6, frozen=True,
                               units='keV')
@@ -3333,7 +3327,7 @@ class XSgsmooth(XSConvolutionKernel):
 
     _calc = _xspec.C_xsgsmt
 
-    def __init__(self, name='xsgsmooth'):
+    def __init__(self, name='gsmooth'):
         self.sigAt6keV = Parameter(name, 'sigAt6keV', 1.0, min=0.0, max=10.0,
                                    hard_min=0.0, hard_max=20.0, frozen=False,
                                    units='keV')
@@ -3347,7 +3341,7 @@ class XSireflect(XSConvolutionKernel):
 
     _calc = _xspec.C_ireflct
 
-    def __init__(self, name='xsireflect'):
+    def __init__(self, name='ireflect'):
         self.rel_refl = Parameter(name, 'rel_refl', 0.0, min=-1.0, max=1e6,
                                   hard_min=-1.0, hard_max=1e6, frozen=False)
         self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
@@ -3378,7 +3372,7 @@ class XSkdblur(XSConvolutionKernel):
 
     _calc = _xspec.C_kdblur
 
-    def __init__(self, name='xskdblur'):
+    def __init__(self, name='kdblur'):
         self.index = Parameter(name, 'index', 3.0, min=-10.0, max=10.0,
                                hard_min=-10.0, hard_max=10.0, frozen=True)
         self.rin_G = Parameter(name, 'rin_G', 4.5, min=1.235, max=400.0,
@@ -3400,7 +3394,7 @@ class XSkdblur2(XSConvolutionKernel):
 
     _calc = _xspec.C_kdblur2
 
-    def __init__(self, name='xskdblur2'):
+    def __init__(self, name='kdblur2'):
         self.index = Parameter(name, 'index', 3.0, min=-10.0, max=10.0,
                                hard_min=-10.0, hard_max=10.0, frozen=True)
         self.rin_G = Parameter(name, 'rin_G', 4.5, min=1.235, max=400.0,
@@ -3427,7 +3421,7 @@ class XSkerrconv(XSConvolutionKernel):
 
     _calc = _xspec.C_spinconv
 
-    def __init__(self, name='xskerrconv'):
+    def __init__(self, name='kerrconv'):
         self.index = Parameter(name, 'index', 3.0, min=-10.0, max=10.0,
                                hard_min=-10.0, hard_max=10.0, frozen=True)
         self.index1 = Parameter(name, 'index1', 3.0, min=-10.0, max=10.0,
@@ -3458,7 +3452,7 @@ class XSlsmooth(XSConvolutionKernel):
 
     _calc = _xspec.C_xslsmt
 
-    def __init__(self, name='xslsmooth'):
+    def __init__(self, name='lsmooth'):
         self.sigAt6keV = Parameter(name, 'sigAt6keV', 1.0, min=0.0, max=10.0,
                                    hard_min=0.0, hard_max=20.0, frozen=False,
                                    units='keV')
@@ -3472,7 +3466,7 @@ class XSpartcov(XSConvolutionKernel):
 
     _calc = _xspec.C_PartialCovering
 
-    def __init__(self, name='xspartcov'):
+    def __init__(self, name='partcov'):
         self.cvrFract = Parameter(name, 'cvrFract', 0.5, min=0.05, max=0.95,
                                   hard_min=0.0, hard_max=1.0, frozen=False)
         XSConvolutionKernel.__init__(self, name, (self.cvrFract,))
@@ -3483,7 +3477,7 @@ class XSrdblur(XSConvolutionKernel):
 
     _calc = _xspec.C_rdblur
 
-    def __init__(self, name='xsrdblur'):
+    def __init__(self, name='rdblur'):
         self.betor10 = Parameter(name, 'betor10', -2.0, min=-10.0, max=20.0,
                                  hard_min=-10.0, hard_max=20.0, frozen=True)
         self.rin_M = Parameter(name, 'rin_M', 10.0, min=6.0, max=1000.0,
@@ -3506,7 +3500,7 @@ class XSreflect(XSConvolutionKernel):
 
     _calc = _xspec.C_reflct
 
-    def __init__(self, name='xsreflect'):
+    def __init__(self, name='reflect'):
         self.rel_refl = Parameter(name, 'rel_refl', 0.0, min=-1.0, max=1e6,
                                   hard_min=-1.0, hard_max=1e6, frozen=False)
         self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
@@ -3530,7 +3524,7 @@ class XSsimpl(XSConvolutionKernel):
 
     _calc = _xspec.C_simpl
 
-    def __init__(self, name='xssimpl'):
+    def __init__(self, name='simpl'):
         # have I understood min/max ranges here for Gamma?
         self.gamma = Parameter(name, 'gamma', 2.3, min=1.1, max=4.0,
                                hard_min=1.1, hard_max=5.0, frozen=False)
@@ -3549,7 +3543,7 @@ class XSzashift(XSConvolutionKernel):
 
     _calc = _xspec.C_zashift
 
-    def __init__(self, name='xszashift'):
+    def __init__(self, name='zashift'):
         self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
                                   hard_min=-0.999, hard_max=10, frozen=True)
         XSConvolutionKernel.__init__(self, name, (self.redshift,))
@@ -3560,7 +3554,7 @@ class XSzmshift(XSConvolutionKernel):
 
     _calc = _xspec.C_zmshift
 
-    def __init__(self, name='xszmshift'):
+    def __init__(self, name='zmshift'):
         self.redshift = Parameter(name, 'redshift', 0.0, min=-0.999, max=10.0,
                                   hard_min=-0.999, hard_max=10, frozen=True)
         XSConvolutionKernel.__init__(self, name, (self.redshift,))
