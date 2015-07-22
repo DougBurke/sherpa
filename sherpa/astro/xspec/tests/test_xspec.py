@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+import os
 import unittest
 import numpy
 from sherpa.astro import ui
@@ -37,6 +38,13 @@ def is_proper_subclass(obj, cls):
 @unittest.skipIf(not has_package_from_list('sherpa.astro.xspec'),
                  "required sherpa.astro.xspec module missing")
 class test_xspec(SherpaTestCase):
+
+    def setUp(self):
+        "Set up the file names"
+        if self.datadir != None:
+            fpath = 'ciao4.3/fabrizio/Data'
+            self.arf273 = os.path.join(self.datadir, fpath, '3c273.arf')
+            self.rmf273 = os.path.join(self.datadir, fpath, '3c273.rmf')
 
     def test_create_model_instances(self):
         import sherpa.astro.xspec as xs
@@ -98,11 +106,9 @@ class test_xspec(SherpaTestCase):
                      'need pycrates, pyfits')
     @unittest.skipIf(test_data_missing(), "required test data missing")
     def test_set_analysis_wave_fabrizio(self):
-        rmf = self.datadir + '/ciao4.3/fabrizio/Data/3c273.rmf'
-        arf = self.datadir + '/ciao4.3/fabrizio/Data/3c273.arf'
 
         ui.set_model("fabrizio", "xspowerlaw.p1")
-        ui.fake_pha("fabrizio", arf, rmf, 10000)
+        ui.fake_pha("fabrizio", self.arf273, self.rmf273, 10000)
 
         model = ui.get_model("fabrizio")
         bare_model, _ = ui._session._get_model_status("fabrizio")
@@ -125,37 +131,84 @@ class test_xspec(SherpaTestCase):
         self.assertEqual('somevalue', xs.get_xsxset('Foobar'))
 
     # Copied from my xspec-contiguous branch and updated to use the Python
-    # interface rather than the low-level API.
+    # interface rather than the low-level API. This test does not need
+    # to use IO (it could just use an energy grid), but I want to check
+    # that it works in the UI layer. Perhaps two tests then?
+    #
+    @unittest.skipIf(not has_fits_support(),
+                     'need pycrates, pyfits')
+    @unittest.skipIf(test_data_missing(), "required test data missing")
     def test_convolution_models(self):
         # Use the cflux convolution model since this gives
-        # an "easily checked" result.
+        # an "easily checked" result: unlike the other model tests, this
+        # checks that the results against an expected value,
+        # rather than just checking the results are not NaN/Inf
+        # or that they agree with different ways of calling the
+        # model. It does rely on the XSpec cflux model not changing
+        # behavior significantly across releases.
+        #
         import sherpa.astro.xspec as xs
 
-        # Want the energy grid to extend beyond the energy grid
-        # used to evaluate the model, to avoid any edge effects.
-        # It also makes things easier if the elo/ehi values align
-        # with the egrid bins.
-        elo = 0.55
-        ehi = 1.45
-        egrid = numpy.linspace(0.5, 1.5, 101)
+        mid = 'test-conv'
 
-        mdl1 = xs.XSpowerlaw()
+        # The arf273/rmf273 grid extends beyond the elo/ehi range used
+        # below. For the test we want the energy grid to extend beyond the
+        # energy grid used to evaluate the model, to avoid any edge effects.
+        # It also makes things easier if the elo/ehi values align with the
+        # egrid bins. Given the tolerance check we use below, is all this
+        # effort worth it?
+        #
+        x = numpy.arange(1, 1025, 1)
+        y = numpy.ones(x.size)
+        ui.load_arrays(mid, x, y, ui.DataPHA)
+        ui.load_arf(mid, self.arf273)
+        ui.load_rmf(mid, self.rmf273)
+
+        # Use the e_min/max arrays so that they match the
+        # values used by get_plot
+        #energ_lo = ui.get_rmf(mid).energ_lo
+        #energ_hi = ui.get_rmf(mid).energ_hi
+        energ_lo = ui.get_rmf(mid).e_min
+        energ_hi = ui.get_rmf(mid).e_max
+
+        # could hard-code limits, but select them
+        # de is just to ensure that the edges are found,
+        # and perhaps should be set to a value smaller than
+        # min(energ_hi - energ_lo).
+        #
+        de = 0.001
+        elo_aim = 0.55
+        ehi_aim = 1.45
+
+        elo = energ_lo[energ_lo <= (elo_aim+de)][-1]
+        ehi = energ_hi[energ_hi >= (ehi_aim-de)][0]
+
+        # Create the models
+        ui.set_source(mid, ui.xspowerlaw.mdl1)
+        mdl1 = ui.get_model_component('mdl1')
+
         mdl1.PhoIndex = 2
 
         # flux of mdl1 over the energy range of interest; converting
         # from a flux in photon/cm^2/s to erg/cm^2/s, when the
-        # energy grid is in keV.
-        y1 = mdl1(egrid)
-        idx, = numpy.where((egrid >= elo) & (egrid < ehi))
+        # energy grid is in keV. The model is evaluated directly since
+        # this calculation has to be done to the model without any
+        # instrument response.
+        y1 = mdl1(energ_lo, energ_hi)
+        idx, = numpy.where((energ_lo >= elo) & (energ_hi <= ehi))
 
         # To match XSpec, need to multiply by (Ehi^2-Elo^2)/(Ehi-Elo)
-        # which means that we need the next bin to get Ehi. Due to
-        # the form of the where statement, we should be missing the
-        # Ehi value of the last bin
-        e1 = egrid[idx]
-        e2 = egrid[idx+1]
+        e1 = energ_lo[idx]
+        e2 = energ_hi[idx]
 
         f1 = 8.01096e-10 * ((e2*e2-e1*e1) * y1[idx] / (e2-e1)).sum()
+
+        # To create the expected array we need the model evaluated
+        # including the instrument response.
+        y1 = ui.get_model_plot(mid).y
+
+        ui.set_source(mid, ui.xscflux.cmdl(mdl1))
+        cmdl = ui.get_model_component('cmdl')
 
         # The cflux parameters are elo, ehi, and the log of the
         # flux within this range (this is log base 10 of the
@@ -163,16 +216,10 @@ class test_xspec(SherpaTestCase):
         # powerlaw, and energy range, should have f1 ~ 1.5e-9
         # (log 10 of this is -8.8).
         lflux = -5.0
-        ui.create_model_component('xscflux', 'cmdl')
 
         # If the test is run directly, this is not needed (i.e. the
         # variable cmdl is defined), but if run via 'python setup.py test'
         # then the following is needed
-        cmdl = ui.get_model_component('cmdl')
-
-        mid = 'test-conv'
-        ui.load_arrays(mid, egrid, egrid*0) # defaults to Data1D
-        ui.set_source(mid, cmdl(mdl1))
 
         cmdl.emin = elo
         cmdl.emax = ehi
@@ -184,7 +231,7 @@ class test_xspec(SherpaTestCase):
         y2 = ui.get_model_plot(mid).y
 
         expected = y1 * 10**lflux / f1
-        numpy.testing.assert_allclose(expected, y2)
+        numpy.testing.assert_allclose(expected, y2, rtol=5e-5)
 
         # TODO: should test elo/ehi and wavelength
         ui.clean()
