@@ -62,17 +62,6 @@ if hasattr(sherpa.astro, 'xspec'):
                     'set_xscosmo', 'set_xsxsect', 'set_xsxset',
                     'get_xsxset'))
 
-    # Add in convolution models; I don't want to hard-code in the
-    # names, to make it easier to support different versions of
-    # the XSpec library.
-    #
-    # Is this still needed now that the models are added directly?
-    #
-    for n in [n for n in dir(sherpa.astro.xspec) if
-              n.startswith('load_xs') and n != 'load_xsconvolve']:
-        globals()[n] = getattr(sherpa.astro.xspec, n)
-        __all__.append(n)
-
 __all__.extend(_session._export_names(globals()))
 
 __all__.append('_session')

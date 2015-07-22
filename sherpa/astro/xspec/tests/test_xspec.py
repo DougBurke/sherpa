@@ -163,8 +163,6 @@ class test_xspec(SherpaTestCase):
         # powerlaw, and energy range, should have f1 ~ 1.5e-9
         # (log 10 of this is -8.8).
         lflux = -5.0
-        #xs.load_xscflux("cmdl")
-        #ui.load_xscflux("cmdl")
         ui.create_model_component('xscflux', 'cmdl')
 
         # If the test is run directly, this is not needed (i.e. the
