@@ -303,16 +303,47 @@ class XSMultiplicativeModel(XSModel):
     pass
 
 
+# Unlike the ConvolutionKernel, this class does not deal
+# with ignored/noticed bins. Ideally it would, but that is
+# more complex, and also because I (DJB, July 22 2015) do
+# not think that the knowledge of the model grid should be
+# held by the model classes, instead it should be done by
+# the caller (or perhaps be done cooperatively by the model
+# expression, with the overall expression querying the
+# sub-components to identify what grid they need, with
+# filtering done at the end).
+#
 class XSConvolutionKernel(XSModel):
     """The kernel for XSpec convolution models.
 
     This model creates a XSConvolutionModel instance, which is then
-    evaluated by Sherpa. Instances of the convolution kernel are
-    created by the load_xsconvolve() command rather than the normal
-    modelname.instancename syntax.
+    evaluated by Sherpa. This is the class that is users use to
+    create an instance, or to include in model expressions.
 
-    This approach is designed to follow the existing psf/convolution
-    models in Sherpa (e.g. load_psf/load_convolve).
+    Notes
+    -----
+    The functionality of using a convolution model is spread
+    between this class and the XSConvolutionModel class,
+    as it follows the approach used by the PSF and convolution
+    models (in particular, `sherpa.instrument.ConvolutionKernel`
+    and `sherpa.instrument.ConvolutionModel`, but without the need
+    to use `sherpa.ui.utils.load_psf` or `sherpa.ui.utils.load_conv`.
+
+    Examples
+    --------
+
+    When using the UI API (`sherpa.astro.ui`):
+
+    >>> ui.set_source(ui.xscflux.cmdl(ui.xsapec.src))
+
+    When importing directly:
+
+    >>> cmdl = xspec.XScflux()
+    >>> src = xspec.XSapec()
+    >>> mdl = cmdl(src)
+    >>> x = np.arange(0.1, 10, 0.01)
+    >>> y = mdl(x)
+
     """
 
     def __repr__(self):
@@ -322,12 +353,32 @@ class XSConvolutionKernel(XSModel):
     def __call__(self, model):
         return XSConvolutionModel(model, self)
 
+    # QUS:
+    #   Should the @sherpa.models.modelCacher1d decorator be added here?
     def calc(self, pars, rhs, *args, **kwargs):
         """Convolve the model.
 
-        Note that this method is not cached by
-        sherpa.models.modelCacher1d (may change in
-        the future).
+        Parameters
+        ----------
+        pars : array_like
+           The parameters for the convolution model followed by the
+           parameters of the model to be convolved.
+        rhs : function reference
+           The model to be called. It is sent an array of parameters
+           followed by the *args and **kwargs arguments.
+        *args
+           Arguments sent to the model (the grid on which the
+           model is to be evaluated). There should be one or
+           two arrays (following the interface supported by the
+           `XSModel` class).
+        **kwargs
+           Keywords sent to the model (the ``rhs`` argument).
+
+        Returns
+        -------
+        flux
+           The convolved model amplitudes.
+
         """
 
         npars = len(self.pars)
@@ -369,8 +420,6 @@ class XSConvolutionKernel(XSModel):
 
 class XSConvolutionModel(CompositeModel, ArithmeticModel):
     """An internal class for use by XSConvolutionKernel.
-
-    Users should not be creating instances of this class.
     """
 
     @staticmethod
@@ -387,7 +436,8 @@ class XSConvolutionModel(CompositeModel, ArithmeticModel):
         CompositeModel.__init__(self, name,
                                 (self.wrapper, self.model))
 
-    # for now this is not cached
+    # QUS:
+    #   Should the @sherpa.models.modelCacher1d decorator be added here?
     def calc(self, p, *args, **kwargs):
         return self.wrapper.calc(p, self.model.calc,
                                  *args, **kwargs)
