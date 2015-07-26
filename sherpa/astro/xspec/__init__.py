@@ -1,5 +1,5 @@
-# 
-#  Copyright (C) 2010  Smithsonian Astrophysical Observatory
+#
+#  Copyright (C) 2010, 2015  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,8 @@ from sherpa.utils import guess_amplitude, param_apply_limits
 from sherpa.astro.utils import get_xspec_position
 from sherpa.astro.xspec._xspec import get_xschatter, get_xsabund, get_xscosmo, \
      get_xsxsect, set_xschatter, set_xsabund, set_xscosmo, set_xsxsect, \
-     get_xsversion
+     get_xsversion, get_xsmanager_path, get_xsmodel_path, \
+     set_xsmanager_path, set_xsmodel_path
 
 # Wrap the XSET function in Python, so that we can keep a record of
 # the strings the user sent as specific XSPEC model strings (if any) during

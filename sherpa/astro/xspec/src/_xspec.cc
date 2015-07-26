@@ -65,6 +65,11 @@ void FNINIT(void);
 // void FPCHAT(int chat);
 // int xs_getVersion(char* buffer, int buffSize);
 
+// Added routines (well, the xsFortran equivalents)
+// char *FGDATD();
+// char *FGMODF();
+// voif FPDATD(const char* dataDir)
+  
 void xsaped_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
 void xsbape_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
 void xsblbd_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
@@ -584,6 +589,121 @@ static PyObject* get_cross( PyObject *self )
   }
 
   return Py_BuildValue( (char*)"s", cross );
+
+}
+
+
+static PyObject* get_manager_path( PyObject *self )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  char* path = NULL;
+
+  try {
+
+    // path = FGDATD();
+    path = const_cast<char *>(FunctionUtility::managerPath().c_str());
+
+  } catch(...) {
+
+    PyErr_SetString( PyExc_RuntimeError,
+		     (char*)"could not get XSPEC manager path" );
+    return NULL;
+
+  }
+
+  return Py_BuildValue( (char*)"s", path );
+
+}
+
+
+static PyObject* set_manager_path( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  char* path = NULL;
+
+  if ( !PyArg_ParseTuple( args, (char*)"s", &path ) )
+    return NULL;
+
+  try {
+
+    // FPDATD(path);
+    FunctionUtility::managerPath(string(path));
+
+  } catch(...) {
+
+    std::ostringstream err;
+    err << "Could not set XSPEC manager path to "
+        << path;
+    PyErr_SetString( PyExc_ValueError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  Py_RETURN_NONE;  
+
+}
+
+
+static PyObject* get_model_path( PyObject *self )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  char* path = NULL;
+
+  try {
+
+    // path = FGMODF();
+    path = const_cast<char *>(FunctionUtility::modelDataPath().c_str());
+
+  } catch(...) {
+
+    PyErr_SetString( PyExc_RuntimeError,
+		     (char*)"could not get XSPEC model path" );
+    return NULL;
+
+  }
+
+  return Py_BuildValue( (char*)"s", path );
+
+}
+
+
+// There does not seem to be a way to change this setting using
+// the xsFortran API
+static PyObject* set_model_path( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  char* path = NULL;
+
+  if ( !PyArg_ParseTuple( args, (char*)"s", &path ) )
+    return NULL;
+
+  try {
+
+    FunctionUtility::modelDataPath(string(path));
+
+  } catch(...) {
+
+    std::ostringstream err;
+    err << "Could not set XSPEC model path to "
+        << path;
+    PyErr_SetString( PyExc_ValueError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  Py_RETURN_NONE;  
 
 }
 
@@ -1191,6 +1311,56 @@ static PyMethodDef XSpecMethods[] = {
             "will only return a value if it has previously been set\n"
             "with a call to `set_xsxset`. There is no way to retrive\n"
             "the default value of a setting.\n\n"},
+
+  { (char*)"get_xsmanager_path", (PyCFunction)get_manager_path, METH_NOARGS,
+    (char*) "get_xsmanager_path()\n\n"
+            "Return the Xspec manager path.\n"
+            RETURNSDOC
+            "val : str\n"
+            "   The Xspec manager path.\n"
+            SEEALSODOC
+            "get_xsmodel_path : Return the Xspec model path.\n"
+            "set_xsmanager_path : Change the Xspec manager path.\n\n"
+  },
+  { (char*)"set_xsmanager_path", (PyCFunction)set_manager_path, METH_VARARGS,
+    (char*) "set_xsmanager_path(path)\n\n"
+            "Set the Xspec manager path.\n"
+            PARAMETERSDOC
+            "path : str\n"
+            "   The new path to the Xspec manager directory.\n"
+            SEEALSODOC
+            "get_xsmanager_path : Return the Xspec manager path.\n"
+            "set_xsmodel_path : Change the Xspec model path.\n"
+            NOTESDOC
+            "This is intended only for people who are developing or\n"
+            "testing Xspec models, as changing the path can significantly\n"
+            "change the evaluation of Xspec models.\n\n"
+  },
+
+  { (char*)"get_xsmodel_path", (PyCFunction)get_model_path, METH_NOARGS,
+    (char*) "get_xsmodel_path()\n\n"
+            "Return the Xspec model path.\n"
+            RETURNSDOC
+            "val : str\n"
+            "   The Xspec model path.\n"
+            SEEALSODOC
+            "get_xsmanager_path : Return the Xspec manager path.\n"
+            "set_xsmodel_path : Change the Xspec model path.\n\n"
+  },
+  { (char*)"set_xsmodel_path", (PyCFunction)set_model_path, METH_VARARGS,
+    (char*) "set_xsmodel_path(path)\n\n"
+            "Set the Xspec model path.\n"
+            PARAMETERSDOC
+            "path : str\n"
+            "   The new path to the Xspec model directory.\n"
+            SEEALSODOC
+            "get_xsmodel_path : Return the Xspec model path.\n"
+            "set_xsmanager_path : Change the Xspec manager path.\n"
+            NOTESDOC
+            "This is intended only for people who are developing or\n"
+            "testing Xspec models, as changing the path can significantly\n"
+            "change the evaluation of Xspec models.\n\n"
+  },
 
   XSPECMODELFCT_NORM( xsaped, 4 ),
   XSPECMODELFCT_NORM( xsbape, 5 ),
