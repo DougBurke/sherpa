@@ -787,10 +787,16 @@ static PyObject* set_cross( PyObject *self, PyObject *args )
   if ( !PyArg_ParseTuple( args, (char*)"s", &csection ) )
     return NULL;
 
+  // Trap any Xspec error message about an invalid table
+  std::streambuf *cerr_sbuf = NULL;
+  std::ostringstream fout;
+
+  cerr_sbuf = std::cerr.rdbuf();
+  if (cerr_sbuf != NULL)
+    std::cerr.rdbuf(fout.rdbuf());
+
   try {
 
-    // NOTE: Xspec 12.8.2 produces a warning message if this fails; should
-    // it be trapped here?
     // FPXSCT( csection, &status );
     string tableName = XSutility::lowerCase(string(csection));
     if (FunctionUtility::checkXsect(tableName)) {
@@ -805,6 +811,9 @@ static PyObject* set_cross( PyObject *self, PyObject *args )
 
   }
 
+  if (cerr_sbuf != NULL)
+    std::cerr.rdbuf(cerr_sbuf);
+  
   if ( 0 != status ) {
     std::ostringstream err;
     err << "Could not set XSPEC photoelectric cross-section to "
