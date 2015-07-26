@@ -1,5 +1,5 @@
 // 
-//  Copyright (C) 2007  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2007, 2015  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -26,33 +26,44 @@ int _sherpa_init_xspec_library();
 #include <fstream>
 #include "sherpa/astro/xspec_extension.hh"
 
-#define ABUND_SIZE (30) // number of elements in Solar Abundance table
+// Need access to the build directory to get the full set of
+// paths (the install directory does contain $HEADAS/include/FunctionUtility.h
+// but its include statements have not been "flattened", in that it
+// contains '#include <XSUtil/Error/Error.h>', so you still need
+// access to the original source directory to use it.
+//
+#include <XSUtil/FunctionUtils/FunctionUtility.h>
+#include <XSUtil/Utils/XSutility.h>
 
 extern "C" {
 void init_xspec();
 
 // Lifted from XSPEC 12 include directory
-char* FGXSCT(void); 
-char* FGSOLR(void);
+// char* FGXSCT(void); 
+// char* FGSOLR(void);
 
-char* FGMSTR(char* dname);
-float FGABND(char* element);
+// char* FGMSTR(char* dname);
+// float FGABND(char* element);
 
-void FPSOLR(const char* table, int* ierr);
-void FPXSCT(const char* csection, int* ierr);
-void FPMSTR(const char* value1, const char* value2);
-void FPSLFL(float rvalue[], int nvalue, int *ierr);
+// void FPSOLR(const char* table, int* ierr);
+// void FPXSCT(const char* csection, int* ierr);
+// void FPMSTR(const char* value1, const char* value2);
+// void FPSLFL(float rvalue[], int nvalue, int *ierr);
 
+// There's a lot of logic in FNINIT that I think it would be dangerous
+// to try and copy here.
 void FNINIT(void);
-float csmgq0(void);
-float csmgh0(void);
-float csmgl0(void);
-void csmpq0(float q0);
-void csmph0(float H0);
-void csmpl0(float lambda0);
-int FGCHAT();
-void FPCHAT(int chat);
-int xs_getVersion(char* buffer, int buffSize);
+
+// float csmgq0(void);
+// float csmgh0(void);
+// float csmgl0(void);
+// void csmpq0(float q0);
+// void csmph0(float H0);
+// void csmpl0(float lambda0);
+
+// int FGCHAT();
+// void FPCHAT(int chat);
+// int xs_getVersion(char* buffer, int buffSize);
 
 void xsaped_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
 void xsbape_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
@@ -293,7 +304,6 @@ int _sherpa_init_xspec_library()
   if ( init )
     return EXIT_SUCCESS;
 
-
   if ( !getenv("HEADAS") ) {
     // Raise appropriate error message that XSPEC initialization failed.
     PyErr_SetString( PyExc_ImportError,
@@ -347,12 +357,14 @@ int _sherpa_init_xspec_library()
     fout.close();
 
     // Try to minimize model chatter for normal operation.
-    FPCHAT( 0 );
+    // FPCHAT( 0 );
+    FunctionUtility::xwriteChatter(0);
 
     // Set cosmology initial values to XSPEC initial values
-    csmph0( 70.0 );
-    csmpq0( 0.0 );
-    csmpl0( 0.73 );
+    // csmph0( 70.0 );
+    // csmpq0( 0.0 );
+    // csmpl0( 0.73 );
+    FunctionUtility::setFunctionCosmoParams( 70.0, 0.0, 0.73 );
 
   } catch(...) {
 
@@ -385,13 +397,16 @@ static PyObject* get_version( PyObject *self )
   if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
     return NULL;
 
-  char version[256];
-  int retval;
+  // char version[256];
+  // int retval;
 
   try {
     
-    retval = xs_getVersion(version, 256);
-
+    // retval = xs_getVersion(version, 256);
+    const string& versStr(XSutility::xs_version());
+    return Py_BuildValue( (char*)"s",
+                          const_cast<char *>(versStr.c_str()) );
+    
   } catch(...) {
 
     PyErr_SetString( PyExc_RuntimeError,
@@ -399,7 +414,8 @@ static PyObject* get_version( PyObject *self )
     return NULL;
 
   }
-  
+
+  /*** old code
   if( retval < 0 ) {
     PyErr_SetString( PyExc_RuntimeError,
 		     (char*)"XSPEC version string was truncated" );
@@ -407,7 +423,8 @@ static PyObject* get_version( PyObject *self )
   }
   
   return Py_BuildValue( (char*)"s", version );
-
+  ***/
+  
 }
 
 static PyObject* get_chatter( PyObject *self )
@@ -420,7 +437,8 @@ static PyObject* get_chatter( PyObject *self )
 
   try {
 
-    chatter = FGCHAT();
+    // chatter = FGCHAT();
+    chatter = FunctionUtility::xwriteChatter();
 
   } catch(...) {
 
@@ -450,7 +468,8 @@ static PyObject* get_abund( PyObject *self, PyObject *args )
 
   try {
 
-    abund = FGSOLR();
+    // abund = FGSOLR();
+    abund = const_cast<char *>(FunctionUtility::ABUND().c_str());
 
   } catch(...) {
 
@@ -477,7 +496,8 @@ static PyObject* get_abund( PyObject *self, PyObject *args )
       if (cerr_sbuf != NULL)
 	std::cerr.rdbuf(fout.rdbuf());
       
-      abundVal = FGABND(element);
+      // abundVal = FGABND(element);
+      abundVal = FunctionUtility::getAbundance(string(element));
       
       // Get back original std::cerr
       if (cerr_sbuf != NULL)
@@ -522,9 +542,12 @@ static PyObject* get_cosmo( PyObject *self )
 
   try {
 
-    h0 = csmgh0();
-    l0 = csmgl0();
-    q0 = csmgq0();
+    // h0 = csmgh0();
+    // l0 = csmgl0();
+    // q0 = csmgq0();
+    h0 = FunctionUtility::getH0();
+    l0 = FunctionUtility::getlambda0();
+    q0 = FunctionUtility::getq0();
 
   } catch(...) {
 
@@ -549,7 +572,8 @@ static PyObject* get_cross( PyObject *self )
 
   try {
 
-    cross = FGXSCT();
+    // cross = FGXSCT();
+    cross = const_cast<char *>(FunctionUtility::XSECT().c_str());
 
   } catch(...) {
 
@@ -577,7 +601,8 @@ static PyObject* set_chatter( PyObject *self, PyObject *args )
 
   try {
 
-    FPCHAT( chatter );
+    // FPCHAT( chatter );
+    FunctionUtility::xwriteChatter(chatter);
 
   } catch(...) {
     
@@ -591,6 +616,64 @@ static PyObject* set_chatter( PyObject *self, PyObject *args )
 
 }
 
+enum AbundanceReadStatus {
+  ABUND_OK = 0,
+  ABUND_ERROR_UNKNOWN = -1,
+  ABUND_ERROR_READ_FILE = -2,
+  ABUND_ERROR_SET_DATA = -3
+};
+  
+// Read in the abundances from the given file.
+//   0 on success
+// true on success, false otherwise.
+//
+static AbundanceReadStatus read_abundance_table(const string table) {
+
+  const size_t nelems = FunctionUtility::NELEMS();
+  std::ifstream fileStream(table.c_str());
+  std::vector<float> vals(nelems, 0);
+  size_t count(0);
+
+  try {
+      
+    float element;
+    fileStream.exceptions(std::ios_base::failbit);
+      
+    while (count < nelems && fileStream >> element) {
+      vals[count] = element;
+      ++count;
+    }
+      
+  }
+  catch ( std::exception& ) {
+
+    if( !fileStream.eof() ) {
+      return ABUND_ERROR_READ_FILE;
+    } else {
+      return ABUND_ERROR_UNKNOWN;
+    }
+
+  }
+  
+  try {
+
+    FunctionUtility::ABUND("file");
+    /***
+    int status = 0;
+    FPSLFL( &vals[0], ABUND_SIZE, &status );
+    if (status != 0)
+      return ABUND_ERROR_SET_DATA;
+    ***/
+    FunctionUtility::abundanceVectors("file", vals);
+      
+  } catch(...) {
+
+    return ABUND_ERROR_SET_DATA;
+      
+  }
+
+  return ABUND_OK;
+}
 
 static PyObject* set_abund( PyObject *self, PyObject *args )
 { 
@@ -598,73 +681,62 @@ static PyObject* set_abund( PyObject *self, PyObject *args )
   if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
     return NULL;
 
-  char* table = NULL;
-  int status = 0;
+  char* table_s = NULL;
 
-  if ( !PyArg_ParseTuple( args, (char*)"s", &table ) )
+  if ( !PyArg_ParseTuple( args, (char*)"s", &table_s ) )
     return NULL;
 
+  string table = string(table_s);
+  string tableName = XSutility::lowerCase(table);
+
+  AbundanceReadStatus status = ABUND_OK;
+  
   try {
 
-    FPSOLR( table, &status );
+    // FPSOLR( table, &status );
+    if (FunctionUtility::checkAbund(tableName)) {
+      FunctionUtility::ABUND(tableName);
+    }
+    else {
+      status = read_abundance_table(table);
+    }
 
   } catch(...) {
     
-    status = 1;
+    status = ABUND_ERROR_UNKNOWN;
 
   }
 
-  // if abundance table name fails, try it as a filename
-  if( status ) {
+  switch (status) {
+  case ABUND_OK:
+    // do nothing
+    break;
 
-    std::ifstream fileStream(table);
-    std::vector<float> vals(ABUND_SIZE, 0);
-    size_t count(0);
-
-    try {
-      
-      float element;
-      fileStream.exceptions(std::ios_base::failbit);
-      
-      while (count < ABUND_SIZE && fileStream >> element) {
-	vals[count] = element;
-	++count;
-      }
-      
-      status = 0;
+  case ABUND_ERROR_READ_FILE:
+    {
+      std::ostringstream err;
+      err << "Cannot read abundances from the file '" << table << "'.";
+      PyErr_SetString( PyExc_ValueError, err.str().c_str() );
+      return NULL;
     }
-    catch ( std::exception& ) {
-     
-      if( !fileStream.eof() ) {
-      	PyErr_Format( PyExc_ValueError, 
-                      (char*)"Cannot read file '%s'.  It may not exist or contains invalid data",
-                      table);
-	return NULL;
-      }
-      
-      status = 1;
-    }
+    break;
 
-    try {
-      
-      FPSOLR((char*)"file", &status);
-      FPSLFL( &vals[0], ABUND_SIZE, &status );
-      
-    } catch(...) {
-      
-      status = 1;
-      
-    }
-  }
-
-  if ( 0 != status ) {
+  case ABUND_ERROR_SET_DATA:
+    PyErr_SetString( PyExc_RuntimeError,
+		     (char*)"Unable to set the XSPEC abundance table" );
+    return NULL;
+    break;
+    
+  case ABUND_ERROR_UNKNOWN:
     PyErr_SetString( PyExc_RuntimeError,
 		     (char*)"could not set XSPEC abundance" );
     return NULL;
+    break;
   }
 
+  // moved here to stop gcc's -Wreturn-type complaining about there
+  // being no return value
   Py_RETURN_NONE;
-
 }
 
 
@@ -683,9 +755,12 @@ static PyObject* set_cosmo( PyObject *self, PyObject *args )
 
   try {
 
-    csmph0( h0 );
-    csmpl0( l0 );
-    csmpq0( q0 );
+    // csmph0( h0 );
+    // csmpl0( l0 );
+    // csmpq0( q0 );
+    FunctionUtility::setH0( h0 );
+    FunctionUtility::setlambda0( l0 );
+    FunctionUtility::setq0( q0 );
 
   } catch(...) {
 
@@ -714,7 +789,15 @@ static PyObject* set_cross( PyObject *self, PyObject *args )
 
   try {
 
-    FPXSCT( csection, &status );
+    // NOTE: Xspec 12.8.2 produces a warning message if this fails; should
+    // it be trapped here?
+    // FPXSCT( csection, &status );
+    string tableName = XSutility::lowerCase(string(csection));
+    if (FunctionUtility::checkXsect(tableName)) {
+      FunctionUtility::XSECT(tableName);
+    } else {
+      status = 1;
+    }
 
   } catch(...) {
 
@@ -723,9 +806,10 @@ static PyObject* set_cross( PyObject *self, PyObject *args )
   }
 
   if ( 0 != status ) {
-    PyErr_SetString( PyExc_RuntimeError,
-		     (char*)"could not set XSPEC photoelectric "
-		     "cross-section" );
+    std::ostringstream err;
+    err << "Could not set XSPEC photoelectric cross-section to "
+        << csection;
+    PyErr_SetString( PyExc_ValueError, err.str().c_str() );
     return NULL;
   }
 
@@ -742,25 +826,27 @@ static PyObject* set_xset( PyObject *self, PyObject *args )
 
   char* str_name = NULL;
   char* str_value = NULL;
-  int status = 0;
 
   if ( !PyArg_ParseTuple( args, (char*)"ss", &str_name, &str_value ) )
     return NULL;
 
   try {
 
-    FPMSTR( str_name, str_value );
+    // FPMSTR( str_name, str_value );
+
+    string skey = XSutility::upperCase(string(str_name));
+    if (skey == "INITIALIZE") {
+      FunctionUtility::eraseModelStringDataBase();
+    } else {
+      FunctionUtility::setModelString(skey, string(str_value));
+    }
 
   } catch(...) {
 
-    status = 1;
-
-  }
-
-  if ( 0 != status ) {
-    PyErr_Format( PyExc_RuntimeError,
-		  (char*)"could not set XSPEC model strings '%s: %s'",
-		  str_name, str_value);
+    std::ostringstream err;
+    err << "Could not set XSPEC model value " << str_name
+        << " to " << str_value;
+    PyErr_SetString( PyExc_ValueError, err.str().c_str() );
     return NULL;
   }
 
@@ -768,6 +854,10 @@ static PyObject* set_xset( PyObject *self, PyObject *args )
 
 }
 
+// QUS: now that we are using the FunctionUtility API, and can
+// tell when a key is not set, is it worth returning None or
+// raising a KeyError in such a situation?
+//
 static PyObject* get_xset( PyObject *self, PyObject *args  )
 { 
 
@@ -780,9 +870,16 @@ static PyObject* get_xset( PyObject *self, PyObject *args  )
   if ( !PyArg_ParseTuple( args, (char*)"s", &str_name ) )
     return NULL;
 
+  static string value;
+  
   try {
 
-    str_value = FGMSTR( str_name );
+    // str_value = FGMSTR( str_name );
+    value = FunctionUtility::getModelString(string(str_name));
+    if (value == FunctionUtility::NOT_A_KEY()) {
+      value.erase();
+    }
+    str_value = const_cast<char *>(value.c_str());
 
   } catch(...) {
 
