@@ -71,6 +71,7 @@ void FNINIT(void);
 // void FPDATD(const char* dataDir)  
 // int DGNFLT(int)
 // float DGFILT(int, int)
+// void PDBVAL(const char* keyword, double value)
   
 void xsaped_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
 void xsbape_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
@@ -1230,6 +1231,144 @@ static PyObject* set_xflt( PyObject *self, PyObject *args )
 }
 
 
+static PyObject* clear_db( PyObject *self )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  try {
+
+    // No xsFortran API
+    FunctionUtility::clearDb();
+
+  } catch(...) {
+
+    PyErr_SetString( PyExc_RuntimeError,
+                     (char*)"Unable to clear the Xspec database");
+    return NULL;
+
+  }
+
+  Py_RETURN_NONE;
+
+}
+
+
+// Users are not expected to call this; it is provided for use by the
+// Python API.
+static PyObject* get_dbkeys( PyObject *self )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  string out;
+  try {
+
+    // No xsFortran API
+    out = FunctionUtility::getDbKeywords();
+
+  } catch(...) {
+
+    PyErr_SetString( PyExc_RuntimeError,
+                     (char*)"Unable to access the Xspec database");
+    return NULL;
+
+  }
+
+  return Py_BuildValue( (char*)"s", out.c_str() );
+
+}
+
+
+static PyObject* set_dbvalue( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  char *key;
+  double val;
+
+  if ( !PyArg_ParseTuple( args, (char*)"sd", &key, &val ) )
+    return NULL;
+
+  try {
+
+    // PDBVAL(key, val);
+    FunctionUtility::loadDbValue(key, val);
+
+  } catch(...) {
+
+    std::ostringstream err;
+    err << "Could not set Database keyword " << key << " to " << val;
+    PyErr_SetString( PyExc_RuntimeError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  Py_RETURN_NONE;
+
+}
+
+
+// Could use FunctionUtility::getAllDbValues() but its easier
+// to do this from Python. I don't expect the overhead of doing
+// it this way to be a problem, but if it is then it could be
+// converted to use getAllDbValues().
+//
+static PyObject* get_dbvalue( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  char *key;
+
+  if ( !PyArg_ParseTuple( args, (char*)"s", &key ) )
+    return NULL;
+
+  double val;
+  std::streambuf *cerr_sbuf = NULL;
+  std::ostringstream fout;
+
+  cerr_sbuf = std::cerr.rdbuf();
+  if (cerr_sbuf != NULL)
+    std::cerr.rdbuf(fout.rdbuf());
+  
+  try {
+
+    // There is no xsFortranAPI for this
+    val = FunctionUtility::getDbValue(key);
+
+  } catch(...) {
+
+    if (cerr_sbuf != NULL)
+      std::cerr.rdbuf(cerr_sbuf);
+    
+    std::ostringstream err;
+    err << "Database keyword " << key;
+    PyErr_SetString( PyExc_KeyError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  if (cerr_sbuf != NULL)
+    std::cerr.rdbuf(cerr_sbuf);
+
+  if( fout.str().size() > 0 ) {
+    std::ostringstream err;
+    err << "Database keyword " << key;
+    PyErr_SetString( PyExc_KeyError, err.str().c_str() );
+    return NULL;
+  }
+
+  return Py_BuildValue( (char*)"d", val );
+
+}
+
+
 // for documentation
 #define SEEALSODOC "\nSee also\n--------\n"
 #define NOTESDOC "\nNotes\n-----\n"
@@ -1644,6 +1783,49 @@ static PyMethodDef XSpecMethods[] = {
             "XFLT keyword system used by the Xspec model library"
   },
   
+  { (char*)"clear_xsdb", (PyCFunction)clear_db, METH_NOARGS,
+    (char*) "clear_xsdb()\n\n"
+            "Clear the Xspec database.\n"
+            SEEALSODOC
+            "set_xsdb : Set the Xspec database keyword to the given value.\n"
+            "get_xsdb : Set the Xspec database keyword to the given value.\n"
+            NOTESDOC
+            "This is an experimental interface.\n"
+  },
+  { (char*)"get_xsdb_keywords", (PyCFunction)get_dbkeys, METH_NOARGS,
+    (char*) "get_xsdb_keywords()\n\n"
+            "Return the set of keywords in the Xspec database.\n"
+            SEEALSODOC
+            "clear_xsdb : Clear the Xspec database.\n"
+            "set_xsdb : Set the Xspec database keyword to the given value.\n"
+            NOTESDOC
+            "This is an experimental interface.\n"
+  },
+  { (char*)"get_xsdb_value", (PyCFunction)get_dbvalue, METH_VARARGS,
+    (char*) "get_xsdb_value()\n\n"
+            "Return the value of a XSpec database keyword.\n"
+            SEEALSODOC
+            "clear_xsdb : Clear the Xspec database.\n"
+            "get_xsdb_keywords : Return the set of keywords in the Xspec database.\n"
+            "set_xsdb : Set the Xspec database keyword to the given value.\n"
+            NOTESDOC
+            "This is an experimental interface.\n"
+  },
+  { (char*)"set_xsdb_value", (PyCFunction)set_dbvalue, METH_VARARGS,
+    (char*) "set_xsdb_value(keyword, value)\n\n"
+            "Set the Xspec database keyword to the given value.\n"
+            PARAMETERSDOC
+            "keyword : str\n"
+            "   The name of the keyword.\n"
+            "value : number\n"
+            "   The value to set the keyword.\n"
+            SEEALSODOC
+            "clear_xsdb : Clear the Xspec database.\n"
+            "get_xsdb : Return the Xspec database values.\n"
+            NOTESDOC
+            "This is an experimental interface.\n"
+  },
+
   XSPECMODELFCT_NORM( xsaped, 4 ),
   XSPECMODELFCT_NORM( xsbape, 5 ),
   XSPECMODELFCT_NORM( xsblbd, 2 ),

@@ -27,7 +27,8 @@ from sherpa.astro.utils import get_xspec_position
 from sherpa.astro.xspec._xspec import get_xschatter, get_xsabund, get_xscosmo, \
      get_xsxsect, set_xschatter, set_xsabund, set_xscosmo, set_xsxsect, \
      get_xsversion, get_xsmanager_path, get_xsmodel_path, \
-     set_xsmanager_path, set_xsmodel_path, clear_xsxflt
+     set_xsmanager_path, set_xsmodel_path, clear_xsxflt, \
+     clear_xsdb, set_xsdb_value
 
 # Wrap the XSET function in Python, so that we can keep a record of
 # the strings the user sent as specific XSPEC model strings (if any) during
@@ -220,6 +221,51 @@ def get_xsxflt(spectrum):
         d[i] = val
 
     return d
+
+
+# Note that there is an asymmetry with how the XFLT keywords are
+# set, in that for XFLT the python API is
+#
+#    clear all spectra
+#    set for a spectrum, input is a dictionary
+#    get for a spectrum, result is a dictionary
+#
+# whereas the "database" supports
+#
+#    clear database
+#    set a keyword in the database with a value
+#    get the database, result is a dictionary
+#
+# So, there's no way to set the database using a dictionary.
+# I think this difference is probably okay but wanted to mention
+# it here.
+#
+def get_xsdb():
+    """Return the Xspec database values.
+
+    Returns
+    -------
+    values : dictionary
+       The keys are strings and the values doubles. The empty
+       dictionary is returned if no keywords are set.
+
+    Notes
+    -----
+    This is an experimental interface.
+    """
+
+    # This could be done in the C++ code but its easier to do so here.
+    db = {}
+
+    # The db keywords are space separated, so split on space and remove
+    # any trailing blank element
+    keys = sherpa.astro.xspec._xspec.get_xsdb_keywords().split(' ')
+    if keys[-1] == '':
+        keys.pop()
+    for key in keys:
+        db[key] = sherpa.astro.xspec._xspec.get_xsdb_value(key)
+
+    return db
 
 
 # Provide XSPEC module state as a dictionary.  The "cosmo" state is
