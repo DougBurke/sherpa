@@ -68,7 +68,9 @@ void FNINIT(void);
 // Added routines (well, the xsFortran equivalents)
 // char *FGDATD();
 // char *FGMODF();
-// voif FPDATD(const char* dataDir)
+// void FPDATD(const char* dataDir)  
+// int DGNFLT(int)
+// float DGFILT(int, int)
   
 void xsaped_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
 void xsbape_(float* ear, int* ne, float* param, int* ifl, float* photar, float* photer);
@@ -1012,7 +1014,8 @@ static PyObject* get_xset( PyObject *self, PyObject *args  )
 
   } catch(...) {
 
-    PyErr_Format( PyExc_RuntimeError,
+    // use KeyError although not clear what the problem could be
+    PyErr_Format( PyExc_KeyError,
 		  (char*)"could not get XSPEC model string '%s'",
 		  str_name);
     return NULL;
@@ -1022,6 +1025,210 @@ static PyObject* get_xset( PyObject *self, PyObject *args  )
   return Py_BuildValue( (char*)"s", str_value );
 
 }
+
+
+static PyObject* get_number_xflt( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  int ifl = 0;
+
+  if ( !PyArg_ParseTuple( args, (char*)"i", &ifl ) )
+    return NULL;
+
+  int nxflt = 0;
+
+  try {
+
+    // nxflt = DGNFLT(ifl);
+    nxflt = FunctionUtility::getNumberXFLT(ifl);
+
+  } catch(...) {
+
+    std::ostringstream err;
+    err << "could not get XSPEC XFLT count for spectrum " << ifl;
+    PyErr_SetString( PyExc_RuntimeError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  return Py_BuildValue( (char*)"i", nxflt );
+
+}
+
+
+// The Python API wraps this up to provide a friendlier interface;
+// although it would be nice if there were a way to find out what
+// indexes have values (or directly access the map in C++ to create
+// the return value).
+//
+static PyObject* get_xflt( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  int ifl = 0;
+  int idx = 0;
+  float retval = 0.0;
+  
+  if ( !PyArg_ParseTuple( args, (char*)"ii", &ifl, &idx ) )
+    return NULL;
+
+  std::streambuf *cerr_sbuf = NULL;
+  std::ostringstream fout;
+
+  cerr_sbuf = std::cerr.rdbuf();
+  if (cerr_sbuf != NULL)
+    std::cerr.rdbuf(fout.rdbuf());
+  
+  try {
+
+    // retval = DGFILT(ifl, idx);
+    retval = FunctionUtility::getXFLT(ifl, idx);
+
+  } catch(...) {
+
+    if (cerr_sbuf != NULL)
+      std::cerr.rdbuf(cerr_sbuf); 
+
+    std::ostringstream err;
+    err << "could not get XSPEC XFLT keyword " << idx
+        << " for spectrum " << ifl;
+    PyErr_SetString( PyExc_RuntimeError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  if (cerr_sbuf != NULL)
+    std::cerr.rdbuf(cerr_sbuf);
+
+  if (fout.str().size() > 0) {
+    /* try using Xspec error message
+    std::ostringstream err;
+    err << "could not get XSPEC XFLT keyword " << idx
+        << " for spectrum " << ifl;
+    PyErr_SetString( PyExc_RuntimeError, err.str().c_str() );
+    */
+    PyErr_SetString( PyExc_RuntimeError, fout.str().c_str() );
+    return NULL;
+  }
+  
+  return Py_BuildValue( (char*)"f", retval );
+
+}
+
+
+// I don't think there's a xsFortran call for this
+static PyObject* clear_xflt( PyObject *self )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  try {
+
+    FunctionUtility::clearXFLT();
+
+  } catch(...) {
+
+    PyErr_SetString( PyExc_RuntimeError,
+                     (char*)"Could not clear the XFLT settings");
+    return NULL;
+
+  }
+
+  Py_RETURN_NONE;
+
+}
+
+
+// I don't think there's a xsFortran call for this.
+static PyObject* set_xflt( PyObject *self, PyObject *args )
+{ 
+
+  if ( EXIT_SUCCESS != _sherpa_init_xspec_library() )
+    return NULL;
+
+  int ifl = 0;
+  PyObject *dict = NULL;
+  
+  if ( !PyArg_ParseTuple( args, (char*)"iO", &ifl, &dict ) )
+    return NULL;
+
+  // This triggers a warning from -Wwrite-strings which is due to
+  // how the PyMapping_Items define is written (in Python 2.7.10
+  // at least).
+  PyObject *items = PyMapping_Items(dict);
+  if (items == NULL) {
+    PyErr_SetString( PyExc_ValueError,
+                     (char*)"second argument must support the Python mapping interface");
+    return NULL;
+  }
+
+  std::map<size_t, Real> map;
+
+  // Could use the _FAST_ form, but assume that these lists are small.
+  // I think the checks are excessive (in that if NULL is returned
+  // from the GetItem calls then there is likely something very wrong
+  // going on), but include just in case.
+  //
+  Py_ssize_t nitems = PySequence_Length(items);
+  for (Py_ssize_t i = 0; i < nitems; i++) {
+    PyObject *pair = PySequence_GetItem(items, i);
+    if (!pair)
+      continue;
+    
+    PyObject *key = PySequence_GetItem(pair, 0);
+    if (!key) {
+      Py_DECREF(pair);
+      continue;
+    }
+    PyObject *val = PySequence_GetItem(pair, 1);
+    if (!val) {
+      Py_DECREF(key);
+      Py_DECREF(pair);
+      continue;
+    }
+
+    if (!PyInt_Check(key) || !PyFloat_Check(val)) {
+      Py_DECREF(val);
+      Py_DECREF(key);
+      Py_DECREF(pair);
+      continue;
+    }
+    
+    long keyval = PyInt_AsLong(key);
+    double valval = PyFloat_AsDouble(val);
+    
+    map[(size_t) keyval] = (Real) valval;
+    Py_DECREF(val);
+    Py_DECREF(key);
+    Py_DECREF(pair);
+  }
+
+  Py_DECREF(items);
+  items = NULL;
+  
+  try {
+
+    FunctionUtility::loadXFLT(ifl, map);
+
+  } catch(...) {
+
+    std::ostringstream err;
+    err << "unable to set XSPEC XFLT keywords for spectrum " << ifl;
+    PyErr_SetString( PyExc_RuntimeError, err.str().c_str() );
+    return NULL;
+
+  }
+
+  Py_RETURN_NONE;
+  
+}
+
 
 // for documentation
 #define SEEALSODOC "\nSee also\n--------\n"
@@ -1362,6 +1569,81 @@ static PyMethodDef XSpecMethods[] = {
             "change the evaluation of Xspec models.\n\n"
   },
 
+  { (char*)"clear_xsxflt", (PyCFunction)clear_xflt, METH_NOARGS,
+    (char*) "clear_xsxflt()\n\n"
+            "Clear the XFLT settings.\n"
+            SEEALSODOC
+            "get_xsxflt : Return the value of the given XFLT keyword.\n"
+            "get_xsxflt_count : Return the number of XFLT keywords for a spectrum.\n"
+            "set_xsxflt : Set the XFLT keywords for a spectrum.\n"
+            NOTESDOC
+            "This is indended to support models that require the XFLT\n"
+            "values for a dataset. It should not be used in general code\n"
+            "without a thorough understanding of how Sherpa handles the\n"
+            "XFLT keyword system used by the Xspec model library"
+  },
+  { (char*)"get_xsxflt_count", (PyCFunction)get_number_xflt, METH_VARARGS,
+    (char*) "get_xsxflt_count()\n\n"
+            "Return the number of XFLT keywords set for the given spectrum.\n"
+            PARAMETERSDOC
+            "ifl : int\n"
+            "   The XSpec identifier used for a spectrum.\n"
+            RETURNSDOC
+            "nkeys : int\n"
+            "   The number of XFLT keywords set for the dataset, or 0 if\n"
+            "   no keywords are set.\n"
+            SEEALSODOC
+            "clear_xsxflt : Clear the XFLT settings.\n"
+            "get_xsxflt : Return the value of the given XFLT keyword.\n"
+            "set_xsxflt : Set the XFLT keywords for a spectrum.\n"
+            NOTESDOC
+            "This is indended to support models that require the XFLT\n"
+            "values for a dataset. It should not be used in general code\n"
+            "without a thorough understanding of how Sherpa handles the\n"
+            "XFLT keyword system used by the Xspec model library"
+  },
+  { (char*)"get_xsxflt", (PyCFunction)get_xflt, METH_VARARGS,
+    (char*) "get_xsxflt()\n\n"
+            "Return the value of the given XFLT keyword.\n"
+            PARAMETERSDOC
+            "ifl : int\n"
+            "   The XSpec identifier used for a spectrum.\n"
+            "idx : int\n"
+            "   The XFLT identifier.\n"
+            RETURNSDOC
+            "value : number\n"
+            "   The value of XFLT keyword idx for the given spectrum.\n"
+            SEEALSODOC
+            "clear_xsxflt : Clear the XFLT settings.\n"
+            "get_xsxflt_count : Return the number of XFLT keywords for a spectrum.\n"
+            "set_xsxflt : Set the XFLT keywords for a spectrum.\n"
+            NOTESDOC
+            "This is indended to support models that require the XFLT\n"
+            "values for a dataset. It should not be used in general code\n"
+            "without a thorough understanding of how Sherpa handles the\n"
+            "XFLT keyword system used by the Xspec model library"
+  },
+  { (char*)"set_xsxflt", (PyCFunction)set_xflt, METH_VARARGS,
+    (char*) "set_xsxflt(ifl, dict)\n\n"
+            "Set the XFLT keywords for a spectrum.\n"
+            PARAMETERSDOC
+            "ifl : int\n"
+            "   The XSpec identifier used for a spectrum.\n"
+            "dict : dict_like\n"
+            "   The XFLT values to set: the key should be an integer\n"
+            "   value and the value a number (any pair which does not\n"
+            "   match this is skipped).\n"
+            SEEALSODOC
+            "clear_xsxflt : Clear the XFLT settings.\n"
+            "get_xsxflt : Return the value of the given XFLT keyword.\n"
+            "get_xsxflt_count : Return the number of XFLT keywords for a spectrum.\n"
+            NOTESDOC
+            "This is indended to support models that require the XFLT\n"
+            "values for a dataset. It should not be used in general code\n"
+            "without a thorough understanding of how Sherpa handles the\n"
+            "XFLT keyword system used by the Xspec model library"
+  },
+  
   XSPECMODELFCT_NORM( xsaped, 4 ),
   XSPECMODELFCT_NORM( xsbape, 5 ),
   XSPECMODELFCT_NORM( xsblbd, 2 ),

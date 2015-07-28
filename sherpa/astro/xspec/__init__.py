@@ -18,6 +18,7 @@
 #
 
 import string
+import re
 from sherpa.models import Parameter, ArithmeticModel, modelCacher1d
 from sherpa.models.parameter import hugeval
 import sherpa.astro.xspec._xspec
@@ -26,7 +27,7 @@ from sherpa.astro.utils import get_xspec_position
 from sherpa.astro.xspec._xspec import get_xschatter, get_xsabund, get_xscosmo, \
      get_xsxsect, set_xschatter, set_xsabund, set_xscosmo, set_xsxsect, \
      get_xsversion, get_xsmanager_path, get_xsmodel_path, \
-     set_xsmanager_path, set_xsmodel_path
+     set_xsmanager_path, set_xsmodel_path, clear_xsxflt
 
 # Wrap the XSET function in Python, so that we can keep a record of
 # the strings the user sent as specific XSPEC model strings (if any) during
@@ -124,6 +125,103 @@ def set_xsxset(name, value):
     if (get_xsxset(name) != ""):
         modelstrings[name] = get_xsxset(name)
 
+
+_xflt_pat = re.compile(r'^XFLT(\d\d\d\d)$', re.IGNORECASE)
+
+
+def set_xsxflt(spectrum, values):
+    """Set the XFLT values for a spectrum.
+
+    Parameters
+    ----------
+    spectrum : int
+       The spectrum index.
+    values : dict_like
+       The key,value pairs used to set the XFLT values are taken from
+       the keys that can be converted using ``int()``, or are a string
+       that match the pattern ``XFLT\d\d\d\d`` (case insensitive), that
+       have values which can be converted using ``float()``. Other items
+       are ignored. If there are multiple keys which convert to the same
+       integer value then one will be picked randomly (there is no
+       guarantee on the ordering). Integer values for the keys must
+       be in the range 0 to 9999 inclusive (the 0 may be changed to 1).
+
+    Notes
+    -----
+    This is indended to support models that require the XFLT
+    values for a dataset. It should not be used in general code
+    without a thorough understanding of how Sherpa handles the
+    XFLT keyword system used by the Xspec model library
+    """
+    d = {}
+    for key, val in values.items():
+        try:
+            key = int(key)
+        except (ValueError, TypeError):
+            match = _xflt_pat.match(str(key))
+            if match is None:
+                continue
+            key = int(match.group(1))
+
+        if key < 0 or key > 9999:
+            continue
+
+        try:
+            val = float(val)
+        except (ValueError, TypeError):
+            continue
+
+        d[key] = val
+
+    sherpa.astro.xspec._xspec.set_xsxflt(spectrum, d)
+
+
+def get_xsxflt(spectrum):
+    """Return the XFLT values for a spectrum.
+
+    Parameters
+    ----------
+    spectrum : int
+       The spectrum index.
+
+    Returns
+    -------
+    values : dictionary
+       The keys are integers and the values floats. If there are
+       no XFLT values for the spectrum the empty dictionary is
+       returned.
+
+    Notes
+    -----
+    Only keys in the range 0 to 9999 (inclusive) are returned.
+
+    This is indended to support models that require the XFLT
+    values for a dataset. It should not be used in general code
+    without a thorough understanding of how Sherpa handles the
+    XFLT keyword system used by the Xspec model library
+    """
+    # There's no easy way to do this, as far as I can tell,
+    # without accessing the map in the FunctionUtility class directly.
+    # The loop assumes that the keyword value is >= 0.
+    d = {}
+    n = sherpa.astro.xspec._xspec.get_xsxflt_count(spectrum)
+    i = -1
+    while len(d) < n:
+        i += 1
+        if i > 9999:
+            # TODO: add a warning message
+            break
+
+        try:
+            val = sherpa.astro.xspec._xspec.get_xsxflt(spectrum, i)
+        except RuntimeError:
+            continue
+
+        d[i] = val
+
+    return d
+
+
 # Provide XSPEC module state as a dictionary.  The "cosmo" state is
 # a 3-tuple, and "modelstrings" is a dictionary of model strings
 # applicable to certain models.  The abund and xsect settings are
@@ -158,6 +256,7 @@ __all__ = ('get_xschatter', 'get_xsabund', 'get_xscosmo', 'get_xsxsect',
            'set_xschatter', 'set_xsabund', 'set_xscosmo', 'set_xsxsect',
            'get_xsversion', 'set_xsxset', 'get_xsxset', 'set_xsstate',
            'get_xsstate')
+
 
 class XSModel(ArithmeticModel):
 
