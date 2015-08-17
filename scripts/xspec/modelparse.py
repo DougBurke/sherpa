@@ -18,13 +18,54 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-"""Create an interface to the Xspec model library.
+"""Routines related to creating and comparing interfaces to the
+Xspec model library.
 
 This module provides routines to parse the model.dat file - which
 is used by Xspec to define available models - and create code
 fragments needed by the Sherpa interface to this library.
 
+It can be imported or run directly - where there's "three" modes:
+
+   sherpa   - for creating the code fragments needed by the Sherpa
+              interface
+
+   test     - create C++ code that calls all the Xspec models (e.g.
+              to run by valgrind to check if any issues seen in Sherpa
+              are down to Xspec)
+
+   compare  - compare the Sherpa and Xspec models for differences
+
 It is *highly experimental*.
+
+Routines:
+
+* ``write_code``
+
+Create three "include" files based on an input model.dat file. These
+files contain the Python classes for each model, the "include" statements
+needed in the extern block of the C API, and the code needed to create
+the Python wrapper functions.
+
+There is *no* attempt to include these fragements into the build process.
+
+* ``get_models``
+
+Create a list of supported models from a model.dat file.
+
+* ``build_xspec_test``
+
+Print, to stdout, C code to test all the models in the model.dat file
+(the test just runs the code for a grid, with the default parameters
+of the model). This is intended to make it easy to do valgrind tests
+of the Xspec library itself so that we can see if any errors are added
+by any Sherpa code.
+
+* ``compare_to_sherpa``
+
+Print, to stdout, and differences between the Xspec models and those
+in the current Sherpa installation.
+
 """
 
 # OLD TODO ITEMS: STILL RELEVANT?
@@ -121,7 +162,7 @@ def convert_parname(modelname, parname):
     if name.endswith(')'):
         lpos = name.rfind('(')
         if lpos != -1:
-            name = name[:lpos] + "_" + name[lpos + 1:-1]
+            name = name[:lpos] + '_' + name[lpos + 1:-1]
 
     # Remove unsupported characters
     # name = "".join([t for t in name if t in valid_chars])
@@ -138,7 +179,7 @@ def convert_parname(modelname, parname):
     name = "".join(map(cconv, name))
 
     if name in ["break", "lambda", "type"]:
-        name += "_"
+        name += '_'
 
     return name
 
@@ -189,6 +230,7 @@ class ModelDefinition():
     The language field determines the interface type - e.g.
     Fortran, C, or C++. It is possible to have C code labelled
     as using the Fortran interface.
+
     """
 
     modeltype = None
@@ -208,25 +250,29 @@ class ModelDefinition():
         # This will probably need to be changed if mixing models
         # (mix or amx) are supported.
         #
-        # Originally I removed the "language tag" but for now leave
-        # back in.
+        # The full name is stored, as this is used as the name of
+        # the function to be called in Python, so that we can easily
+        # tell what Xspec interface it uses (e.g. with a C_ prefix)
+        # and the name to call from C++ scope is also stored.
         #
-        # Is it upper or lowercase f?
         if funcname.startswith('F_'):
             self.language = ModelLanguage.FORTRANDP_STYLE
-            # self.funcname = funcname[2:]
             self.funcname = funcname
+            self.callname = funcname[2:] + '_'  # TODO: is this correct?
         elif funcname.startswith('c_'):
             self.language = ModelLanguage.C_STYLE
-            # self.funcname = funcname[2:]
             self.funcname = funcname
+            self.callname = funcname[2:]
         elif funcname.startswith('C_'):
             self.language = ModelLanguage.CPP_STYLE
-            # self.funcname = funcname[2:]
             self.funcname = funcname
+            self.callname = funcname
+        elif funcname.startswith('f_'):
+            raise NotImplementedError("Found funcname={}".format(funcname))
         else:
             self.language = ModelLanguage.FORTRAN_STYLE
             self.funcname = funcname
+            self.callname = funcname + '_'
 
     def __str__(self):
         pars = "\n".join([str(p) for p in self.pars])
@@ -251,7 +297,6 @@ class AddModelDefinition(ModelDefinition):
     modeltype = "Add"
 
     def make_wrapper(self):
-        funcname = self.funcname
         if self.language in [ModelLanguage.FORTRAN_STYLE,
                              ModelLanguage.FORTRANDP_STYLE]:
             template = ""
@@ -259,7 +304,7 @@ class AddModelDefinition(ModelDefinition):
             template = "_C"
 
         return "XSPECMODELFCT{}_NORM( {}, {} )".format(template,
-                                                       funcname,
+                                                       self.callname,
                                                        len(self.pars))
 
 
@@ -270,7 +315,6 @@ class MulModelDefinition(ModelDefinition):
     modeltype = "Mul"
 
     def make_wrapper(self):
-        funcname = self.funcname
         if self.language in [ModelLanguage.FORTRAN_STYLE,
                              ModelLanguage.FORTRANDP_STYLE]:
             template = ""
@@ -278,10 +322,11 @@ class MulModelDefinition(ModelDefinition):
             template = "_C"
 
         return "XSPECMODELFCT{}( {}, {} )".format(template,
-                                                  funcname,
+                                                  self.callname,
                                                   len(self.pars))
 
 
+# The RGSXSRC model is written in C but uses the FORTRAN-style interface.
 class ConModelDefinition(ModelDefinition):
     """X-Spec convolution models. See
     http://heasarc.gsfc.nasa.gov/docs/software/lheasoft/xanadu/xspec/manual/Convolution.html
@@ -289,7 +334,13 @@ class ConModelDefinition(ModelDefinition):
     modeltype = "Con"
 
     def make_wrapper(self):
-        return "XSPECMODELFCT_C( {}, {} )".format(self.funcname,
+        template = ""
+        if self.language in [ModelLanguage.C_STYLE,
+                             ModelLanguage.CPP_STYLE]:
+            template = "_C"
+
+        return "XSPECMODELFCT{}( {}, {} )".format(template,
+                                                  self.callname,
                                                   len(self.pars))
 
 
@@ -903,8 +954,7 @@ def simple_wrap(modelname, modulename, mdl):
     t2 = ' ' * 8
     out = "class {}(XS{}):\n".format(mdl.clname, modelname)
     out += '{}"""The Xspec model {}"""\n'.format(t1, mdl.name)
-    # TODO: does modulename really need a _ added to it hee?
-    out += "{}_calc = _{}.{}\n".format(t1, modulename, mdl.funcname)
+    out += "{}_calc = _{}.{}\n".format(t1, modulename, mdl.callname)
 
     out += "\n"
     out += "{}def __init__(self, name='{}'):\n".format(t1, mdl.name)
@@ -1025,7 +1075,7 @@ def model_to_include(mdl):
 
     Parameters
     ----------
-    mdel : a ModelDefinition object
+    mdl : a ModelDefinition object
 
     Returns
     -------
@@ -1034,15 +1084,11 @@ def model_to_include(mdl):
        of the C/C++ API.
     """
 
-    funcname = mdl.funcname
-
     if mdl.language == ModelLanguage.FORTRAN_STYLE:
         args = _fortran_funcargs
-        funcname += "_"
 
     elif mdl.language == ModelLanguage.FORTRANDP_STYLE:
         args = _fortrandp_funcargs
-        funcname += "_"
 
     elif mdl.language == ModelLanguage.C_STYLE:
         args = _c_funcargs
@@ -1056,7 +1102,7 @@ def model_to_include(mdl):
         # TODO: provide a more informative error message
         raise ValueError("Unsupported language: {}".format(mdl.language))
 
-    return "void {}({});\n".format(funcname, args)
+    return "  void {}({});\n".format(mdl.callname, args)
 
 
 def model_to_wrap(mdl):
@@ -1138,6 +1184,49 @@ def make_code(modulename, mdls):
     return (pycode, inccode, wrapcode)
 
 
+def get_models(infile,
+               namefunc=add_xs_prefix,
+               nametranslate=convert_parname):
+    """Read in the models from the input file and remove unsupported ones.
+
+    Parameters
+    ----------
+    infile: str
+       The name of the Xspec model definition file to process
+       (should include path, expected to be called model.dat).
+    namefunc: optional
+       The namefunc routine takes the model name (taken from the
+       Xspec file) and returns the Python class name for the
+       model; at the least it should ensure the first character
+       is capitalized. The default is to prepend with XS, which
+       means that a user would create an instance of the model
+       foobar with xsfoobar.mdl, and the class would be called
+       XSfoobar.
+    nametranslate: optional
+       Used to convert from the Xspec name to a name that can be used
+       in Sherpa (i.e. matches Python naming rules).
+
+    Returns
+    -------
+    mdls : list of ModelDefinition
+       The supported models from infile. Can not be empty as
+       an error is raised if this is the case.
+
+    """
+
+    mdls = parse_model_file(infile,
+                            namefunc=namefunc,
+                            nametranslate=nametranslate)
+    if mdls == []:
+        raise IOError("No models read from {}".format(infile))
+
+    mdls = verify_models(mdls)
+    if mdls == []:
+        raise IOError("After cleaning, no models left in {}".format(infile))
+
+    return mdls
+
+
 def write_code(infile, filehead,
                modulename='xspec',
                namefunc=add_xs_prefix,
@@ -1168,15 +1257,8 @@ def write_code(infile, filehead,
        in Sherpa (i.e. matches Python naming rules).
     """
 
-    mdls = parse_model_file(infile,
-                            namefunc=namefunc,
-                            nametranslate=nametranslate)
-    if mdls == []:
-        raise IOError("No models read from {}".format(infile))
-
-    mdls = verify_models(mdls)
-    if mdls == []:
-        raise IOError("After cleaning, no models left in {}".format(infile))
+    mdls = get_models(infile, namefunc=namefunc,
+                      nametranslate=nametranslate)
 
     (pycode, dcode, mcode) = make_code(modulename, mdls)
 
@@ -1186,12 +1268,316 @@ def write_code(infile, filehead,
     print("Created: {}.py/declare/methoddef.incl".format(filehead))
 
 
+def model_to_params(mdl):
+    """Create C code to define and create the params for this model."""
+
+    if mdl.language == ModelLanguage.FORTRAN_STYLE:
+        dtype = "float"
+    else:
+        dtype = "double"
+
+    out = "{} {}_params[] = {{ ".format(dtype, mdl.name)
+
+    pars = mdl.pars
+    if isinstance(mdl, AddModelDefinition):
+        pars = pars[:-1]
+
+    pvals = []
+    for par in pars:
+        pvals.append(str(par.default))
+
+    out += ", ".join(pvals)
+    out += " };"
+    return out
+
+
+def model_to_call(mdl):
+    """The C code to call the model (directly)."""
+
+    out = "  eval_model"
+
+    if mdl.language == ModelLanguage.FORTRAN_STYLE:
+        out += "_f"
+    elif mdl.language == ModelLanguage.FORTRANDP_STYLE:
+        raise ValueError("Err: unexpected {} FORTRANDP".format(mdl.name))
+
+    out += "({}, {}_params);".format(mdl.callname, mdl.name)
+    out += " std::cout << \"Model: \" << "
+    out += "\"{}\" << std::endl;".format(mdl.name)
+    return out
+
+
+def build_xspec_test(modelfile):
+    """Print out a C++ file for doing simple valgrind tests of Xspec models.
+
+    Parameters
+    ----------
+    modelfile: str
+       The name of the file to process.
+
+    """
+
+    mdls = get_models(modelfile)
+
+    externs = ""
+    params = ""
+    calls = ""
+    for mdl in mdls:
+
+        if isinstance(mdl, ConModelDefinition):
+            # TODO: add in code to test these.
+            continue
+
+        externs += model_to_include(mdl) + "\n"
+        params += model_to_params(mdl) + "\n"
+        calls += model_to_call(mdl) + "\n"
+
+    out = """/*
+
+Compile with something like
+
+   g++ -o testit testit.cc -Wall -L$HEADAS/lib -lXSFunctions -lXSUtil \
+      -lXSModel -lXS -lwcs-4.20 -lCCfits_2.4 -lcfitsio_3.37 -lgfortran
+
+and then test with
+
+   valgrind testit
+
+*/
+
+#include <iostream>
+
+typedef double Real;
+
+typedef void (*cpp_model_ptr)(const double* energy, int nFlux, const double* params, int spectrumNumber, double* flux, double* fluxError, const char* initStr);
+
+typedef void (*f_model_ptr)(float* energy, int *nFlux, float* params, int *spectrumNumber, float* flux, float* fluxError);
+
+extern "C" {
+  void FNINIT();
+  char* FGSOLR();
+  char* FGXSCT();
+  void FPCHAT(int);
+
+  void csmpq0(float q0);
+  void csmph0(float H0);
+  void csmpl0(float lambda0);
+
+  int xs_getVersion(char *buffer, int buffSize);
+
+"""
+
+    out += externs
+    out += """
+}
+
+const int nbins = 990;
+
+void eval_model(cpp_model_ptr mfunc,
+                double *params) {
+
+  double energy[nbins+1];
+  double flux[nbins];
+  double fluxerr[nbins];
+  int i;
+
+  energy[0] = 0.1;
+  for (i=0; i < nbins; i++) {
+    energy[i+1] = energy[i] + 0.01;
+    flux[i] = 0.0;
+    fluxerr[i] = 0.0;
+  }
+
+  (*mfunc)(energy, nbins, params, 1, flux, fluxerr, "");
+
+}
+
+int nbins_f = nbins;
+
+void eval_model_f(f_model_ptr mfunc,
+                  float *params) {
+
+  float energy[nbins_f+1];
+  float flux[nbins_f];
+  float fluxerr[nbins_f];
+  int i;
+  int sp = 1;
+
+  energy[0] = 0.1;
+  for (i=0; i < nbins_f; i++) {
+    energy[i+1] = energy[i] + 0.01;
+    flux[i] = 0.0;
+    fluxerr[i] = 0.0;
+  }
+
+  (*mfunc)(energy, &nbins_f, params, &sp, flux, fluxerr);
+
+}
+
+"""
+
+    out += params
+    out += """
+
+int main(int argc ,char **argv) {
+
+  char version[100];
+
+  FNINIT();
+  xs_getVersion(version, 99);
+  std::cout << "X-Spec: " << version << std::endl;
+
+  std::cout << "** abundances   : " << FGSOLR() << std::endl;
+  std::cout << "** cross-section: " << FGXSCT() << std::endl;
+
+  FPCHAT(0);
+
+  csmph0( 70.0 );
+  csmpq0( 0.0 );
+  csmpl0( 0.73 );
+
+"""
+
+    out += calls
+    out += "\n  return 0;\n}\n"
+
+    print out
+
+
+def compare_pars(mdl, sherpa_model):
+    """Print out any differences in parameters between Sherpa and the model.
+
+    Parameters
+    ----------
+    mdl : a ModelDefinition object
+    sherpa_model : a XSModel instance
+
+    """
+
+    diffs = []
+
+    xspec_npars = len(mdl.pars)
+    sherpa_npars = len(sherpa_model.pars)
+    if xspec_npars != sherpa_npars:
+        args = xspec_npars, sherpa_npars
+        diffs.append("Npars does not agree: Xspec {}  Sherpa {}".format(*args))
+        # TODO: list the extra/missing parameters, but hard to do well
+        #       as it also depends on the names of parameters, so leave
+        #       until I find I need it
+
+    for i, (xpar, spar) in enumerate(zip(mdl.pars, sherpa_model.pars)):
+
+        def checkit(lbl, v1, v2):
+            # Xspec model has units=None; sherpa uses ''
+            if v1 == v2 or (v1 is None and v2 == '') or str(v1) == str(v2):
+                return
+
+            args = i + 1, lbl, v1, v2
+            diffs.append("Par #{} {}  Xspec/Sherpa={}  {}".format(*args))
+
+        checkit('Name', xpar.name, spar.name)
+        checkit('units', xpar.units, spar.units)
+        checkit('defval', xpar.default, spar.val)
+        checkit('softmin', xpar.softmin, spar.min)
+        checkit('softmax', xpar.softmax, spar.max)
+        checkit('hardmin', xpar.hardmin, spar.hard_min)
+        checkit('hardmax', xpar.hardmax, spar.hard_max)
+        if isinstance(xpar, SwitchParameterDefinition) or \
+           isinstance(xpar, ScaleParameterDefinition):
+            frozen = True
+        else:
+            frozen = xpar.frozen
+        checkit('Frozen', frozen, spar.frozen)
+
+    if diffs != []:
+        print("Differences in model {}  [{}]".format(mdl.name, mdl.modeltype))
+        for diff in diffs:
+            print(" - {}".format(diff))
+
+
+def compare_to_sherpa(modelfile):
+    """Print out any differences between sherpa and the models in the file.
+
+    Parameters
+    ----------
+    modelfile: str
+       The name of the file to process.
+
+    """
+
+    from sherpa.astro import xspec
+
+    sherpa_models = [m for m in dir(xspec) if m.startswith('XS') and \
+                     not m.endswith('Model')]
+
+    not_seen = set(sherpa_models)
+    mdls = get_models(modelfile)
+    for mdl in mdls:
+        mname = "XS{}".format(mdl.name)
+        if mname not in not_seen:
+            args = mdl.name, mdl.modeltype, len(mdl.pars)
+            print("Sherpa is missing model {}  [{}, npars={}]".format(*args))
+            continue
+
+        not_seen.remove(mname)
+
+        mname = "XS{}".format(mdl.name)
+        cls = getattr(xspec, mname)
+        sherpa_model = cls()
+
+        xspec_funcname = mdl.funcname
+        sherpa_funcname = sherpa_model._calc.__name__
+
+        if xspec_funcname != sherpa_funcname:
+            args = mdl.name, xspec_funcname, sherpa_funcname
+            print("Model {}  Xspec calls {} Sherpa calls {}".format(*args))
+
+        compare_pars(mdl, sherpa_model)
+
+    if len(not_seen) != 0:
+        print("\n-----\n")
+        print("Sherpa contains extra models: {}".format(not_seen))
+
+
+def _usage(progname):
+    """Write out usage information and exit."""
+
+    for msg in ["Usage: {} sherpa <model.dat> <outhead>".format(progname),
+                "       {} test <model.dat>".format(progname),
+                "       {} compare <model.dat>".format(progname)]:
+        sys.stderr.write(msg + "\n")
+
+    sys.exit(1)
+
 if __name__ == "__main__":
 
     import sys
-    if len(sys.argv) != 3:
-        sys.stderr.write("Usage: {} <model.dat> <outhead>\n".format(sys.argv[0]))
-        sys.exit(1)
+    pname = sys.argv[0]
+    nargs = len(sys.argv)
+    if nargs < 3:
+        _usage(sys.argv[0])
 
     logging.basicConfig(level=logging.INFO)
-    write_code(sys.argv[1], sys.argv[2])
+
+    mode = sys.argv[1]
+    modelfile = sys.argv[2]
+    if mode == 'sherpa':
+        if nargs != 4:
+            _usage(sys.argv[0])
+
+        write_code(modelfile, sys.argv[3])
+
+    elif mode == 'test':
+        if nargs != 3:
+            _usage(sys.argv[0])
+
+        build_xspec_test(modelfile)
+
+    elif mode == 'compare':
+        if nargs != 3:
+            _usage(sys.argv[0])
+
+        compare_to_sherpa(modelfile)
+
+    else:
+        _usage(sys.argv[0])
