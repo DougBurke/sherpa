@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 #
-#  Copyright (C) 2010, 2016  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2010, 2016, 2017  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -80,6 +80,103 @@ def modelCacher1d(func):
     return cache_model
 
 
+# TESTING: START
+
+import collections
+
+try:
+    # What is the best way to handle this?
+    from IPython.core.display import HTML
+except ImportError:
+    HTML = None
+
+
+def parameter_header_raw():
+    """Create a TR row for the header items."""
+
+    def th(n):
+        return "<th>{}</th>".format(n)
+
+    hdrs = [th(n) for n in
+            ["Component", "Name", "Frozen", "Value", "Min", "Max", "Units"]]
+    return "<tr class='parvals'>" + "".join(hdrs) + "</tr>"
+
+
+# TODO:
+#   Note that this code needs to be extended to support properly displaying
+#   linked parameters.
+#
+def par_to_tr_raw(par, bgcol=False, cptcount=1, newcpt=False):
+    """Convert a parameter to a TR.
+
+    If bgcol is set True then the model class will be added to the tr
+    component (bad parameter name).
+
+    The cptcount argument gives the number of parameters there are
+    for this component and newcpt is True if it is the first
+    parameter of the component.
+    """
+
+    def td(n, cname=None):
+        ostr = "<td"
+        if cname is not None:
+            ostr += " class='{}'".format(cname)
+        if newcpt and cptcount > 1 and n == "modelname":
+            ostr += " rowspan='{}'".format(cptcount)
+        return ostr + ">{}</td>".format(getattr(par, n))
+
+    out = "<tr"
+    if bgcol:
+        out += " class='model'"
+    out += ">"
+
+    attrs = ["name", "frozen", "val", "min", "max", "units"]
+    if newcpt:
+        attrs.insert(0, "modelname")
+
+    for n in attrs:
+        if n == "val" and (par.val <= par.min or par.val >= par.max):
+            cname = "atbounds"
+        else:
+            cname = None
+        out += td(n, cname=cname)
+    out += "</tr>"
+    return out
+
+
+def model_to_html_raw(mdl):
+    """Create HTML display for a model (raw)"""
+    def clean(s):
+        if s.startswith("(") and s.endswith(")"):
+            return s[1:-1]
+        else:
+            return s
+
+    out = "<table class='model'><caption>" + clean(mdl.name) + "</caption>"
+    out += parameter_header_raw()
+
+    ctr = collections.Counter([p.modelname for p in mdl.pars])
+
+    # have decided to highlight frozen parameters rather than
+    # different components
+    curmodel = None
+    # bgcol = True
+    for par in mdl.pars:
+        # if par.modelname != curmodel:
+        #     bgcol = not bgcol
+        #     curmodel = par.modelname
+        bgcol = par.frozen
+        out += par_to_tr_raw(par, bgcol=bgcol,
+                             cptcount=ctr[par.modelname],
+                             newcpt=par.modelname != curmodel)
+        curmodel = par.modelname
+
+    out += "</table>"
+    return out
+
+# TESTING: END
+
+
 class Model(NoNewAttributesAfterInit):
 
     def __init__(self, name, pars=()):
@@ -115,6 +212,15 @@ class Model(NoNewAttributesAfterInit):
                 s += ('\n   %-12s %-6s %12g %12g %12g %10s' %
                       (p.fullname, tp, p.val, p.min, p.max, p.units))
         return s
+
+    def _repr_html_(self):
+        return model_to_html_raw(self)
+
+    # QUS: should HTML be applied to to_html or _repr_html?
+    @property
+    def to_html(self):
+        """Return a HTML representation of the model"""
+        return HTML(self._repr_html_())
 
     # This allows all models to be used in iteration contexts, whether or
     # not they're composite
