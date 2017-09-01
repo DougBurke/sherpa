@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2010, 2016  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2010, 2016, 2017  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -318,6 +318,8 @@ class ModelErr(SherpaErr):
             'filtermismatch': "Mismatch between %s and %s",
             'nobkg': 'background model %s for data set %s has not been set',
             'norsp': 'No background response found for background %s in data set %s',
+            'nogrid': 'There is no grid on which to evaluate the model',
+            'needspoint': 'A non-integrated grid is required for model evaluation',
             }
 
     def __init__(self, key, *args):
