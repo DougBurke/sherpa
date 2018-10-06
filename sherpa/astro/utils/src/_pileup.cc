@@ -1,5 +1,5 @@
 // 
-//  Copyright (C) 2009  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2009, 2018  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -123,7 +123,7 @@ static PyObject* _apply_pileup( PyObject* self, PyObject* args )
     return NULL;
   }
 
-  std::auto_ptr< sherpa::PyWrapper >
+  std::unique_ptr< sherpa::PyWrapper >
     wrapper( new sherpa::PyWrapper( py_function ) );
 
   DoubleArray results;
