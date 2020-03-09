@@ -534,7 +534,7 @@ def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
 
         for i, (pmin, pmax) in enumerate(zip(mysoftmins, mysoftmaxs), 1):
             parvals = mysamples[:, i]
-            tmp = (parvals > pmin) & (parvals < pmax)
+            tmp = (parvals >= pmin) & (parvals <= pmax)
             mysamples = mysamples[tmp]
 
         return mysamples
