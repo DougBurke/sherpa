@@ -63,6 +63,7 @@ def modelCacher1d(func):
             token = b''.join(data)
             digest = hashlib.sha256(token).digest()
             if digest in cache:
+                cache['hits'] += 1
                 return cache[digest].copy()
 
         vals = func(cls, pars, xlo, *args, **kwargs)
@@ -74,6 +75,7 @@ def modelCacher1d(func):
 
             # append newest model values to queue
             queue.append(digest)
+            cache['misses'] += 1
             cache[digest] = vals.copy()
 
         return vals
@@ -411,6 +413,13 @@ class CompositeModel(Model):
     def teardown(self):
         pass
 
+    def _cache_status(self):
+        for p in self.parts:
+            try:
+                p._cache_status()
+            except AttributeError:
+                pass
+
 
 class SimulFitModel(CompositeModel):
     """Store multiple models.
@@ -505,8 +514,15 @@ class ArithmeticModel(Model):
         self.cache = 5
         self._use_caching = True  # FIXME: reduce number of variables?
         self._queue = ['']
-        self._cache = {}
+        self._cache = {'hits': 0, 'misses': 0}
         Model.__init__(self, name, pars)
+
+    def _cache_status(self):
+        c = self._cache
+        print(" {:30s}  size: {:4d}  hits: {:5d}  misses: {:5d}".format(self.name,
+                                                                        len(self._queue),
+                                                                        c['hits'],
+                                                                        c['misses']))
 
     # Unary operations
     __neg__ = _make_unop(numpy.negative, '-')
@@ -532,7 +548,7 @@ class ArithmeticModel(Model):
             self.__dict__['_queue'] = ['']
 
         if '_cache' not in state:
-            self.__dict__['_cache'] = {}
+            self.__dict__['_cache'] = {'hits': 0, 'misses': 0}
 
         if 'cache' not in state:
             self.__dict__['cache'] = 5
@@ -541,8 +557,9 @@ class ArithmeticModel(Model):
         return FilterModel(self, filter)
 
     def startup(self, cache):
+        # NOTE: this resets the existing cache
         self._queue = ['']
-        self._cache = {}
+        self._cache = {'hits': 0, 'misses': 0}
         self._use_caching = cache
         if int(self.cache) > 0:
             self._queue = [''] * int(self.cache)
