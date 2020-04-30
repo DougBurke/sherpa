@@ -589,8 +589,7 @@ def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
                 par.set(parval)
 
             iflx[nn] = calc_energy_flux(data, modelcomponent, lo=lo, hi=hi)
-
-            mystat.append(session.calc_stat(id))
+            mystat.append(fit.calc_stat())
 
         logger.setLevel(orig_log_level)
 
