@@ -572,9 +572,11 @@ def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
         for nn in range(size):
             session.set_source(id, orig_source)
             oflx[nn] = mysim[nn, 0]
+
             for ii in range(len(thawedpars)):
                 val = mysim[nn, ii + 1]
-                session.set_par(thawedpars[ii].fullname, val)
+                thawedpars[ii].set(val)
+
             session.set_source(id, modelcomponent)
             iflx[nn] = session.calc_energy_flux(lo=lo, hi=hi, id=id)
             #####################################
