@@ -527,7 +527,7 @@ def sample_flux(fit, data, src,
     return numpy.concatenate((vals, numpy.expand_dims(clipped, 1)), axis=1)
 
 
-def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
+def calc_sample_flux(lo, hi, fit, data, samples, modelcomponent,
                      confidence):
 
     thawedpars = [par for par in fit.model.pars if not par.frozen]
