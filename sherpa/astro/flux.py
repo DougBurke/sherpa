@@ -530,14 +530,33 @@ def sample_flux(fit, data, src,
 def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
                      confidence):
 
-    def simulated_pars_within_ranges(mysamples, mysoftmins, mysoftmaxs):
+    thawedpars = [par for par in fit.model.pars if not par.frozen]
 
-        for i, (pmin, pmax) in enumerate(zip(mysoftmins, mysoftmaxs), 1):
-            parvals = mysamples[:, i]
-            tmp = (parvals >= pmin) & (parvals <= pmax)
-            mysamples = mysamples[tmp]
+    # Check the number of free parameters agrees with the samples argument,
+    # noting that each row in samples is <flux> + <free pars>. This is
+    # a requirement for calling this routine, so is just handled as an
+    # assert (as this is not intended for a user-level routine)
+    #
+    # Note: due to changes to sample_energy_flux the number of parameters is
+    #       now two less
+    nthawed = len(thawedpars)
+    npars = samples.shape[1] - 2
+    assert nthawed == npars, (nthawed, npars)
 
-        return mysamples
+    # Remove any row where a parameter lies outside the min/max range
+    softmins = fit.model.thawedparmins
+    softmaxs = fit.model.thawedparmaxes
+
+    # We have to use columns 1 to n-1 of samples
+    valid = numpy.ones(samples.shape[0], dtype=numpy.bool)
+    for col, pmin, pmax in zip(samples.T[1:-1], softmins, softmaxs):
+        valid &= (col >= pmin) & (col <= pmax)
+
+    mysim = samples[valid]
+
+    size = len(mysim[:, 0])
+    oflx = numpy.zeros(size)  # observed/absorbed flux
+    iflx = numpy.zeros(size)  # intrinsic/unabsorbed flux
 
     #
     # For later restoration
@@ -550,32 +569,26 @@ def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
     logger = logging.getLogger("sherpa")
     orig_log_level = logger.level
 
-    # only change the log level if it is less than error
+    # In the unlikely case the user has set logging to something
+    # higher than ERROR, do not over-write this during the
+    # loop below
     #
     if orig_log_level < logging.ERROR:
-        logger.setLevel(logging.ERROR)
+        log_level = logging.ERROR
+    else:
+        log_level = orig_log_level
 
     try:
 
-        softmins = fit.model.thawedparmins
-        softmaxs = fit.model.thawedparmaxes
-        mysim = simulated_pars_within_ranges(samples, softmins, softmaxs)
-
-        size = len(mysim[:, 0])
-        oflx = numpy.zeros(size)  # observed/absorbed flux
-        iflx = numpy.zeros(size)  # intrinsic/unabsorbed flux
-        thawedpars = [par for par in fit.model.pars if not par.frozen]
-
-        logger.setLevel(logging.ERROR)
+        logger.setLevel(log_level)
 
         mystat = []
         for nn in range(size):
             session.set_source(id, orig_source)
             oflx[nn] = mysim[nn, 0]
 
-            for ii in range(len(thawedpars)):
-                val = mysim[nn, ii + 1]
-                thawedpars[ii].set(val)
+            for par, parval in zip(thawedpars, mysim[nn, 1:]):
+                par.set(parval)
 
             session.set_source(id, modelcomponent)
             iflx[nn] = session.calc_energy_flux(lo=lo, hi=hi, id=id)
@@ -590,7 +603,10 @@ def calc_sample_flux(id, lo, hi, session, fit, data, samples, modelcomponent,
 
         # Why do we set both full_model and source here?
         #
-        logger.setLevel(logging.ERROR)
+        # Note that calling set_full_model will result in a WARN-level
+        # message, which is why the logging-level is changed here briefly.
+        #
+        logger.setLevel(log_level)
         session.set_full_model(id, orig_model)
         fit.model.thawedpars = orig_model_vals
         session.set_source(id, orig_source)
