@@ -75,8 +75,8 @@ def test_regrid_name_combined():
 
 @requires_xspec
 @pytest.mark.parametrize("mname", ["wabs", "powerlaw"])
-def test_regrid_does_not_require_bins(mname):
-    """The regrid method does not require lo,hi bins but running it does"""
+def test_regrid_requires_bins(mname):
+    """The regrid method requires lo,hi bins"""
 
     from sherpa.astro import xspec
 
@@ -84,12 +84,12 @@ def test_regrid_does_not_require_bins(mname):
 
     cls = getattr(xspec, 'XS{}'.format(mname))
     mdl = cls('base')
-    regrid = mdl.regrid(ebase)
 
-    with pytest.raises(TypeError) as exc:
-        regrid([0.4, 0.5, 0.6])
+    with pytest.raises(ModelErr) as exc:
+        mdl.regrid(ebase)
 
-    assert str(exc.value) == 'calc() requires pars,lo,hi arguments, sent 2 arguments'
+    emsg = 'A non-overlapping integrated grid is required for model evaluation'
+    assert str(exc.value).startswith(emsg)
 
 
 @pytest.mark.xfail
@@ -113,7 +113,6 @@ def test_regrid_table_requires_bins(make_data_path):
     assert str(exc.value).startswith(emsg)
 
 
-@pytest.mark.xfail
 @requires_xspec
 @pytest.mark.parametrize("mname", ["wabs", "powerlaw"])
 def test_regrid_identity(mname):
@@ -134,7 +133,6 @@ def test_regrid_identity(mname):
     assert y2 == pytest.approx(y1)
 
 
-@pytest.mark.xfail
 @requires_xspec
 def test_regrid_identity_combined():
     """Check regrid returns the same data when grids are equal"""
@@ -158,7 +156,6 @@ def test_regrid_identity_combined():
     assert y2 == pytest.approx(y1)
 
 
-@pytest.mark.xfail
 @requires_xspec
 def test_additive():
     """Simple test of an additive model"""
@@ -198,9 +195,9 @@ ans_high = np.asarray([4.08219945, 3.92207132, 3.7740328, 3.63676442,
 
 @requires_xspec
 @pytest.mark.parametrize("egrid,yexp",
-                         [pytest.param(overlap_none, ans_none, marks=pytest.mark.xfail),
-                          pytest.param(overlap_low, ans_low, marks=pytest.mark.xfail),
-                          pytest.param(overlap_high, ans_high, marks=pytest.mark.xfail)
+                         [(overlap_none, ans_none),
+                          (overlap_low, ans_low),
+                          (overlap_high, ans_high)
                          ])
 def test_additive_overlap(egrid, yexp):
     """Simple test of an additive model.
@@ -236,7 +233,6 @@ def test_additive_overlap(egrid, yexp):
 #   0.275-0.325
 #
 
-@pytest.mark.xfail
 @requires_xspec
 def test_multiplicative():
     """Simple test of a multiplicative model"""
@@ -270,8 +266,8 @@ ans2_high = np.asarray([0.7984249, 0.84757835, 0.8698429, 0, 0, 0])
 @requires_xspec
 @pytest.mark.parametrize("egrid,yexp",
                          [(overlap_none, ans_none),
-                          pytest.param(overlap2_low, ans2_low, marks=pytest.mark.xfail),
-                          pytest.param(overlap2_high, ans2_high, marks=pytest.mark.xfail)
+                          (overlap2_low, ans2_low),
+                          (overlap2_high, ans2_high)
                          ])
 def test_multiplicative_overlap(egrid, yexp):
     """Simple test of a multiplicative model
@@ -297,8 +293,8 @@ def test_multiplicative_overlap(egrid, yexp):
 @pytest.mark.parametrize("name1,par1,val1,name2,par2,val2",
                          [pytest.param('wabs', 'nh', 0.05,
                                        'powerlaw', 'norm', 100, marks=pytest.mark.xfail),
-                          pytest.param('powerlaw', 'norm', 100,
-                                       'wabs', 'nh', 0.05, marks=pytest.mark.xfail)])
+                          ('powerlaw', 'norm', 100,
+                           'wabs', 'nh', 0.05)])
 def test_combined(name1, par1, val1, name2, par2, val2):
     """Simple test of an additive model * multiplicative model
 
@@ -326,7 +322,6 @@ def test_combined(name1, par1, val1, name2, par2, val2):
     assert y2 == pytest.approx(y1, rel=0.04)
 
 
-@pytest.mark.xfail
 @requires_xspec
 @pytest.mark.parametrize("name,par,val",
                          [('wabs', 'nh', 0.05),
@@ -350,7 +345,6 @@ def test_combined_arithmetic_left(name, par, val):
     assert y1 == pytest.approx(yexp, rel=0.04)
 
 
-@pytest.mark.xfail
 @requires_xspec
 @pytest.mark.parametrize("name,par,val",
                          [('wabs', 'nh', 0.05),
@@ -416,7 +410,6 @@ def test_multi_combined_multiplicative():
     regrid = mdl.regrid(ebase[:-1], ebase[1:])
 
 
-@pytest.mark.xfail
 @requires_xspec
 @pytest.mark.parametrize('sherpa_first', [True, False])
 def test_sherpa_mul_xspec_add(sherpa_first):
@@ -452,7 +445,7 @@ def test_sherpa_mul_xspec_add(sherpa_first):
 
 
 @requires_xspec
-@pytest.mark.parametrize('sherpa_first', [pytest.param(True, marks=pytest.mark.xfail), pytest.param(False, marks=pytest.mark.xfail)])
+@pytest.mark.parametrize('sherpa_first', [True, pytest.param(False, marks=pytest.mark.xfail)])
 def test_sherpa_add_xspec_mul(sherpa_first):
     """Check sherpa (additive) * xspec (multiplicative)"""
 

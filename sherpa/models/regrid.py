@@ -27,6 +27,8 @@ data - e.g. a larger grid, since the convolution will account
 for signal outside the data range - and then be regridded to
 match the desired grid.
 """
+
+import logging
 import warnings
 
 import numpy as np
@@ -36,7 +38,6 @@ from sherpa.utils.akima import akima
 from sherpa.astro.utils import reshape_2d_arrays
 from sherpa.utils.err import ModelErr
 
-import logging
 warning = logging.getLogger(__name__).warning
 
 
