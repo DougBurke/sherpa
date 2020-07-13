@@ -169,7 +169,8 @@ class ParameterScaleVector(ParameterScale):
 
             covar = Covariance()
             covar.config['sigma'] = self.sigma
-            fit.estmethod = Covariance()
+            covar.config.update(est_method_args)
+            fit.estmethod = covar
 
             try:
                 r = fit.est_errors()
@@ -187,6 +188,7 @@ class ParameterScaleVector(ParameterScale):
 
                     conf = Confidence()
                     conf.config['sigma'] = self.sigma
+                    conf.config.update(est_method_args)
                     fit.estmethod = conf
                     try:
                         t = fit.est_errors(parlist=(par,))
@@ -253,6 +255,7 @@ class ParameterScaleMatrix(ParameterScale):
         if myscales is None:
             oldestmethod = fit.estmethod
             fit.estmethod = Covariance()
+            fit.estmethod.config.update(est_method_args)
 
             try:
                 r = fit.est_errors()
@@ -418,7 +421,7 @@ class UniformParameterSampleFromScaleVector(ParameterSampleFromScaleVector):
 
         """
         vals = numpy.array(fit.model.thawedpars)
-        scales = self.scale.get_scales(fit)
+        scales = self.scale.get_scales(fit, est_method_args=est_method_args)
         samples = [numpy.random.uniform(val - factor * abs(scale),
                                         val + factor * abs(scale),
                                         int(num)) for val, scale in zip(vals, scales)]
@@ -457,7 +460,7 @@ class NormalParameterSampleFromScaleVector(ParameterSampleFromScaleVector):
 
         """
         vals = numpy.array(fit.model.thawedpars)
-        scales = self.scale.get_scales(fit, myscales)
+        scales = self.scale.get_scales(fit, myscales, est_method_args=est_method_args)
         samples = [numpy.random.normal(
             val, scale, int(num)) for val, scale in zip(vals, scales)]
         return numpy.asarray(samples).T
@@ -495,7 +498,7 @@ class NormalParameterSampleFromScaleMatrix(ParameterSampleFromScaleMatrix):
 
         """
         vals = numpy.array(fit.model.thawedpars)
-        cov = self.scale.get_scales(fit, mycov)
+        cov = self.scale.get_scales(fit, mycov, est_method_args=None)  # TODO: should this be 'est_method_args' and not 'None'?
         return numpy.random.multivariate_normal(vals, cov, int(num))
 
 
@@ -530,7 +533,7 @@ class StudentTParameterSampleFromScaleMatrix(ParameterSampleFromScaleMatrix):
 
         """
         vals = numpy.array(fit.model.thawedpars)
-        cov = self.scale.get_scales(fit)
+        cov = self.scale.get_scales(fit, est_method_args=est_method_args)
         return multivariate_t(vals, cov, dof, int(num))
 
 
