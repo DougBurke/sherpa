@@ -83,7 +83,7 @@ from sherpa.models import ArithmeticModel, ArithmeticFunctionModel, \
 from sherpa.models.parameter import hugeval
 
 from sherpa.utils import guess_amplitude, param_apply_limits, bool_cast
-from sherpa.utils.err import ParameterErr
+from sherpa.utils.err import ModelErr, ParameterErr
 from sherpa.astro.utils import get_xspec_position
 
 from .utils import ModelMeta, version_at_least, equal_or_greater_than
@@ -841,9 +841,34 @@ class XSModel(RegriddableModel1D, metaclass=ModelMeta):
     represents the upper edge of the last bin. This means that for
     an input grid of ``n`` points, the returned array will contain
     ``n`` values, but the last element will be zero.
+
+    The ``integrate`` setting is fixed for XSPEC models: it is set to
+    ``True`` for Additive models and ``False`` for Multiplicative
+    models. It is not clear what to do for convolution models, so they
+    are currently set to ``True``. Note that the model evaluation
+    proceeds as described above whatever the integrate setting, as
+    this setting is used by the RegriddableModel1D class to
+    determine how to rebin data.
+
     """
 
     version_enabled = True
+
+    @property
+    def integrate(self):
+        return self._integrate
+
+    @integrate.setter
+    def integrate(self, newval):
+        try:
+            oldval = self._integrate
+        except AttributeError:
+            self._integrate = newval
+            return
+
+        if oldval != newval:
+            raise ModelErr("Unable to change integrate setting " +
+                           "of {}".format(self.name))
 
     @modelCacher1d
     def calc(self, *args, **kwargs):
@@ -965,6 +990,11 @@ class XSTableModel(XSModel):
 
         XSModel.__init__(self, name, pars)
 
+        # The integrate setting is the same as the addmodel parameter
+        # (need to change after XSModel has been called).
+        #
+        self._integrate = addmodel
+
     def fold(*args, **kwargs):
         pass
 
@@ -1010,6 +1040,10 @@ class XSAdditiveModel(XSModel):
 
     """
 
+    def __init__(self, name, pars):
+        super().__init__(name, pars)
+        self._integrate = True
+
     def guess(self, dep, *args, **kwargs):
         if hasattr(self, 'norm'):
             norm = guess_amplitude(dep, *args)
@@ -1028,7 +1062,9 @@ class XSMultiplicativeModel(XSModel):
 
     """
 
-    pass
+    def __init__(self, name, pars):
+        super().__init__(name, pars)
+        self._integrate = False
 
 
 class XSConvolutionKernel(XSModel):
@@ -1105,6 +1141,10 @@ class XSConvolutionKernel(XSModel):
     >>> pl.norm.freeze()
 
     """
+
+    def __init__(self, name, pars):
+        super().__init__(name, pars)
+        self._integrate = True
 
     def __repr__(self):
         return "<{} kernel instance '{}'>".format(type(self).__name__,
@@ -1242,6 +1282,7 @@ class XSConvolutionModel(CompositeModel, XSModel):
     def __init__(self, model, wrapper):
         self.model = self.wrapobj(model)
         self.wrapper = wrapper
+        self._integrate = True
         CompositeModel.__init__(self,
                                 "{}({})".format(self.wrapper.name,
                                                 self.model.name),
