@@ -1377,6 +1377,8 @@ class XSConvolutionModel(CompositeModel, XSModel):
                                  *args, **kwargs)
 
 
+# Models
+
 @version_at_least("12.10.1")
 class XSagnsed(XSAdditiveModel):
     """The XSPEC agnsed model: AGN SED model

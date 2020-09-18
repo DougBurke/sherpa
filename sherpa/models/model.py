@@ -672,6 +672,86 @@ class UnaryOpModel(CompositeModel, ArithmeticModel):
         return self.op(self.arg.calc(p, *args, **kwargs))
 
 
+def find_regrid_binop(lmod, rmod):
+    """What is the regrid method and integration status for the model?
+
+    Parameters
+    ----------
+    mod - Model instance
+
+    Returns
+    -------
+    flag, regrid
+        The integrate setting for this model and the regrid
+        class method (not instance method).
+    """
+
+    lflag, lregrid = find_regrid(lmod)
+    rflag, rregrid = find_regrid(rmod)
+
+    # If one side has no information then we use the other side.
+    #
+    if lregrid is None:
+        return rflag, rregrid
+
+    if rregrid is None:
+        return lflag, lregrid
+
+    flag = lflag or rflag
+    if not flag:
+        # both have integrate=False so can use either regrid
+        return False, lregrid
+
+    # We chose the side which has the integrate flag set.
+    #
+    if lflag:
+        return True, lregrid
+
+    return True, rregrid
+
+
+def find_regrid(mod):
+    """What is the regrid method and integration status for the model?
+
+    Parameters
+    ----------
+    mod - Model instance
+
+    Returns
+    -------
+    flag, regrid
+        The integrate setting for this model and the regrid
+        class method (not instance method).
+    """
+
+    if isinstance(mod, BinaryOpModel):
+        return find_regrid_binop(mod.lhs, mod.rhs)
+
+    # handle a single model (including UnaryOpModel)
+    #
+    try:
+        flag = mod.integrate
+    except AttributeError:
+        flag = None
+
+    try:
+        regrid = mod.__class__.regrid
+    except AttributeError:
+        regrid = None
+
+    # We are not guaranteed that if one is None, both are, but it
+    # feels like they should have the same meaning, so let's test
+    # this.
+    #
+    if flag is None and regrid is not None:
+        raise ModelErr("Unexpected model (no integrate setting): {}".format(type(mod)))
+
+    if flag is not None and regrid is None:
+        raise ModelErr("Unexpected model (no regrid setting): {}".format(type(mod)))
+
+    return flag, regrid
+
+
 class BinaryOpModel(CompositeModel, RegriddableModel):
 
     @staticmethod
@@ -698,14 +778,11 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
                                 (self.lhs, self.rhs))
 
     def regrid(self, *args, **kwargs):
-        for part in self.parts:
-            # ArithmeticConstantModel does not support regrid by design
-            if not hasattr(part, 'regrid'):
-                continue
-            # The full model expression must be used
-            return part.__class__.regrid(self, *args, **kwargs)
-        raise ModelErr('Neither component supports regrid method')
-    
+        _, regrid = find_regrid_binop(self.lhs, self.rhs)
+        if regrid is None:
+            raise ModelErr("No regrid support for {}".format(self.name))
+        return regrid(self, *args, **kwargs)
+
     def startup(self, cache=False):
         self.lhs.startup(cache)
         self.rhs.startup(cache)
