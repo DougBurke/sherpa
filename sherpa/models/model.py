@@ -650,6 +650,13 @@ class UnaryOpModel(CompositeModel, ArithmeticModel):
     def __init__(self, arg, op, opstr):
         self.arg = arg
         self.op = op
+
+        # Copy the integrate setting, if available
+        try:
+            self.integrate = arg.integrate
+        except AttributeError:
+            pass
+
         CompositeModel.__init__(self, ('%s(%s)' % (opstr, self.arg.name)),
                                 (self.arg,))
 
@@ -669,6 +676,13 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
         self.lhs = self.wrapobj(lhs)
         self.rhs = self.wrapobj(rhs)
         self.op = op
+
+        # Copy the integrate setting, if meaningful.
+        try:
+            if lhs.integrate == rhs.integrate:
+                self.integrate = lhs.integrate
+        except AttributeError:
+            pass
 
         CompositeModel.__init__(self,
                                 ('(%s %s %s)' %

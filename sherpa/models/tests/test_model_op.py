@@ -275,3 +275,70 @@ def test_load_table_model(make_data_path):
     s.load_table_model('tbl', make_data_path('double.dat'))
     tbl = s.get_model_component('tbl')
     assert tbl.ndim is None
+
+
+@pytest.mark.parametrize("flag", [True, False])
+def test_unop_integrate(flag):
+    """Is the integrate flag carried over"""
+
+    mdl = basic.Const1D()
+    mdl.integrate = flag
+
+    umdl = -mdl
+    assert umdl.integrate == flag
+
+
+def test_unop_integrate_unset():
+    """Is the integrate flag not set for an unary op model"""
+
+    # I want to use ArithmeticConstantModel for this, as it has
+    # no integrate setting, but we have not set up operators
+    # for the unary op model, which means we have to use a
+    # binary op model (which creates ArithmeticConstant models
+    # for us).
+    #
+    mdl = BinaryOpModel(4, 4, np.add, '+')
+    umdl = -mdl
+
+    with pytest.raises(AttributeError):
+        umdl.integrate
+
+
+@pytest.mark.parametrize("flag", [True, False])
+def test_binop_integrate_same(flag):
+    """Is the integrate flag carried over when the same"""
+
+    mdl1 = basic.Const1D()
+    mdl1.integrate = flag
+
+    mdl2 = basic.Const1D()
+    mdl2.integrate = flag
+
+    mdl = mdl1 + mdl2
+    assert mdl.integrate == flag
+
+
+@pytest.mark.parametrize("flag", [True, False])
+def test_binop_integrate_different(flag):
+    """Is the integrate flag not carried over when different"""
+
+    mdl1 = basic.Const1D()
+    mdl1.integrate = flag
+
+    mdl2 = basic.Const1D()
+    mdl2.integrate = not flag
+
+    mdl = mdl1 + mdl2
+    with pytest.raises(AttributeError):
+        mdl.integrate
+
+
+def test_binop_integrate_unset():
+    """Is the integrate flag not set for a binary op model"""
+
+    # The ArithmeticConstantModel, which the binary-op model casts
+    # the constant terms, has no integrate setting.
+    #
+    mdl = BinaryOpModel(4, 4, np.add, '+')
+    with pytest.raises(AttributeError):
+        mdl.integrate
