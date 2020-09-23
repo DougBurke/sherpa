@@ -32,7 +32,8 @@ import pytest
 
 from sherpa.astro import ui
 from sherpa.utils import poisson_noise
-from sherpa.utils.err import ArgumentTypeErr, DataErr
+from sherpa.utils.err import ArgumentTypeErr, DataErr, StatErr
+from sherpa.utils.testing import requires_data, requires_fits
 
 
 # This is part of #397
@@ -219,3 +220,31 @@ def test_save_xxx_nodata(func, emsg, bid):
         func("temp-file-that-should-not-be-created", bkg_id=bid)
 
     assert str(exc.value) == emsg
+
+
+@requires_fits
+@requires_data
+def test_wstat_errors_data1d(clean_astro_ui, make_data_path):
+    """Check we error out with a mixture of data.
+
+    This was hit during some test that needed a clean_astro_ui
+    fixture, so I just wanted to make sure we ran a similar
+    test.
+    """
+
+    infile = make_data_path('3c273.pi')
+    ui.load_pha(infile)
+
+    x = np.asarray([1, 2, 3])
+    y = np.asarray([2, 0, 4])
+    ui.load_arrays(2, x, y)
+
+    ui.set_source(ui.powlaw1d.m1)
+    ui.set_source(2, ui.polynom1d.m2)
+
+    ui.set_stat('wstat')
+
+    with pytest.raises(StatErr) as exc:
+        ui.get_stat_info()
+
+    assert str(exc.value) == 'No background data has been supplied. Use cstat'
