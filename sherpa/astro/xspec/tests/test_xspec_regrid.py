@@ -92,7 +92,6 @@ def test_regrid_requires_bins(mname):
     assert str(exc.value).startswith(emsg)
 
 
-@pytest.mark.xfail
 @requires_data
 @requires_fits
 @requires_xspec
@@ -482,7 +481,7 @@ def test_sherpa_add_xspec_mul(sherpa_first):
 @requires_xspec
 @pytest.mark.parametrize('name,iflag,tol',
                          [('xspec-tablemodel-RCS.mod', True, 1e-6),
-                          pytest.param('testpcfabs.mod', False, 1e-3, marks=pytest.mark.xfail)])
+                          ('testpcfabs.mod', False, 1e-3)])
 def test_regrid_table(name, iflag, tol, make_data_path):
     """Can we regrid a table model?
 

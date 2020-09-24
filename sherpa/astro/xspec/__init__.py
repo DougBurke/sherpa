@@ -1059,6 +1059,23 @@ class XSTableModel(XSModel):
 
         return func(p, *args, filename=self.filename)
 
+    def regrid(self, *arrays, **kwargs):
+        """Handle regrid evaluation for XSPEC table models.
+
+        Ensure that the grids have low and high bins.
+        """
+
+        # Note that we pass the behavior off to the XSPEC class,
+        # even when we know, for the additive case, we could
+        # pass it to a super class. This way we get the check for
+        # grid size.
+        #
+        if self.addmodel:
+            return XSAdditiveModel.regrid(self, *arrays, **kwargs)
+
+        return XSMultiplicativeModel.regrid(self, *arrays, **kwargs)
+
+
 
 class XSAdditiveModel(XSModel):
     """The base class for XSPEC additive models.
