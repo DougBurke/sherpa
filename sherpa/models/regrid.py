@@ -656,6 +656,20 @@ class ModelDomainRegridder1D():
 
         return y
 
+    def eval_integrated(self, pars, modelfunc, data_space, eval_space,
+                        **kwargs):
+        """Evaluate a grid with low and high bins.
+
+        Note that data_space and eval_space are assumed to have two
+        elements (low- and high- edges).
+
+        This requires both the data- and eval-spaces are "integrated".
+        """
+
+        y = modelfunc(pars, eval_space[0], eval_space[1],
+                      **kwargs)
+        return rebin(y, eval_space[0], eval_space[1],
+                     data_space[0], data_space[1])
 
     def _evaluate(self, data_space, pars, modelfunc, **kwargs):
         """
@@ -666,25 +680,16 @@ class ModelDomainRegridder1D():
         kwargs['integrate'] = self.integrate  # Not really sure I need this, but let's be safe
 
         eval_space = self.evaluation_space
-        if data_space.is_integrated:
-            if self.integrate:
-                # This should be the most common case
-                y = modelfunc(pars, eval_space.grid[0], eval_space.grid[1],
-                              **kwargs)
-                return rebin(y, eval_space.grid[0], eval_space.grid[1],
-                             data_space.grid[0], data_space.grid[1])
-            else:
-                # The integrate flag is set to false, so just evaluate the model
-                # and then interpolate using the grids midpoints.
-                return self.eval_non_integrated(pars, modelfunc,
-                                                data_space.midpoint_grid,
-                                                eval_space.midpoint_grid,
-                                                **kwargs)
-        else:
-            return self.eval_non_integrated(pars, modelfunc,
-                                            data_space.midpoint_grid,
-                                            eval_space.midpoint_grid,
-                                            **kwargs)
+        if data_space.is_integrated and self.integrate:
+            return self.eval_integrated(pars, modelfunc,
+                                        data_space.grid, eval_space.grid,
+                                        **kwargs)
+
+        # We either have integrate=False or a non-integrated bin is given.
+        return self.eval_non_integrated(pars, modelfunc,
+                                        data_space.midpoint_grid,
+                                        eval_space.midpoint_grid,
+                                        **kwargs)
 
 
 class ModelDomainRegridder2D():
