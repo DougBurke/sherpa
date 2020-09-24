@@ -660,6 +660,14 @@ class UnaryOpModel(CompositeModel, ArithmeticModel):
         CompositeModel.__init__(self, ('%s(%s)' % (opstr, self.arg.name)),
                                 (self.arg,))
 
+    def regrid(self, *args, **kwargs):
+        try:
+            regrid = self.arg.__class__.regrid
+        except AttributeError:
+            raise ModelErr("No regrid support for {}".format(self.name)) from None
+
+        return regrid(self, *args, **kwargs)
+
     def calc(self, p, *args, **kwargs):
         return self.op(self.arg.calc(p, *args, **kwargs))
 

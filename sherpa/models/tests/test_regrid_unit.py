@@ -23,9 +23,10 @@ from numpy.testing import assert_allclose
 
 import pytest
 
-from sherpa.models.model import Model, ArithmeticModel, CompositeModel, \
-    ArithmeticFunctionModel, RegridWrappedModel
-from sherpa.models.basic import Box1D, Const1D, Gauss1D, Const2D, \
+from sherpa.models.model import Model, ArithmeticModel, BinaryOpModel, \
+    CompositeModel, ArithmeticConstantModel, ArithmeticFunctionModel, \
+    RegridWrappedModel, UnaryOpModel
+from sherpa.models.basic import Box1D, Const1D, Gauss1D, \
     PowLaw1D, StepLo1D
 from sherpa.models.parameter import Parameter
 from sherpa.instrument import PSFModel
@@ -1087,3 +1088,35 @@ def test_wrong_kwargs():
     with pytest.raises(TypeError) as excinfo:
         ygot = d.eval_model(mdl.regrid(requested, fubar='wrong_kwargs'))
     assert "unknown keyword argument: 'fubar'" in str(excinfo.value)
+
+
+def test_regrid_unop_no_regrid():
+    """Check we can't regrid a model with no regrid"""
+
+    mdl = ArithmeticConstantModel(4)
+    umdl = UnaryOpModel(mdl, np.negative, '-')
+
+    x = np.linspace(1.1, 1.9, 8)
+    with pytest.raises(ModelErr) as exc:
+        umdl.regrid(x)
+
+    assert str(exc.value) == 'No regrid support for -(4)'
+
+
+def test_regrid_unop():
+    """Test regridding a unary-op model"""
+
+    mdl = Gauss1D()
+    mdl.pos = 25
+    mdl.fwhm = 4
+    mdl.ampl = 10
+
+    umdl = -mdl
+
+    x = np.linspace(23, 27, 7)
+    grid = np.linspace(20, 30, 21)
+
+    exp = -1 * mdl(x)
+
+    rmdl = umdl.regrid(grid)
+    assert rmdl(x) == pytest.approx(exp)
