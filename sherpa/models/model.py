@@ -76,8 +76,10 @@ def modelCacher1d(func):
             try:
                 integrate = cls.integrate
             except AttributeError:
-                # Is this a possibility?
-                integrate = False
+                # Rely on the integrate kwarg as there's no
+                # model setting.
+                #
+                integrate = kwargs.get('integrate', False)
 
             data = [numpy.array(pars).tobytes(),
                     boolean_to_byte(integrate),
