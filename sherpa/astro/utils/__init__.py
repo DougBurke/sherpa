@@ -29,6 +29,10 @@ from ._utils import arf_fold, do_group, expand_grouped_mask, \
 from ._pileup import apply_pileup
 from sherpa.astro import hc, charge_e
 
+from ._utils import arf_fold, do_group, expand_grouped_mask, \
+    filter_resp, is_in, resp_init, rmf_fold, shrink_effarea
+from ._pileup import apply_pileup
+
 
 __all__ = ['arf_fold', 'rmf_fold', 'do_group', 'apply_pileup',
            'eqwidth', 'calc_photon_flux', 'calc_energy_flux',
