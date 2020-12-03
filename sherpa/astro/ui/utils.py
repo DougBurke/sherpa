@@ -11517,6 +11517,105 @@ class Session(sherpa.ui.utils.Session):
         super().plot_source(id=id, replot=replot, overplot=overplot,
                             clearwindow=clearwindow, **kwargs)
 
+    # DOC-NOTE: should this support bkg_id argument?
+    #
+    def plot_model_component(self, id, model=None, add_response=True,
+                             replot=False, overplot=False,
+                             clearwindow=True, **kwargs):
+        """Plot a component of the model for a data set.
+
+        This function evaluates and plots a component of the model
+        expression for a data set, including any instrument response.
+        Use `plot_source_component` to display without any response.
+
+        Parameters
+        ----------
+        id : int or str, optional
+           The data set that provides the data. If not given then the
+           default identifier is used, as returned by `get_default_id`.
+        model : str or sherpa.models.model.Model instance
+           The component to display (the name, if a string).
+        add_response : bool, optional
+           Should the PHA response be added to the model expression
+           for PHA datasets? The default is ``True``.
+        replot : bool, optional
+           Set to ``True`` to use the values calculated by the last
+           call to `plot_model_component`. The default is ``False``.
+        overplot : bool, optional
+           If ``True`` then add the data to an existing plot, otherwise
+           create a new plot. The default is ``False``.
+        clearwindow : bool, optional
+           Should the existing plot area be cleared before creating this
+           new plot (e.g. for multi-panel plots)?
+
+        See Also
+        --------
+        get_model_component_plot : Return the data used to create the model-component plot.
+        get_default_id : Return the default data set identifier.
+        plot : Create one or more plot types.
+        plot_source_component : Plot a component of the source expression for a data set.
+        plot_model : Plot the model for a data set.
+        set_xlinear : New plots will display a linear X axis.
+        set_xlog : New plots will display a logarithmically-scaled X axis.
+        set_ylinear : New plots will display a linear Y axis.
+        set_ylog : New plots will display a logarithmically-scaled Y axis.
+
+        Notes
+        -----
+        The function does not follow the normal Python standards for
+        parameter use, since it is designed for easy interactive use.
+        When called with a single un-named argument, it is taken to be
+        the `model` parameter. If given two un-named arguments, then
+        they are interpreted as the `id` and `model` parameters,
+        respectively.
+
+        The additional keyword arguments match the keywords of the
+        dictionary returned by get_model_plot_prefs.
+
+        Examples
+        --------
+
+        Overplot the ``pl`` component of the model expression for
+        the default data set:
+
+        >>> plot_model()
+        >>> plot_model_component(pl, overplot=True)
+
+        Display the results for the 'jet' data set (data and model),
+        and then overplot the ``pl`` component evaluated for the 'jet'
+        and 'core' data sets:
+
+        >>> plot_fit('jet')
+        >>> plot_model_component('jet', pl, overplot=True)
+        >>> plot_model_component('core', pl, overplot=True)
+
+        """
+
+        if model is None:
+            id, model = model, id
+
+        # May as well convert the model here even if fall through to the
+        # super class.
+        #
+        model = self._check_model(model)
+
+        # For PHA data we may need to add a response model. As there's no
+        # a-prior way to know if a model contains a response, and I do not
+        # want to hard-code a list, we rely on the user for guidance, with
+        # the add_response argument.
+        #
+        d = self.get_data(id)
+        if add_response and isinstance(d, sherpa.astro.data.DataPHA):
+            rsp = self._get_response(id, d)
+            model = rsp(model)
+
+        # This repeats some of the logic above, but it's simpler to keep
+        # the behavior straight.
+        #
+        super().plot_model_component(id=id, model=model,
+                                     replot=replot, overplot=overplot,
+                                     clearwindow=clearwindow, **kwargs)
+
     # DOC-TODO: is orders the same as resp_id?
     def plot_order(self, id=None, orders=None, replot=False, overplot=False,
                    clearwindow=True, **kwargs):
