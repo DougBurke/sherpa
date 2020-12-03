@@ -10849,10 +10849,8 @@ class Session(NoNewAttributesAfterInit):
         """
         if model is None:
             id, model = model, id
-        self._check_model(model)
-        if isinstance(model, string_types):
-            model = self._eval_model_expression(model)
 
+        model = self._check_model(model)
         d = self.get_data(id)
         if isinstance(d, sherpa.data.Data1DInt):
             plotobj = self._compmdlhistplot
@@ -12566,8 +12564,6 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot, clearwindow=clearwindow,
                    **kwargs)
 
-    # DOC-NOTE: also in sherpa.astro.utils, for now copies this text
-    #           but does the astro version support a bkg_id parameter?
     def plot_model_component(self, id, model=None, replot=False,
                              overplot=False, clearwindow=True, **kwargs):
         """Plot a component of the model for a data set.
