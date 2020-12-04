@@ -11528,13 +11528,17 @@ class Session(sherpa.ui.utils.Session):
         expression for a data set, including any instrument response.
         Use `plot_source_component` to display without any response.
 
+        .. versionchanged:: 4.13.1
+           The add_response argument has been added and is used to
+           decide whether to add the PHA response to the model.
+
         Parameters
         ----------
         id : int or str, optional
            The data set that provides the data. If not given then the
            default identifier is used, as returned by `get_default_id`.
         model : str or sherpa.models.model.Model instance
-           The component to display (the name, if a string).
+           The model expression to display (the name, if a string).
         add_response : bool, optional
            Should the PHA response be added to the model expression
            for PHA datasets? The default is ``True``.
@@ -11588,6 +11592,15 @@ class Session(sherpa.ui.utils.Session):
         >>> plot_fit('jet')
         >>> plot_model_component('jet', pl, overplot=True)
         >>> plot_model_component('core', pl, overplot=True)
+
+        Display the full model and then overplot the two components,
+        absorbed power-law and absorbed line:
+
+        >>> set_source(xsphabs.gal * (powlaw1d.pl + xsgaussian.line))
+        >>> fit()
+        >>> plot_model()
+        >>> plot_model_component(gal * pl, alpha=0.5, overpot=True)
+        >>> plot_model_component(gal * line, alpha=0.5, overpot=True)
 
         """
 
