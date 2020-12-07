@@ -753,7 +753,7 @@ class UnaryOpModel(CompositeModel, ArithmeticModel):
     def calc(self, p, *args, **kwargs):
         return self.op(self.arg.calc(p, *args, **kwargs))
 
-    def apply(self, model):
+    def create(self, model):
         """Create a version of unary-op model applied to model.
 
         Parameters
@@ -781,7 +781,7 @@ class UnaryOpModel(CompositeModel, ArithmeticModel):
         except AttributeError:
             return self
 
-        return self.apply(expanded)
+        return self.create(expanded)
 
 
 class BinaryOpModel(CompositeModel, RegriddableModel):
@@ -868,7 +868,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
                               type(self.rhs).__name__, len(rhs)))
         return val
 
-    def apply(self, lhs, rhs):
+    def create(self, lhs, rhs):
         """Create a version of the binary-op model applied to model.
 
         Parameters
@@ -948,7 +948,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
 
             # Do not bother trying to avoid excess work.
             #
-            return self.apply(lhs, rhs)
+            return self.create(lhs, rhs)
 
         if not is_mul(self):
             # Is this possible?
@@ -984,7 +984,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
             """
             lhs = expand(a)
             rhs = expand(b)
-            mul = self.apply(lhs, rhs)
+            mul = self.create(lhs, rhs)
             return expand(mul)
 
         def acomb(mdl, a, b):
@@ -993,7 +993,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
             There is no expansion done here.
             """
 
-            return mdl.apply(a, b)
+            return mdl.create(a, b)
 
         # The idea is that we expand the components and then, if
         # we create a (a * b) term, we expand that. We don't expand
@@ -1076,7 +1076,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
         #
         a = self.lhs.expand()
         b = self.rhs.expand()
-        return self.apply(a, b)
+        return self.create(a, b)
 
 
 # TODO: do we actually make use of this functionality anywhere?
