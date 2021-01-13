@@ -743,7 +743,8 @@ class UnaryOpModel(CompositeModel, ArithmeticModel):
         self.arg = self.wrapobj(arg)
         self.op = op
         self.opstr = opstr
-        CompositeModel.__init__(self, ('%s(%s)' % (opstr, self.arg.name)),
+        CompositeModel.__init__(self,
+                                f'{opstr}({self.arg.name})',
                                 (self.arg,))
 
     def calc(self, p, *args, **kwargs):
@@ -799,8 +800,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
         self.opstr = opstr
 
         CompositeModel.__init__(self,
-                                ('(%s %s %s)' %
-                                 (self.lhs.name, opstr, self.rhs.name)),
+                                f'({self.lhs.name} {opstr} {self.rhs.name})',
                                 (self.lhs, self.rhs))
 
     def regrid(self, *args, **kwargs):
