@@ -43,6 +43,7 @@ from sherpa.astro.ui import serialize
 from sherpa.sim import NormalParameterSampleFromScaleMatrix
 from sherpa.stats import Cash, CStat, WStat
 from sherpa.models.basic import TableModel
+import sherpa.models.model
 
 warning = logging.getLogger(__name__).warning
 info = logging.getLogger(__name__).info
