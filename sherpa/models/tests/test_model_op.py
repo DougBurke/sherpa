@@ -281,3 +281,58 @@ def test_load_table_model(make_data_path):
     s.load_table_model('tbl', make_data_path('double.dat'))
     tbl = s.get_model_component('tbl')
     assert tbl.ndim is None
+
+
+class TestBrackets:
+    """Provide a set of model instances for the tests."""
+
+    a = basic.Const1D('a')
+    b = basic.Const1D('b')
+    c = basic.Const1D('c')
+    d = basic.Const1D('d')
+
+    # It would be nice to instead use a principled set of states,
+    # but let's just try a somewhat-random set of expressions.
+    #
+    @pytest.mark.parametrize("model,expected",
+                             [(a, "a"),
+                              (abs(a), "abs(a)"),
+                              (-a, "-(a)"),
+                              (-a + b, "(-(a) + b)"),
+                              (-(a + b), "-((a + b))"),
+                              (-(a * b), "-((a * b))"),
+                              (-(a - b), "-((a - b))"),
+                              (a + a, "(a + a)"),
+                              (a * b, "(a * b)"),
+                              (a - a, "(a - a)"),
+                              (a / b, "(a / b)"),
+                              (a + b + c, "((a + b) + c)"),
+                              (a * b * c, "((a * b) * c)"),
+                              ((a * b) + c, "((a * b) + c)"),
+                              ((a + b) * c, "((a + b) * c)"),
+                              (a + (b * c), "(a + (b * c))"),
+                              (a * (b + c), "(a * (b + c))"),
+                              ((a + b) * (c + d), "((a + b) * (c + d))"),
+                              ((a * b) * (c + d), "((a * b) * (c + d))"),
+                              ((a + b) * (c * d), "((a + b) * (c * d))"),
+                              ((a + (b * c) + d), "((a + (b * c)) + d)"),
+                              (a + b + 2 * c + d + a, "((((a + b) + (2.0 * c)) + d) + a)"),
+                              (a + b + c * 2 + d + a, "((((a + b) + (c * 2.0)) + d) + a)"),
+                              (a + b * (c - 2) + d + a, "(((a + (b * (c - 2.0))) + d) + a)"),
+                              ((a + b + c) + (c + b + d + a), "(((a + b) + c) + (((c + b) + d) + a))"),
+                              ((a + b + c) * (c + b + d + a), "(((a + b) + c) * (((c + b) + d) + a))"),
+                              ((a * b * c) * (c + b + d + a), "(((a * b) * c) * (((c + b) + d) + a))"),
+                              ((a + b + c) * (c * b * d * a), "(((a + b) + c) * (((c * b) * d) * a))"),
+                              ((a + b + c) * (c * b + d * a), "(((a + b) + c) * ((c * b) + (d * a)))")
+                             ])
+    def test_brackets(self, model, expected):
+        """Do we get the expected number of brackets?
+
+        The model is written as a string and gives the expected set of
+        brackets.  It is written in such a way as to make it easy to
+        convert to a Sherpa model expression. Since the actual model
+        does not matter we
+
+        """
+
+        assert model.name == expected
