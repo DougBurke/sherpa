@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2007, 2016, 2017, 2020  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2007, 2016, 2017, 2020, 2021  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -29,8 +29,8 @@ import pytest
 
 from sherpa.utils.err import ModelErr
 from sherpa.models.model import ArithmeticModel, ArithmeticConstantModel, \
-    ArithmeticFunctionModel, BinaryOpModel, FilterModel, NestedModel, \
-    UnaryOpModel, RegridWrappedModel
+    ArithmeticFunctionModel, BinaryOpModel, FilterModel, Model, NestedModel, \
+    UnaryOpModel, RegridWrappedModel, modelCacher1d
 from sherpa.models.parameter import Parameter, hugeval, tinyval
 from sherpa.models.basic import Sin, Const1D, Box1D, Polynom1D
 
@@ -829,3 +829,107 @@ def test_evaluate_cache_regrid1d():
 
     assert isinstance(rmdl, RegridWrappedModel)
     assert not hasattr(rmdl, '_use_caching')
+
+
+class DoNotUseModel(Model):
+    """This is only used to get a integrate-free model.
+
+    ArithmeticModel sets a integrate field, so this is derived
+    from Model. This requires adding some fields from ArithmeticModel
+    to support use with modelCacher1d.
+    """
+
+    # We need this for modelCacher1d
+    _use_caching = True
+    _cache = {}
+    _queue = ['']
+
+    @modelCacher1d
+    def calc(self, p, *args, **kwargs):
+        """p is ignored."""
+
+        return numpy.ones(args[0].size)
+
+
+def test_cache_integrate_fall_through_no_integrate():
+    """Try and test the fall-through of the integrate setting.
+
+    This is a bit contrived.
+    """
+
+    mdl = DoNotUseModel('notme')
+    x = numpy.asarray([2, 3, 7, 100])
+    y = mdl(x)
+
+    expected = [1, 1, 1, 1]
+    assert y == pytest.approx(expected)
+
+    # A simplified version of check_cache (as we have no
+    # integrate setting).
+    #
+    cache = mdl._cache
+    assert len(cache) == 1
+
+    pars = []
+    data = [numpy.asarray(pars).tobytes(),
+            b'0', # not integrated
+            x.tobytes()]
+
+    token = b''.join(data)
+    digest = hashlib.sha256(token).digest()
+    assert digest in cache
+    assert cache[digest] == pytest.approx(expected)
+
+
+def test_cache_integrate_fall_through_integrate_true():
+    """See also test_cache_integrate_fall_through_no_integrate."""
+
+    mdl = DoNotUseModel('notme')
+    x = numpy.asarray([2, 3, 7, 100])
+    y = mdl(x, integrate=True)
+
+    expected = [1, 1, 1, 1]
+    assert y == pytest.approx(expected)
+
+    # A simplified version of check_cache (as we have no
+    # integrate setting).
+    #
+    cache = mdl._cache
+    assert len(cache) == 1
+
+    pars = []
+    data = [numpy.asarray(pars).tobytes(),
+            b'1', # integrated
+            x.tobytes()]
+
+    token = b''.join(data)
+    digest = hashlib.sha256(token).digest()
+    assert digest in cache
+    assert cache[digest] == pytest.approx(expected)
+
+
+def test_cache_integrate_fall_through_integrate_false():
+    """See also test_cache_integrate_fall_through_no_integrate."""
+
+    mdl = DoNotUseModel('notme')
+    x = numpy.asarray([2, 3, 7, 100])
+    y = mdl(x, integrate=False)
+
+    expected = [1, 1, 1, 1]
+    assert y == pytest.approx(expected)
+
+    # A simplified version of check_cache (as we have no
+    # integrate setting).
+    #
+    cache = mdl._cache
+    assert len(cache) == 1
+
+    pars = []
+    data = [numpy.asarray(pars).tobytes(),
+            b'0', # not integrated
+            x.tobytes()]
+
+    token = b''.join(data)
+    digest = hashlib.sha256(token).digest()
+    assert digest in cache
+    assert cache[digest] == pytest.approx(expected)
