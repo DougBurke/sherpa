@@ -655,7 +655,7 @@ class ArithmeticModel(Model):
 
     # Unary operations
     __neg__ = _make_unop(numpy.negative, '-')
-    __pos__ = _make_unop(numpy.positive, '+')  # this requires numpy >= 1.13.0; is this worth it?
+    # __pos__ = _make_unop(numpy.positive, '+')  # this requires numpy >= 1.13.0; is this worth it?
     __abs__ = _make_unop(numpy.absolute, 'abs')
 
     # Binary operations
@@ -1154,9 +1154,13 @@ def op_to_precedence(op):
     # and add 10 for each group.
     #
     # group: +, -
-    # group: *, @, /, //, %
-    # group: +x, -x, ~x  (these aren't handled here)
+    # group: *, @, /, //, %     (do not handle @)
+    # group: +x, -x, ~x         (do not handle ~)
     # group: **
+    #
+    # TODO: A pecedence for numpy.absolute is added since the test suite does
+    # trigger this condition. I should check on this as technically it's not
+    # needed (I think)
     #
     ops = {numpy.subtract: 0,
            numpy.add: 1,
@@ -1166,7 +1170,7 @@ def op_to_precedence(op):
            numpy.true_divide: 12,
            numpy.multiply: 13,
            numpy.negative: 20,
-           numpy.positive: 21,
+           # numpy.positive: 21,
            numpy.absolute: 22,  # this is made up
            numpy.power: 30,
     }

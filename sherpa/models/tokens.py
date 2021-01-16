@@ -224,7 +224,9 @@ def left_token(store, model, leftprec=None):
         #
         # I think that we could just check the length and we do not need
         # the isinstance check, but leave in.
-        if model.op in [np.negative, np.positive] and len(tokens) == 1 \
+        #
+        # if model.op in [np.negative, np.positive] and len(tokens) == 1 \
+        if model.op == np.negative and len(tokens) == 1 \
            and isinstance(tokens[0], TokenTerm):
             rhs = tokens
         else:
