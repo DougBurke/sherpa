@@ -38,7 +38,7 @@ def test_basic_unop_neg_raw():
     cpt = basic.Polynom2D()
     mdl = UnaryOpModel(cpt, np.negative, '<->')
 
-    assert mdl.name == '<->(polynom2d)'
+    assert mdl.name == '<->polynom2d'
     assert mdl.op == np.negative
     assert mdl.opstr == '<->'
     assert mdl.ndim == 2
@@ -49,7 +49,7 @@ def test_basic_unop_neg():
     cpt = basic.Polynom2D()
     mdl = -cpt
 
-    assert mdl.name == '-(polynom2d)'
+    assert mdl.name == '-polynom2d'
     assert mdl.op == np.negative
     assert mdl.opstr == '-'
     assert mdl.ndim == 2
@@ -87,7 +87,7 @@ def test_basic_binop_raw(op):
     mdl = BinaryOpModel(l, r, op, 'xOx')
 
     assert isinstance(mdl, BinaryOpModel)
-    assert mdl.name == '(polynom2d xOx gauss2d)'
+    assert mdl.name == 'polynom2d xOx gauss2d'
     assert mdl.op == op
     assert mdl.opstr == 'xOx'
     assert len(mdl.parts) == 2
@@ -108,7 +108,7 @@ def test_basic_binop(op, opstr):
     mdl = op(l, r)
 
     assert isinstance(mdl, BinaryOpModel)
-    assert mdl.name == f'(polynom2d {opstr} gauss2d)'
+    assert mdl.name == f'polynom2d {opstr} gauss2d'
     assert mdl.op == op
     assert mdl.opstr == opstr
     assert len(mdl.parts) == 2
@@ -297,42 +297,52 @@ class TestBrackets:
     @pytest.mark.parametrize("model,expected",
                              [(a, "a"),
                               (abs(a), "abs(a)"),
-                              (-a, "-(a)"),
-                              (-a + b, "(-(a) + b)"),
-                              (-(a + b), "-((a + b))"),
-                              (-(a * b), "-((a * b))"),
-                              (-(a - b), "-((a - b))"),
-                              (a + a, "(a + a)"),
-                              (a * b, "(a * b)"),
-                              (a - a, "(a - a)"),
-                              (a / b, "(a / b)"),
-                              (a + b + c, "((a + b) + c)"),
-                              (a * b * c, "((a * b) * c)"),
-                              ((a * b) + c, "((a * b) + c)"),
-                              ((a + b) * c, "((a + b) * c)"),
-                              (a + (b * c), "(a + (b * c))"),
-                              (a * (b + c), "(a * (b + c))"),
-                              ((a + b) * (c + d), "((a + b) * (c + d))"),
-                              ((a * b) * (c + d), "((a * b) * (c + d))"),
-                              ((a + b) * (c * d), "((a + b) * (c * d))"),
-                              ((a + (b * c) + d), "((a + (b * c)) + d)"),
-                              (a + b + 2 * c + d + a, "((((a + b) + (2.0 * c)) + d) + a)"),
-                              (a + b + c * 2 + d + a, "((((a + b) + (c * 2.0)) + d) + a)"),
-                              (a + b * (c - 2) + d + a, "(((a + (b * (c - 2.0))) + d) + a)"),
-                              ((a + b + c) + (c + b + d + a), "(((a + b) + c) + (((c + b) + d) + a))"),
-                              ((a + b + c) * (c + b + d + a), "(((a + b) + c) * (((c + b) + d) + a))"),
-                              ((a * b * c) * (c + b + d + a), "(((a * b) * c) * (((c + b) + d) + a))"),
-                              ((a + b + c) * (c * b * d * a), "(((a + b) + c) * (((c * b) * d) * a))"),
-                              ((a + b + c) * (c * b + d * a), "(((a + b) + c) * ((c * b) + (d * a)))")
+                              (abs(a) + b, "abs(a) + b"),
+                              (b + abs(a), "b + abs(a)"),
+                              (abs(a + b), "abs(a + b)"),
+                              (abs(a + b * c), "abs(a + b * c)"),
+                              (abs(a - b * c), "abs(a - b * c)"),
+                              (abs((a + b) * c), "abs((a + b) * c)"),
+                              (abs((a * b) - c), "abs(a * b - c)"),
+                              (-a, "-a"),
+                              (-a + b, "-a + b"),
+                              (+a - b, "+a - b"),
+                              (-(a + b), "-(a + b)"),
+                              (-(a * b), "-(a * b)"),
+                              (-(a - b), "-(a - b)"),
+                              (a + a, "a + a"),
+                              (a * b, "a * b"),
+                              (a - a, "a - a"),
+                              (a / b, "a / b"),
+                              (a + b + c, "a + b + c"),
+                              (a * b * c, "a * b * c"),
+                              ((a * b) + c, "a * b + c"),
+                              ((a + b) * c, "(a + b) * c"),
+                              (a + (b * c), "a + b * c"),
+                              (a * (b + c), "a * (b + c)"),
+                              ((a + b) * (c + d), "(a + b) * (c + d)"),
+                              ((a * b) * (c + d), "a * b * (c + d)"),
+                              ((a + b) * (c * d), "(a + b) * c * d"),
+                              ((a + (b * c) + d), "a + b * c + d"),
+                              (a + b + 2 * c + d + a, "a + b + 2.0 * c + d + a"),
+                              (a + b + c * 2 + d + a, "a + b + c * 2.0 + d + a"),
+                              # (a + b * (c - 2) + d + a, "a + b * (c - 2.0) + d + a"),
+                              # (a + b * (2 - c) + d + a, "a + b * (2.0 - c) + d + a"),
+                              (a + b * (c - 2) + d + a, "((a + (b * (c - 2.0))) + d) + a"), # not ideal
+                              (a + b * (2 - c) + d + a, "((a + (b * (2.0 - c))) + d) + a"), # not ideal
+                              ((a + b + c) + (c + b + d + a), "a + b + c + c + b + d + a"),
+                              # ((a + b + c) + (c + b - d + a), "a + b + c + c + b - d + a"),
+                              # ((a + b + c) + (c + b - abs(d) + a), "a + b + c + c + b - abs(d) + a"),
+                              ((a + b + c) + (c + b - d + a), "a + b + c + ((c + b - d) + a)"), # not ideal
+                              ((a + b + c) + (c + b - abs(d) + a), "a + b + c + ((c + b - abs(d)) + a)"), # not ideal
+                              ((a + b + c) * (c + b + d + a), "(a + b + c) * (c + b + d + a)"),
+                              ((a * b * c) * (c + b + d + a), "a * b * c * (c + b + d + a)"),
+                              ((a + b + c) * (c * b * d * a), "(a + b + c) * c * b * d * a"),
+                              ((a + b + c) * (c * b + d * a), "(a + b + c) * (c * b + d * a)")
                              ])
     def test_brackets(self, model, expected):
-        """Do we get the expected number of brackets?
-
-        The model is written as a string and gives the expected set of
-        brackets.  It is written in such a way as to make it easy to
-        convert to a Sherpa model expression. Since the actual model
-        does not matter we
-
-        """
+        """Do we get the expected number of brackets?"""
 
         assert model.name == expected
+
+    # TODO: test when wrapped by arf, rmf, rsp, and combos

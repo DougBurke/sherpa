@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2017  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2017, 2021  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -1168,10 +1168,10 @@ def test_rsp_matrix_call(analysis, arfexp, phaexp):
 
     if phaexp:
         exposure = pha_exposure
-        mdl_label = '({} * flat)'.format(exposure)
+        mdl_label = '{} * flat'.format(exposure)
     elif arfexp:
         exposure = arf_exposure
-        mdl_label = '({} * flat)'.format(exposure)
+        mdl_label = '{} * flat'.format(exposure)
     else:
         exposure = 1.0
         mdl_label = 'flat'
@@ -1245,10 +1245,10 @@ def test_rsp_normf_call(arfexp, phaexp):
 
     if phaexp:
         exposure = pha_exposure
-        mdl_label = '({} * flat)'.format(exposure)
+        mdl_label = '{} * flat'.format(exposure)
     elif arfexp:
         exposure = arf_exposure
-        mdl_label = '({} * flat)'.format(exposure)
+        mdl_label = '{} * flat'.format(exposure)
     else:
         exposure = 1.0
         mdl_label = 'flat'
@@ -1310,7 +1310,7 @@ def test_rsp_no_arf_matrix_call(analysis, phaexp):
 
     if phaexp:
         exposure = pha_exposure
-        mdl_label = '({} * flat)'.format(exposure)
+        mdl_label = '{} * flat'.format(exposure)
     else:
         exposure = 1.0
         mdl_label = 'flat'

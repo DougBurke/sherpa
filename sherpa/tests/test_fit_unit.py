@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2016, 2018  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2016, 2018, 2021  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -1686,7 +1686,7 @@ def test_fit_str_single(stat):
     out = str(fit)
 
     expected = [("data", "test"),
-                ("model", "((poly * step) + bg)"),
+                ("model", "poly * step + bg"),
                 ("stat", stat.__name__),
                 ("method", "LevMar"),
                 ("estmethod", "Covariance")]

@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2015, 2016, 2018, 2019, 2020  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2015, 2016, 2018, 2019, 2020, 2021  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -299,7 +299,7 @@ gal.nH.frozen  = False
 
 ######### Set Source, Pileup and Background Models
 
-set_source(1, (xsphabs.gal * (powlaw1d.pl + xsapec.src)))
+set_source(1, xsphabs.gal * (powlaw1d.pl + xsapec.src))
 
 
 
@@ -430,7 +430,7 @@ ggal.nH.frozen  = True
 
 ######### Set Source, Pileup and Background Models
 
-set_source("grp", (xsphabs.ggal * powlaw1d.gpl))
+set_source("grp", xsphabs.ggal * powlaw1d.gpl)
 
 
 
@@ -666,9 +666,9 @@ bpoly.offset.frozen  = True
 
 ######### Set Source, Pileup and Background Models
 
-set_source("bgrp", (xsphabs.ggal * powlaw1d.gpl))
+set_source("bgrp", xsphabs.ggal * powlaw1d.gpl)
 
-set_bkg_source("bgrp", (steplo1d.bstep + polynom1d.bpoly), bkg_id=1)
+set_bkg_source("bgrp", steplo1d.bstep + polynom1d.bpoly, bkg_id=1)
 
 
 ######### XSPEC Module Settings
@@ -801,7 +801,7 @@ mymodel.m.frozen  = True
 
 ######### Set Source, Pileup and Background Models
 
-set_source(3, (sin.sin_model + usermodel.mymodel))
+set_source(3, sin.sin_model + usermodel.mymodel)
 
 """
 
@@ -1108,7 +1108,7 @@ def test_restore_pha_basic(make_data_path):
     assert ui.get_data().subtracted, 'Data should be subtracted'
 
     src_expr = ui.get_source()
-    assert src_expr.name == '(xsphabs.gal * (powlaw1d.pl + xsapec.src))'
+    assert src_expr.name == 'xsphabs.gal * (powlaw1d.pl + xsapec.src)'
     assert ui.xsphabs.gal.name == 'xsphabs.gal'
     assert ui.powlaw1d.pl.name == 'powlaw1d.pl'
     assert ui.xsapec.src.name == 'xsapec.src'
@@ -1151,7 +1151,7 @@ def test_restore_pha_grouped(make_data_path):
     assert_array_equal(qual, q, err_msg='grouping column')
 
     src_expr = ui.get_source('grp')
-    assert src_expr.name == '(xsphabs.ggal * powlaw1d.gpl)'
+    assert src_expr.name == 'xsphabs.ggal * powlaw1d.gpl'
     assert ui.xsphabs.ggal.nh.frozen, "is ggal.nh frozen?"
     assert ui.xsphabs.ggal.nh.val == 2.0
     assert ui.powlaw1d.gpl.gamma.max == 5.0
@@ -1212,10 +1212,10 @@ def test_restore_pha_back(make_data_path):
     # TODO: check noticed range
 
     src_expr = ui.get_source('bgrp')
-    assert src_expr.name == '(xsphabs.ggal * powlaw1d.gpl)'
+    assert src_expr.name == 'xsphabs.ggal * powlaw1d.gpl'
 
     bg_expr = ui.get_bkg_source('bgrp')
-    assert bg_expr.name == '(steplo1d.bstep + polynom1d.bpoly)'
+    assert bg_expr.name == 'steplo1d.bstep + polynom1d.bpoly'
 
     assert ui.xsphabs.ggal.nh.frozen, "is ggal.nh frozen?"
     assert ui.polynom1d.bpoly.c0.frozen, "is bpoly.c0 frozen?"
@@ -1251,7 +1251,7 @@ def test_restore_usermodel():
     #
     # src_expr = ui.get_source(3)
     src_expr = ui.get_model(3)
-    assert src_expr.name == '(sin.sin_model + usermodel.mymodel)'
+    assert src_expr.name == 'sin.sin_model + usermodel.mymodel'
     mymodel = ui.get_model_component("mymodel")
     assert mymodel.m.frozen,"is mymodel.m frozen?"
     assert mymodel.c.val == 2.0
