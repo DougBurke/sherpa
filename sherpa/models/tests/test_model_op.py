@@ -283,6 +283,10 @@ def test_load_table_model(make_data_path):
     assert tbl.ndim is None
 
 
+def xfail(m, e):
+    return pytest.param(m, e, marks=pytest.mark.xfail)
+
+
 class TestBrackets:
     """Provide a set of model instances for the tests."""
 
@@ -310,6 +314,11 @@ class TestBrackets:
                               (-(a + b), "-(a + b)"),
                               (-(a * b), "-(a * b)"),
                               (-(a - b), "-(a - b)"),
+                              (-(a * b - c), "-(a * b - c)"),
+                              (-(a - b * c), "-(a - b * c)"),
+                              xfail(a - (a - b), "a - (a - b)"),  # returns a - a - b
+                              xfail(2 * (a + b) - c * 3, "2.0 * (a + b) - c * 3.0"),  # returns 2.0 * a * b - c * 3.0
+                              xfail(abs(2 * (a + b) - c * 3), "abs(2.0 * (a + b) - c * 3.0)"),  # returns abs(2.0 * a * b - c * 3.0)
                               (a + a, "a + a"),
                               (a * b, "a * b"),
                               (a - a, "a - a"),
@@ -326,19 +335,18 @@ class TestBrackets:
                               ((a + (b * c) + d), "a + b * c + d"),
                               (a + b + 2 * c + d + a, "a + b + 2.0 * c + d + a"),
                               (a + b + c * 2 + d + a, "a + b + c * 2.0 + d + a"),
-                              # (a + b * (c - 2) + d + a, "a + b * (c - 2.0) + d + a"),
-                              # (a + b * (2 - c) + d + a, "a + b * (2.0 - c) + d + a"),
-                              (a + b * (c - 2) + d + a, "((a + (b * (c - 2.0))) + d) + a"), # not ideal
-                              (a + b * (2 - c) + d + a, "((a + (b * (2.0 - c))) + d) + a"), # not ideal
+                              (a + b * (c - 2) + d + a, "((a + (b * (c - 2.0))) + d) + a"), # want: a + b * (c - 2.0) + d + a
+                              (a + b * (2 - c) + d + a, "((a + (b * (2.0 - c))) + d) + a"), # want: a + b * (2.0 - c) + d + a
                               ((a + b + c) + (c + b + d + a), "a + b + c + c + b + d + a"),
-                              # ((a + b + c) + (c + b - d + a), "a + b + c + c + b - d + a"),
-                              # ((a + b + c) + (c + b - abs(d) + a), "a + b + c + c + b - abs(d) + a"),
-                              ((a + b + c) + (c + b - d + a), "a + b + c + ((c + b - d) + a)"), # not ideal
-                              ((a + b + c) + (c + b - abs(d) + a), "a + b + c + ((c + b - abs(d)) + a)"), # not ideal
+                              ((a + b + c) + (c + b - d + a), "a + b + c + ((c + b - d) + a)"), # want: a + b + c + c + b - d + a
+                              ((a + b + c) + (c + b - abs(d) + a), "a + b + c + ((c + b - abs(d)) + a)"), # want: a + b + c + c + b - abs(d) + a
                               ((a + b + c) * (c + b + d + a), "(a + b + c) * (c + b + d + a)"),
                               ((a * b * c) * (c + b + d + a), "a * b * c * (c + b + d + a)"),
                               ((a + b + c) * (c * b * d * a), "(a + b + c) * c * b * d * a"),
-                              ((a + b + c) * (c * b + d * a), "(a + b + c) * (c * b + d * a)")
+                              ((a + b + c) * (c * b + d * a), "(a + b + c) * (c * b + d * a)"),
+                              (2 * a * 2, "2.0 * a * 2.0"),
+                              (a * 2 * 2, "a * 2.0 * 2.0"),
+                              (2 * a + 2 * (b + c - 4) * 3, "2.0 * a + ((2.0 * (b + c - 4.0)) * 3.0)"), # want: 2.0 * a + 2.0 * (b + c - 4.0) * 3.0
                              ])
     def test_brackets(self, model, expected):
         """Do we get the expected number of brackets?"""
