@@ -152,7 +152,7 @@ class Model(NoNewAttributesAfterInit):
         self._name = name
 
     def __repr__(self):
-        return "<%s model instance '%s'>" % (type(self).__name__, self.name)
+        return f"<{type(self).__name__} model instance '{self.name}'>"
 
     def __str__(self):
         s = self.name
@@ -173,7 +173,7 @@ class Model(NoNewAttributesAfterInit):
                 tp = 'thawed'
 
             if tp == 'linked':
-                linkstr = 'expr: %s' % p.link.fullname
+                linkstr = f'expr: {p.link.fullname}'
                 s += ('\n   %-12s %-6s %12g %24s %10s' %
                       (p.fullname, tp, p.val, linkstr, p.units))
             else:
@@ -310,12 +310,12 @@ class Model(NoNewAttributesAfterInit):
             v = SherpaFloat(v)
             if v < p.hard_min:
                 p.val = p.min
-                warning(('value of parameter %s is below minimum; ' +
-                         'setting to minimum') % p.fullname)
+                warning(f'value of parameter {p.fullname} is below minimum; ' +
+                        'setting to minimum')
             elif v > p.hard_max:
                 p.val = p.max
-                warning(('value of parameter %s is above maximum; ' +
-                         'setting to maximum') % p.fullname)
+                warning(f'value of parameter {p.fullname} is above maximum; ' +
+                        'setting to maximum')
             else:
                 p._val = v
 
@@ -337,14 +337,12 @@ class Model(NoNewAttributesAfterInit):
             v = SherpaFloat(v)
             if v < p.hard_min:
                 p.min = p.hard_min
-                warning(('value of parameter %s minimum is below ' +
-                         'hard minimum; ' +
-                         'setting to hard minimum') % p.fullname)
+                warning(f'value of parameter {p.fullname} minimum is below ' +
+                        'hard minimum; setting to hard minimum')
             elif v > p.hard_max:
                 p.min = p.hard_max
-                warning(('value of parameter %s minimum is above ' +
-                         'hard maximum; ' +
-                         'setting to hard maximum') % p.fullname)
+                warning(f'value of parameter {p.fullname} minimum is above ' +
+                        'hard maximum; setting to hard maximum')
             else:
                 p._min = v
 
@@ -366,14 +364,12 @@ class Model(NoNewAttributesAfterInit):
             v = SherpaFloat(v)
             if v < p.hard_min:
                 p.max = p.hard_min
-                warning(('value of parameter %s maximum is below ' +
-                         'hard minimum; ' +
-                         'setting to hard minimum') % p.fullname)
+                warning(f'value of parameter {p.fullname} maximum is below ' +
+                        'hard minimum; setting to hard minimum')
             elif v > p.hard_max:
                 p.max = p.hard_max
-                warning(('value of parameter %s maximum is above ' +
-                         'hard maximum; ' +
-                         'setting to hard maximum') % p.fullname)
+                warning(f'value of parameter {p.fullname} maximum is above ' +
+                        'hard maximum; setting to hard maximum')
             else:
                 p._max = v
 
@@ -459,8 +455,8 @@ class CompositeModel(Model):
 
         for p in self.parts:
             # A CompositeModel should not hold a reference to itself
-            assert (p is not self), (("'%s' object holds a reference to " +
-                                      "itself") % type(self).__name__)
+            assert (p is not self), f"'{type(self).__name__}' object " + \
+                "holds a reference to itself"
 
             parts.append(p)
             if isinstance(p, CompositeModel):
@@ -731,7 +727,7 @@ class RegriddableModel1D(RegriddableModel):
         valid_keys = ('interp',)
         for key in kwargs.keys():
             if key not in valid_keys:
-                raise TypeError("unknown keyword argument: '%s'" % key)
+                raise TypeError(f"unknown keyword argument: '{key}'")
         eval_space = EvaluationSpace1D(*args)
         regridder = ModelDomainRegridder1D(eval_space, **kwargs)
         regridder._make_and_validate_grid(args)
@@ -903,7 +899,7 @@ class FilterModel(CompositeModel, ArithmeticModel):
             filter_str = self._make_filter_str(filter)
 
         CompositeModel.__init__(self,
-                                ('(%s)[%s]' % (self.model.name, filter_str)),
+                                f'({self.model.name})[{filter_str}]',
                                 (self.model,))
 
     @staticmethod
@@ -920,7 +916,7 @@ class FilterModel(CompositeModel, ArithmeticModel):
         if filter.stop is not None:
             s += str(filter.stop)
         if filter.step is not None:
-            s += ':%s' % filter.step
+            s += f':{filter.step}'
 
         return s
 
@@ -1026,8 +1022,8 @@ class MultigridSumModel(CompositeModel, ArithmeticModel):
 
     def __init__(self, models):
         self.models = tuple(models)
-        name = '%s(%s)' % (type(self).__name__,
-                           ','.join([m.name for m in models]))
+        arg = ','.join([m.name for m in models])
+        name = f'{type(self).__name__}({arg})'
         CompositeModel.__init__(self, name, self.models)
 
     def calc(self, p, arglist):
