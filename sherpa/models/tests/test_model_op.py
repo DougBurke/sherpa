@@ -354,7 +354,7 @@ class TestBrackets:
                               (-(a - b), "-(a - b)"),
                               (-(a * b - c), "-(a * b - c)"),
                               (-(a - b * c), "-(a - b * c)"),
-                              xfail(a - (a - b), "a - (a - b)"),  # returns a - a - b
+                              (a - (a - b), "a - (a - b)"),
                               xfail(2 * (a + b) - c * 3, "2.0 * (a + b) - c * 3.0"),  # returns 2.0 * a * b - c * 3.0
                               xfail(abs(2 * (a + b) - c * 3), "abs(2.0 * (a + b) - c * 3.0)"),  # returns abs(2.0 * a * b - c * 3.0)
                               (a + a, "a + a"),
