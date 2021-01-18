@@ -421,6 +421,21 @@ def simplify(expr):
     -------
     expr : string
         The model expression
+
+    Notes
+    -----
+
+    A complex expression will call simplify multiple times since each
+    sub-element (e.g. BinaryOpModel) will access the model's name
+    attribute.  Some composite models, such as RSPModel, create a name
+    using a format like
+
+        apply_rmf(apply_arf(xxx.name))
+
+    where xxx is the sub-component, and others like BinaryOpModel use
+
+        (lhs.name op rhs.name)
+
     """
 
     # This is not a perfect check, but it should catch obvious problems.

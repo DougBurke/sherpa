@@ -848,7 +848,7 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
         self.precedence = op_to_precedence(op)
 
         CompositeModel.__init__(self,
-                                f'({self.lhs.name} {opstr} {self.rhs.name})',
+                                f'{self.lhs.name} {opstr} {self.rhs.name}',
                                 (self.lhs, self.rhs))
 
     def regrid(self, *args, **kwargs):
