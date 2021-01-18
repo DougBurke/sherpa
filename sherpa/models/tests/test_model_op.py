@@ -344,6 +344,8 @@ class TestBrackets:
                               (abs(a - b * c), "abs(a - b * c)"),
                               (abs((a + b) * c), "abs((a + b) * c)"),
                               (abs((a * b) - c), "abs(a * b - c)"),
+                              (a * abs(b * (c + d)), "a * (abs(b * (c + d)))"), # want: less brackets
+                              (abs(b * (c + d)) * (a + d), "(abs(b * (c + d))) * (a + d)"), # want: less brackets
                               (-a, "-a"),
                               (-a + b, "-a + b"),
                               # (+a - b, "+a - b"),   # This requires __pos__ to be set up
