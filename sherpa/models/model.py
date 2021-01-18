@@ -1128,10 +1128,9 @@ def op_to_precedence(op):
 
     Returns
     -------
-    precedence : int
+    precedence : int or None
         The precedence of the operator. Any unsupported operator is
-        mapped to a 'maximum' value (this value is not guaranteed to
-        be stable, just larger than all the named operators).
+        mapped to None (e.g. numpy.absolute).
 
 
     Notes
@@ -1154,10 +1153,6 @@ def op_to_precedence(op):
     # group: +x, -x, ~x         (do not handle ~)
     # group: **
     #
-    # TODO: A pecedence for numpy.absolute is added since the test suite does
-    # trigger this condition. I should check on this as technically it's not
-    # needed (I think)
-    #
     ops = {numpy.subtract: 0,
            numpy.add: 1,
            numpy.remainder: 10,
@@ -1167,14 +1162,13 @@ def op_to_precedence(op):
            numpy.multiply: 13,
            numpy.negative: 20,
            # numpy.positive: 21,
-           numpy.absolute: 22,  # this is made up
            numpy.power: 30,
     }
 
     try:
         return ops[op]
     except KeyError:
-        return 35
+        return None
 
 
 # Notebook representation
