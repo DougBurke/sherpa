@@ -423,5 +423,10 @@ def simplify(expr):
         The model expression
     """
 
+    # This is not a perfect check, but it should catch obvious problems.
+    #
+    if isinstance(expr, str):
+        raise ValueError(f"simplify sent a string: {expr}")
+
     toks = tokenize(expr)
     return simplify_brackets(toks)
