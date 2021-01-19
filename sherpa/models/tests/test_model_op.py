@@ -355,8 +355,14 @@ class TestBrackets:
                               (-(a * b - c), "-(a * b - c)"),
                               (-(a - b * c), "-(a - b * c)"),
                               (a - (a - b), "a - (a - b)"),
+                              xfail(a - (b - (c - d)), 'a - (b - (c - d))'),  # returns a - (b - c - d)
+                              xfail(a - (b + (c - d)), 'a - (b + (c - d))'),  # returns a - b + (c - d)
+                              xfail(b - (c + d), 'b - (c + d)'),  # returns b - c + d
+                              xfail((a - b) - (c + d), '(a - b) - (c + d)'),  # returns a - b - c + d
+                              xfail(a - (b - (c + d)), 'a - (b - (c + d))'),  # returns a - (b - c + d)
+                              xfail(a - (b + (c + d)), 'a - (b + c + d)'),  # returns a - b + c + d
                               xfail(2 * (a + b) - c * 3, "2.0 * (a + b) - c * 3.0"),  # returns 2.0 * a * b - c * 3.0
-                              xfail(abs(2 * (a + b) - c * 3), "abs(2.0 * (a + b) - c * 3.0)"),  # returns abs(2.0 * a * b - c * 3.0)
+                              xfail(abs(2 * (a + b) - c * 3), "abs(2.0 * (a + b) - c * 3.0)"),  # returns abs(2.0 * a + b - c * 3.0)
                               (a + a, "a + a"),
                               (a * b, "a * b"),
                               (a - a, "a - a"),
