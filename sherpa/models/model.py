@@ -847,20 +847,6 @@ class BinaryOpModel(CompositeModel, RegriddableModel):
         self.opstr = opstr
         self.precedence = op_to_precedence(op)
 
-        # We need special-case handling of the subtract operator,
-        # since we want to decrease the precedence of the rhs IF
-        # op.numpy.subtract and rhs.precedence==precedence(numpy.subtract).
-        #
-        # Does this work with a cascade of negative operations?
-        #
-        try:
-            if op == numpy.subtract and self.rhs.precedence is not None and \
-               self.rhs.precedence <= self.precedence:
-                self.rhs.precedence -= 1
-        except AttributeError:
-            # self.rhs has no precedence
-            pass
-
         CompositeModel.__init__(self,
                                 f'{self.lhs.name} {opstr} {self.rhs.name}',
                                 (self.lhs, self.rhs))
@@ -1150,11 +1136,13 @@ def op_to_precedence(op):
     -----
     See the description of precedence at [1]_.
 
-    The precedence level starts at 0 for the subtract operator. It is
-    important that the subtract operator has the lowest value, since
-    we use some run-time decoding to allow precedence values less than
-    this (they are associated with negatively-associated expressions
-    that are themselves subtracted from a term.).
+    The precedence level starts at 0 for the subtract operator, but
+    the numeric value is not guaranteed. It is important that the
+    subtract operator has the lowest value, since we use some run-time
+    decoding to allow precedence values less than this (they are
+    associated with negatively-associated expressions that are
+    themselves subtracted from a term). This is handled in
+    sherpa.models.tokens.simplify_brackets.
 
     Refs
     ----
