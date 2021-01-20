@@ -8563,18 +8563,23 @@ class Session(sherpa.ui.utils.Session):
         time, along with a Poisson noise term. A background component can
         be included.
 
+        .. versionchanged:: 4.13.1
+           Using an id parameter of None now means that the default
+           dataset identifier is used, rather than creating a
+           completely new dataset.
+
         Parameters
         ----------
         id : int or str
-           The identifier for the data set to create. If it
-           already exists then it is assumed to contain a PHA
-           data set and the counts will be over-written.
+           The identifier for the data set to create. If it already
+           exists then it is assumed to contain a PHA data set and the
+           counts will be over-written.
         arf : filename or ARF object
-           The name of the ARF, or an ARF data object (e.g.
-           as returned by `get_arf` or `unpack_arf`).
+           The name of the ARF, or an ARF data object (e.g.  as
+           returned by `get_arf` or `unpack_arf`).
         rmf : filename or RMF object
-           The name of the RMF, or an RMF data object (e.g.
-           as returned by `get_arf` or `unpack_arf`).
+           The name of the RMF, or an RMF data object (e.g.  as
+           returned by `get_arf` or `unpack_arf`).
         exposure : number
            The exposure time, in seconds.
         backscal : number, optional
@@ -8584,9 +8589,9 @@ class Session(sherpa.ui.utils.Session):
         grouping : array, optional
            The grouping array for the data (see `set_grouping`).
         grouped : bool, optional
-           Should the simulated data be grouped (see `group`)?
-           The default is ``False``. This value is only used if
-           the `grouping` parameter is set.
+           Should the simulated data be grouped (see `group`)?  The
+           default is ``False``. This value is only used if the
+           `grouping` parameter is set.
         quality : array, optional
            The quality array for the data (see `set_quality`).
         bkg : optional
@@ -8612,20 +8617,21 @@ class Session(sherpa.ui.utils.Session):
 
         Notes
         -----
-        A model expression is created by using the supplied ARF and RMF
-        to convolve the source expression for the dataset (the return
-        value of `get_source` for the supplied `id` parameter). This
-        expresion is evaluated for each channel to create the expectation
-        values, which is then passed to a Poisson random number generator
-        to determine the observed number of counts per channel. Any
-        background component is scaled by appropriate terms (exsposure
-        time, area scaling, and the backscal value) before adding to the
-        simulated date. That is, the background component is not simulated.
+        A model expression is created by using the supplied ARF and
+        RMF to convolve the source expression for the dataset (the
+        return value of `get_source` for the supplied `id`
+        parameter). This expresion is evaluated for each channel to
+        create the expectation values, which is then passed to a
+        Poisson random number generator to determine the observed
+        number of counts per channel. Any background component is
+        scaled by appropriate terms (exsposure time, area scaling, and
+        the backscal value) before adding to the simulated date. That
+        is, the background component is not simulated.
 
         Examples
         --------
-        Estimate the signal from a 5000 second observation using
-        the ARF and RMF from "src.arf" and "src.rmf" respectively:
+        Estimate the signal from a 5000 second observation using the
+        ARF and RMF from "src.arf" and "src.rmf" respectively:
 
         >>> set_source(1, xsphabs.gal * xsapec.clus)
         >>> gal.nh = 0.12
@@ -8655,6 +8661,7 @@ class Session(sherpa.ui.utils.Session):
         >>> save_pha('sim', 'sim.pi')
 
         """
+        id = self._fix_id(id)
         d = sherpa.astro.data.DataPHA('', None, None)
         if id in self._data:
             d = self._get_pha_data(id)
