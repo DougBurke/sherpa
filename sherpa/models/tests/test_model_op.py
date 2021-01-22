@@ -354,6 +354,7 @@ class TestBrackets:
                               (-(a - b), "-(a - b)"),
                               (-(a * b - c), "-(a * b - c)"),
                               (-(a - b * c), "-(a - b * c)"),
+                              (a - a - b, "a - a - b"),  # this and the following must be different
                               (a - (a - b), "a - (a - b)"),
                               (a - (b - (c - d)), 'a - (b - (c - d))'),
                               (a - (b + (c - d)), 'a - (b + (c - d))'),
