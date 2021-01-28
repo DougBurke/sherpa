@@ -1367,6 +1367,18 @@ class DataPHA(Data1D):
                         doc='Number of times to multiply the y-axis ' +
                         'quantity by x-axis bin size')
 
+    def _get_plot_norm(self):
+        return self._plot_norm
+
+    def _set_plot_norm(self, val):
+        val = bool(val)
+        self._plot_norm = val
+        for id in self.background_ids:
+            self.get_background(id).plot_norm = val
+
+    plot_norm = property(_get_plot_norm, _set_plot_norm,
+                         doc='Do we normalize y-axis by the bin width?')
+
     def _get_response_ids(self):
         return self._response_ids
 
@@ -1400,9 +1412,11 @@ class DataPHA(Data1D):
     background_ids = property(_get_background_ids, _set_background_ids,
                               doc='IDs of defined background data sets')
 
-    _fields = ('name', 'channel', 'counts', 'staterror', 'syserror', 'bin_lo', 'bin_hi', 'grouping', 'quality',
-               'exposure', 'backscal', 'areascal', 'grouped', 'subtracted', 'units', 'rate', 'plot_fac', 'response_ids',
-               'background_ids')
+    _fields = ('name', 'channel', 'counts', 'staterror', 'syserror',
+               'bin_lo', 'bin_hi', 'grouping', 'quality', 'exposure',
+               'backscal', 'areascal', 'grouped', 'subtracted', 'units',
+               'rate', 'plot_fac', 'plot_norm',
+               'response_ids', 'background_ids')
 
     def __init__(self, name, channel, counts, staterror=None, syserror=None,
                  bin_lo=None, bin_hi=None, grouping=None, quality=None,
@@ -1426,6 +1440,7 @@ class DataPHA(Data1D):
         self._backgrounds = {}
         self._rate = True
         self._plot_fac = 0
+        self._plot_norm = True
         self.units = 'channel'
         self.quality_filter = None
         Data1D.__init__(self, name, channel, counts, staterror, syserror)
@@ -3121,6 +3136,9 @@ class DataPHA(Data1D):
     def _fix_y_units(self, val, filter=False, response_id=None):
         """Rescale the data to match the 'y' axis."""
 
+        # This needs to be kept up-to-date with get_ylabel
+        #
+
         if val is None:
             return val
 
@@ -3140,8 +3158,12 @@ class DataPHA(Data1D):
             areascal = self._check_scale(self.areascal, filter=filter)
             val /= areascal
 
-        if self.grouped or self.rate:
+        # Do we divide by the bin width (in analysis units)? This used
+        # to be decided by a less-than-obvious manner.
+        #
+        if self.plot_norm:
 
+            # TODO: shouldn't this be a generic routine, not special-cased here?
             if self.units != 'channel':
                 elo, ehi = self._get_ebins(response_id, group=False)
             else:
@@ -3175,12 +3197,16 @@ class DataPHA(Data1D):
 
         scale = self.apply_filter(self.get_x(response_id=response_id),
                                   self._middle)
+
+        # TODO: val *= np.power(scale, self.plot_fac)
         for ii in range(self.plot_fac):
             val *= scale
 
         return val
 
-    def get_y(self, filter=False, yfunc=None, response_id=None, use_evaluation_space=False):
+    def get_y(self, filter=False, yfunc=None, response_id=None,
+              use_evaluation_space=False):
+
         vallist = Data.get_y(self, yfunc=yfunc)
         filter = bool_cast(filter)
 
@@ -3228,7 +3254,7 @@ class DataPHA(Data1D):
         if self.rate and self.exposure:
             ylabel += '/sec'
 
-        if self.rate or self.grouped:
+        if self.plot_norm:
             if self.units == 'energy':
                 ylabel += '/keV'
             elif self.units == 'wavelength':
@@ -3236,7 +3262,7 @@ class DataPHA(Data1D):
             elif self.units == 'channel':
                 ylabel += '/channel'
 
-        if self.plot_fac:
+        if self.plot_fac > 0:
             from sherpa.plot import backend
             latex = backend.get_latex_for_string(
                 '^{}'.format(self.plot_fac))
@@ -3535,9 +3561,13 @@ class DataPHA(Data1D):
                 self.get_syserror(True))
 
     def to_plot(self, yfunc=None, staterrfunc=None, response_id=None):
-        return (self.apply_filter(self.get_x(response_id=response_id),
-                                  self._middle),
-                self.get_y(True, yfunc, response_id=response_id),
+
+        x = self.apply_filter(self.get_x(response_id=response_id),
+                              self._middle)
+        y = self.get_y(True, yfunc, response_id=response_id)
+
+        return (x,
+                y,
                 self.get_yerr(True, staterrfunc, response_id=response_id),
                 self.get_xerr(True, response_id=response_id),
                 self.get_xlabel(),
