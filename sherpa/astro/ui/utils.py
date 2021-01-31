@@ -1,6 +1,6 @@
 #
 #  Copyright (C) 2010, 2015, 2016, 2017, 2018, 2019, 2020, 2021
-#      Smithsonian Astrophysical Observatory
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -160,6 +160,10 @@ class Session(sherpa.ui.utils.Session):
         sherpa.ui.utils.Session.clean(self)
 
         self._pyblocxs = sherpa.astro.sim.MCMC()
+
+        # Add PHA plot types. This is ugly.
+        #
+        self._plot_store['data'][1][sherpa.astro.data.DataPHA] = sherpa.astro.plot.DataPHAPlot()
 
         self._plot_types['order'] = [self._orderplot]
         self._plot_types['energy'] = [self._energyfluxplot]
@@ -10219,20 +10223,6 @@ class Session(sherpa.ui.utils.Session):
     # Plotting
     ###########################################################################
 
-    def get_data_plot_prefs(self, id=None):
-
-        try:
-            d = self.get_data(id)
-            if isinstance(d, sherpa.astro.data.DataPHA):
-                return self._dataphaplot.histo_prefs
-
-        except IdentifierErr:
-            pass
-
-        return super().get_data_plot_prefs(id)
-
-    get_data_plot_prefs.__doc__ = sherpa.ui.utils.Session.get_data_plot_prefs.__doc__
-
     def get_model_plot_prefs(self, id=None):
 
         try:
@@ -10246,22 +10236,6 @@ class Session(sherpa.ui.utils.Session):
         return super().get_model_plot_prefs(id)
 
     get_model_plot_prefs.__doc__ = sherpa.ui.utils.Session.get_model_plot_prefs.__doc__
-
-    def get_data_plot(self, id=None, recalc=True):
-        try:
-            d = self.get_data(id)
-        except IdentifierErr:
-            return super().get_data_plot(id, recalc=recalc)
-
-        if isinstance(d, sherpa.astro.data.DataPHA):
-            plotobj = self._dataphaplot
-            if recalc:
-                plotobj.prepare(d, self.get_stat())
-            return plotobj
-
-        return super().get_data_plot(id, recalc=recalc)
-
-    get_data_plot.__doc__ = sherpa.ui.utils.Session.get_data_plot.__doc__
 
     def get_model_plot(self, id=None, recalc=True):
         try:

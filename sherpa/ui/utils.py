@@ -1,6 +1,6 @@
 #
 #  Copyright (C) 2010, 2015, 2016, 2017, 2018, 2019, 2020, 2021
-#       Smithsonian Astrophysical Observatory
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -303,8 +303,23 @@ class Session(NoNewAttributesAfterInit):
 
         self._splitplot = sherpa.plot.SplitPlot()
         self._jointplot = sherpa.plot.JointPlot()
+
+        # Map from plot type to
+        #    default plot object
+        #    dictionary of key= datatype value=plot object
+        #
+        # where the list type is used in preference to the default plot
+        # object. We should enforce the list so that more-specific
+        # types are given first (or use a
+        #
+        # TODO: combine with _plot_types
+        self._plot_store = {}
+        self._plot_store['data'] = (sherpa.plot.DataPlot(),
+                                    {sherpa.data.Data1DInt: sherpa.plot.DataHistogramPlot()})
+
         self._dataplot = sherpa.plot.DataPlot()
         self._datahistplot = sherpa.plot.DataHistogramPlot()
+
         self._modelplot = sherpa.plot.ModelPlot()
         self._modelhistplot = sherpa.plot.ModelHistogramPlot()
 
@@ -10499,6 +10514,64 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._splitplot
 
+    def _get_plotobj(self, plot, data):
+        """Return the plot object.
+
+        Parameters
+        ----------
+        plot : str
+            The plot type
+        data : sherpa.data.Data instance or None
+            The data type. If None then the default plot type is
+            returned.
+
+        Returns
+        -------
+        plotobj : sherpa.plot.Plot instance
+            The plot instance (it may not be a subclass of Plot, need to check)
+
+        Notes
+        -----
+
+        What about complex types like "fit"? Should there be a
+        two-step process that maps "fit" to "data", "model" and then
+        we call these individually, or should there be a special case?
+        For PHA datasets with fit we would want a special case (to get
+        grouping handled).
+
+        The dictionary used to store the specialised types for a plot
+        should probably use a speialised dictionary type that iterates
+        over items using the inverse of the mro depth (or the negative
+        of the depth order) so that we suold search the
+        most-specialised first, and can exit as soon as a match is
+        found. This requires that we have a common plot type for all
+        plots so that a simple mro depth is a sensible check.
+
+        """
+
+        try:
+            (default, plots) = self._plot_store[plot]
+        except KeyError:
+            # TODO: use a sherpa-appropriate error type
+            raise ValueError(f"Invalid plot type: {plot}") from None
+
+        if data is None:
+            return default
+
+        depth = None
+        retval = default
+
+        for k, v in plots.items():
+            if not isinstance(data, k):
+                continue
+
+            d = len(k.__mro__)
+            if depth is None or d > depth:
+                retval = v
+                depth = d
+
+        return retval
+
     def get_data_plot(self, id=None, recalc=True):
         """Return the data used by plot_data.
 
@@ -10531,23 +10604,17 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        # Allow an answer to be returned if recalc is False and no
-        # data has been loaded. However, it's not obvious what the
-        # answer should be if recalc=False and the dataset has
-        # changed type since get_data_plot was last called.
-        #
         try:
-            is_int = isinstance(self.get_data(id), sherpa.data.Data1DInt)
-        except IdentifierErr:
-            is_int = False
+            d = self.get_data(id)
+        except IdentifierErr as ie:
+            if recalc:
+                raise ie
 
-        if is_int:
-            plotobj = self._datahistplot
-        else:
-            plotobj = self._dataplot
+            d = None
 
+        plotobj = self._get_plotobj('data', d)
         if recalc:
-            plotobj.prepare(self.get_data(id), self.get_stat())
+            plotobj.prepare(d, self.get_stat())
         return plotobj
 
     # DOC-TODO: discussion of preferences needs better handling
@@ -10664,15 +10731,14 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
+        plotobj = self.get_data_plot(id, recalc=False)
+
+        # Ugly: need a way to identify the preferences.
+        #
         try:
-            d = self.get_data(id)
-            if isinstance(d, sherpa.data.Data1DInt):
-                return self._datahistplot.histo_prefs
-
-        except IdentifierErr:
-            pass
-
-        return self._dataplot.plot_prefs
+            return plotobj.histo_prefs
+        except AttributeError:
+            return plotobj.plot_prefs
 
     # also in sherpa.astro.utils (copies this docstring)
     def get_model_plot(self, id=None, recalc=True):
@@ -11988,9 +12054,42 @@ class Session(NoNewAttributesAfterInit):
             sherpa.plot.end()
 
     def _set_plot_item(self, plottype, item, value):
+        """Set the plot item/option.
+
+        """
+
+        def set_item(plot):
+            try:
+                plot.plot_prefs[item] = value
+            except AttributeError:
+                try:
+                    plot.histo_prefs[item] = value
+                except AttributeError:
+                    pass
+
+        # TODO: once the code has been moved over to using
+        #       _plot_store we can remove the duplication here.
+        #
+        #       The handling of plottype='all' complicates this.
+        #
+        plottype = plottype.strip().lower()
+        if plottype == 'all':
+            for plotinfo in self._plot_store.values():
+                for plot in [plotinfo[0]] + list(plotinfo[1].values()):
+                    set_item(plot)
+
+        else:
+            # TODO: this should error out if not known.
+            if plottype in self._plot_store:
+                plotinfo = self._plot_store[plottype]
+                for plot in [plotinfo[0]] + list(plotinfo[1].values()):
+                    set_item(plot)
+
+                return
+
+        # Still need to support the "old" style access
         keys = list(self._plot_types.keys())
 
-        plottype = plottype.strip().lower()
         if plottype != "all":
             if plottype not in self._plot_types:
                 raise sherpa.utils.err.PlotErr(
@@ -12000,15 +12099,7 @@ class Session(NoNewAttributesAfterInit):
 
         for key in keys:
             for plot in self._plot_types[key]:
-                # This could be a "line" or "histogram" style plot.
-                #
-                try:
-                    plot.plot_prefs[item] = value
-                except AttributeError:
-                    try:
-                        plot.histo_prefs[item] = value
-                    except AttributeError:
-                        pass
+                set_item(plot)
 
     def set_xlog(self, plottype="all"):
         """New plots will display a logarithmically-scaled X axis.
