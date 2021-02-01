@@ -3579,3 +3579,177 @@ def test_set_plot_opt_explicit_astro():
     assert fig.axes[3].get_yscale() == 'linear'
 
     plt.close(fig)
+
+
+@requires_pylab
+@pytest.mark.parametrize("idval", [None, "bob"])
+def test_plot_fit_resid_handles_data_log(idval, clean_ui):
+    """Check that log handling is correct: data=log
+
+    See also test_plot_fit_resid_handles_resid_log.
+
+    I thought we had tests of this, but apparently not.
+    Copy of test_ui_plot version but for PHA data.
+    """
+
+    from matplotlib import pyplot as plt
+
+    setup_example(idval)
+    ui.set_xlog('data')
+    ui.plot_fit_resid(idval)
+
+    fig = plt.gcf()
+    axes = fig.axes
+    assert len(axes) == 2
+    assert axes[0].xaxis.get_label().get_text() == ''
+
+    assert axes[0].xaxis.get_scale() == 'log'
+    assert axes[0].yaxis.get_scale() == 'linear'
+
+    assert axes[1].xaxis.get_scale() == 'log'
+    assert axes[1].yaxis.get_scale() == 'linear'
+
+
+@requires_pylab
+@pytest.mark.parametrize("idval", [None, "bob"])
+def test_plot_fit_resid_handles_resid_log(idval, clean_ui):
+    """Check that log handling is correct: resid=log
+
+    We need to decide whether we want the residual setting to override
+    the linear display of the fit plot here. At present the code is
+    that if resid has xlog set then both will be drawn logged (since
+    the X axis is shared via a sharex=True argument to plt.subplots)
+    but we may decide this should change.
+
+    """
+
+    from matplotlib import pyplot as plt
+
+    setup_example(idval)
+    ui.set_xlog('resid')
+    ui.plot_fit_resid(idval)
+
+    fig = plt.gcf()
+    axes = fig.axes
+    assert len(axes) == 2
+    assert axes[0].xaxis.get_label().get_text() == ''
+
+    assert axes[0].xaxis.get_scale() == 'log'
+    assert axes[0].yaxis.get_scale() == 'linear'
+
+    assert axes[1].xaxis.get_scale() == 'log'
+    assert axes[1].yaxis.get_scale() == 'linear'
+
+
+@requires_pylab
+@pytest.mark.parametrize("idval", [None, "bob"])
+def test_plot_bkg_fit_resid_handles_data_log(idval, clean_ui):
+    """Check that log handling is correct: data=log
+
+    It's an open question as to what the correct behavior should be
+    since setting set_xlog('resid') changes the plot_bkg_fit_resid
+    plot, so it's a bit unclear to the user what is happening.
+
+    """
+
+    from matplotlib import pyplot as plt
+
+    setup_example_bkg_model(idval)
+    ui.set_xlog('data')
+    ui.plot_bkg_fit_resid(idval)
+
+    fig = plt.gcf()
+    axes = fig.axes
+    assert len(axes) == 2
+    assert axes[0].xaxis.get_label().get_text() == ''
+
+    assert axes[0].xaxis.get_scale() == 'linear'
+    assert axes[0].yaxis.get_scale() == 'linear'
+
+    assert axes[1].xaxis.get_scale() == 'linear'
+    assert axes[1].yaxis.get_scale() == 'linear'
+
+
+@requires_pylab
+@pytest.mark.parametrize("idval", [None, "bob"])
+def test_plot_bkg_fit_resid_handles_bkg_log(idval, clean_ui):
+    """Check that log handling is correct: bkg=log"""
+
+    from matplotlib import pyplot as plt
+
+    setup_example_bkg_model(idval)
+    ui.set_xlog('bkg')  # NOTE: not 'data'
+    ui.plot_bkg_fit_resid(idval)
+
+    fig = plt.gcf()
+    axes = fig.axes
+    assert len(axes) == 2
+    assert axes[0].xaxis.get_label().get_text() == ''
+
+    assert axes[0].xaxis.get_scale() == 'log'
+    assert axes[0].yaxis.get_scale() == 'linear'
+
+    assert axes[1].xaxis.get_scale() == 'log'
+    assert axes[1].yaxis.get_scale() == 'linear'
+
+
+@requires_pylab
+@pytest.mark.parametrize("idval", [None, "bob"])
+def test_plot_bkg_fit_resid_handles_resid_log(idval, clean_ui):
+    """Check that log handling is correct: resid=log
+
+    We need to decide whether we want the residual setting to override
+    the linear display of the fit plot here. At present the code is
+    that if resid has xlog set then both will be drawn logged (since
+    the X axis is shared via a sharex=True argument to plt.subplots)
+    but we may decide this should change.
+
+    """
+
+    from matplotlib import pyplot as plt
+
+    setup_example_bkg_model(idval)
+    ui.set_xlog('resid')
+    ui.plot_bkg_fit_resid(idval)
+
+    fig = plt.gcf()
+    axes = fig.axes
+    assert len(axes) == 2
+    assert axes[0].xaxis.get_label().get_text() == ''
+
+    assert axes[0].xaxis.get_scale() == 'log'
+    assert axes[0].yaxis.get_scale() == 'linear'
+
+    assert axes[1].xaxis.get_scale() == 'log'
+    assert axes[1].yaxis.get_scale() == 'linear'
+
+
+@requires_pylab
+@pytest.mark.parametrize("idval", [None, "bob"])
+def test_plot_bkg_fit_resid_handles_bkgresid_log(idval, clean_ui):
+    """Check that log handling is correct: bkgresid=log
+
+    We need to decide whether we want the residual setting to override
+    the linear display of the fit plot here. At present the code is
+    that if resid has xlog set then both will be drawn logged (since
+    the X axis is shared via a sharex=True argument to plt.subplots)
+    but we may decide this should change.
+
+    """
+
+    from matplotlib import pyplot as plt
+
+    setup_example_bkg_model(idval)
+    ui.set_xlog('bkgresid')  # NOTE: not 'resid'
+    ui.plot_bkg_fit_resid(idval)
+
+    fig = plt.gcf()
+    axes = fig.axes
+    assert len(axes) == 2
+    assert axes[0].xaxis.get_label().get_text() == ''
+
+    assert axes[0].xaxis.get_scale() == 'log'
+    assert axes[0].yaxis.get_scale() == 'linear'
+
+    assert axes[1].xaxis.get_scale() == 'log'
+    assert axes[1].yaxis.get_scale() == 'linear'
