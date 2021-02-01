@@ -16,13 +16,15 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from collections import OrderedDict, UserDict
+
 import numpy
 from numpy.testing import assert_almost_equal, assert_array_equal, \
     assert_array_almost_equal
 
 import pytest
 
-from sherpa.utils import _utils, is_binary_file, pad_bounding_box
+from sherpa.utils import _utils, OrderedByMRO, is_binary_file, pad_bounding_box
 from sherpa.utils.testing import requires_data
 
 
@@ -333,3 +335,59 @@ def test_pad_bounding_box_mask_too_large():
     # ignored).
     exp = numpy.asarray([0, 1, 2, 3, 4, 0, 0, 0, 0, 0]).astype(numpy.float64)
     assert_array_equal(ans, exp)
+
+
+def test_ordered_by_mro_invalid_argument():
+    """We error out of sent a non-class argument"""
+
+    with pytest.raises(TypeError):
+        OrderedByMRO(foo=1)
+
+    with pytest.raises(TypeError):
+        OrderedByMRO({'x': 2})
+
+    d = OrderedByMRO()
+    with pytest.raises(TypeError):
+        d[23] = 3
+
+
+def test_ordered_by_mro_empty_is_empty():
+    """The emptt dict is empty"""
+
+    d = OrderedByMRO()
+    assert len(d.keys()) == 0
+    assert len(d.values()) == 0
+    assert len(d.items()) == 0
+
+
+def test_ordered_by_mro_is_sorted():
+    """The whole point of OrderedByMRO"""
+    d = OrderedByMRO()
+    d[dict] = "dict"
+    assert list(d.keys()) == [dict]
+    assert list(d.values()) == ["dict"]
+
+    d[UserDict] = "user dict"
+    assert list(d.keys()) == [UserDict, dict]
+    assert list(d.values()) == ["user dict", "dict"]
+
+    d[OrderedDict] = "ordered dict"
+    assert list(d.keys()) == [UserDict, OrderedDict, dict]
+    assert list(d.values()) == ["user dict", "ordered dict", "dict"]
+
+
+def test_ordered_by_mro_delete():
+    """Check we can delete an item"""
+
+    d = OrderedByMRO()
+    d[dict] = "dict"
+    d[UserDict] = "user dict"
+    d[OrderedDict] = "ordered dict"
+
+    assert len(d.store) == 3
+
+    del d[dict]
+    assert list(d.keys()) == [UserDict, OrderedDict]
+    assert list(d.values()) == ["user dict", "ordered dict"]
+
+    assert len(d.store) == 2
