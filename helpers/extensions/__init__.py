@@ -1,6 +1,5 @@
 #
-#  Copyright (C) 2014, 2016, 2017, 2018, 2020
-#       Smithsonian Astrophysical Observatory
+#  Copyright (C) 2014, 2016, 2017, 2018, 2020, 2021
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -242,6 +241,17 @@ astro_utils = Extension('sherpa.astro.utils._utils',
               depends=(get_deps(['extension', 'utils', 'astro/utils'])+
                        ['sherpa/utils/src/gsl/fcmp.h']))
 
+####
+# FORTRAN EXTENSIONS
+####
+minim =  Extension('sherpa.optmethods._minim',
+              ['sherpa/optmethods/src/_minim.pyf',
+               'sherpa/optmethods/src/minim.f',
+               'sherpa/optmethods/src/syminv.f'],
+		# extra_link_args=['-static-libgfortran'],
+                    )
+
+fortran_exts = [minim]
 
 static_ext_modules = [
                    estmethods,
@@ -254,4 +264,5 @@ static_ext_modules = [
                    astro_modelfcts,
                    pileup,
                    astro_utils,
+                   minim,
                 ]
