@@ -671,6 +671,9 @@ class NelderMead(OptMethod):
     verbose: int
        The amount of information to print during the fit. The default
        is `0`, which means no output.
+    useminimC : bool
+       Should the C++ version of the minimiser be used? If False then
+       the FORTRAN version is used.
 
     Notes
     -----
