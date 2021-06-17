@@ -569,7 +569,7 @@ def minimF(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, step=None,
 #
 # minim
 #
-def minim(fcn, x0, xmin, xmax, useminimC, ftol=EPSILON, maxfev=None,
+def minim(fcn, x0, xmin, xmax, useminimC=True, ftol=EPSILON, maxfev=None,
           step=None, nloop=1, iquad=1, simp=None, verbose=-1):
     if useminimC:
         return minimC(fcn, x0, xmin, xmax, ftol=ftol, maxfev=maxfev,
@@ -1105,7 +1105,7 @@ def neldermead(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None,
     info = 1
     covarerr = None
     if len(finalsimplex) >= 3 and 0 != iquad:
-        nelmea = minim(fcn, x, xmin, xmax, useminimC,
+        nelmea = minim(fcn, x, xmin, xmax, useminimC=useminimC,
                        ftol=10.0*ftol,
                        maxfev=maxfev - nfev - 12, iquad=1)
         nelmea_x = numpy.asarray(nelmea[1], numpy.float_)
