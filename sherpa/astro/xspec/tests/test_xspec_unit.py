@@ -403,6 +403,57 @@ def test_abund_change_file():
         assert out[n] == pytest.approx(elems[n])
 
 
+@pytest.mark.parametrize('reset', [False, True])
+@requires_xspec
+def test_abund_change_file_twice(reset):
+    """Can we change the abundance setting: multiple files #1240
+
+    It's not clear how to trigger the behavior in #1240
+    hence the reset option. Could it depend on XSPEC version?
+    """
+
+    from sherpa.astro import xspec
+
+    oval = xspec.get_xsabund()
+
+    elems1 = {n: i * 0.1 for i, n in enumerate(ELEMENT_NAMES)}
+    elems2 = {n: 1 + i * 0.1 for i, n in enumerate(ELEMENT_NAMES)}
+
+    with NamedTemporaryFile(mode='w', suffix='.xspec') as t1fh:
+        with NamedTemporaryFile(mode='w', suffix='.xspec') as t2fh:
+            for n in ELEMENT_NAMES:
+                t1fh.write("{}\n".format(elems1[n]))
+                t2fh.write("{}\n".format(elems2[n]))
+
+            t1fh.flush()
+            t2fh.flush()
+
+            try:
+                xspec.set_xsabund(t1fh.name)
+                abund1 = xspec.get_xsabund()
+                out1 = {n: xspec.get_xsabund(n)
+                        for n in ELEMENT_NAMES}
+
+                if reset:
+                    xspec.set_xsabund('angr')
+                    assert xspec.get_xsabund() == 'angr'
+
+                xspec.set_xsabund(t2fh.name)
+
+                abund2 = xspec.get_xsabund()
+                out2 = {n: xspec.get_xsabund(n)
+                        for n in ELEMENT_NAMES}
+
+            finally:
+                xspec.set_xsabund(oval)
+
+    assert abund1 == 'file'
+    assert abund2 == 'file'
+    for n in ELEMENT_NAMES:
+        assert out1[n] == pytest.approx(elems1[n])
+        assert out2[n] == pytest.approx(elems2[n])
+
+
 @requires_xspec
 def test_xset_change():
     """Can we change the xset setting.
