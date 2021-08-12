@@ -1555,6 +1555,69 @@ def test_pha_grouping_changed_filter_1160(make_test_pha):
     assert d4 == pytest.approx([2, 3])
 
 
+@requires_fits
+@requires_data
+def test_pha_grouping_changed_1160_data_no_filter(make_data_path):
+    """Test based on work on #1160
+
+    It should be able to be repeatable with a hand-crafted PHA file
+    """
+
+    from sherpa.astro.io import read_pha
+
+    infile = make_data_path("3c273.pi")
+    pha = read_pha(infile)
+
+    # check that the data contains grouped data
+    assert pha.get_dep(filter=False).shape == (1024, )
+    assert pha.get_dep(filter=True).shape == (46, )
+
+    ofilter = "0.00:14.95"
+    assert pha.get_filter(format="%.2f") == ofilter
+
+    # Change the grouping
+    pha.grouping = [1] * 1024
+
+    assert pha.get_dep(filter=False).shape == (1024, )
+    assert pha.get_dep(filter=True).shape == (1024, )
+
+    assert pha.get_filter(format="%.2f") == ofilter
+
+
+@pytest.mark.xfail
+@requires_fits
+@requires_data
+def test_pha_grouping_changed_1160_data_with_filter(make_data_path):
+    """Test based on work on #1160
+
+    It should be able to be repeatable with a hand-crafted PHA file
+    """
+
+    from sherpa.astro.io import read_pha
+
+    infile = make_data_path("3c273.pi")
+    pha = read_pha(infile)
+
+    pha.notice(0.5, 6)
+
+    ofilter = "0.47:6.57"
+    assert pha.get_filter(format="%.2f") == ofilter
+
+    # check that the data contains grouped data
+    assert pha.get_dep(filter=False).shape == (1024, )
+    assert pha.get_dep(filter=True).shape == (41, )
+
+    # Change the grouping
+    pha.grouping = [1] * 1024
+
+    assert pha.get_dep(filter=False).shape == (1024, )
+    # This currently raises a DataErr due to
+    # 'size mismatch between mask and data array'
+    assert pha.get_dep(filter=True).shape == (622, )  # TODO: is this the correct value
+
+    assert pha.get_filter(format="%.2f") == ofilter
+
+
 @pytest.mark.xfail
 def test_pha_remove_grouping(make_test_pha):
     """Check we can remove the grouping array."""
@@ -1579,6 +1642,18 @@ def test_pha_remove_grouping(make_test_pha):
     assert not pha.grouped
     d2 = pha.get_dep(filter=True)
     assert d2 == pytest.approx(no_data)
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize("grouping", [True, [1, 1], np.ones(10)])
+def test_pha_grouping_size(grouping, make_test_pha):
+    """Check we error out if grouping has the wrong size"""
+
+    pha = make_test_pha
+    with pytest.raises(DataErr) as de:
+        pha.grouping = grouping
+
+    assert str(de.value) == 'size mismatch between channel and grouping'
 
 
 def test_pha_remove_quality(make_test_pha):
