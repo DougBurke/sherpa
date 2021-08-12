@@ -1776,7 +1776,6 @@ def test_pha_column_set_none(label, vals, clean_astro_ui):
     assert getfunc() is None
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("label", ["grouping", "quality"])
 @pytest.mark.parametrize("vals",
                          [True, False, [1, 2, 3], np.ones(20)])
@@ -1790,7 +1789,6 @@ def test_pha_column_has_correct_size(label, vals, clean_astro_ui):
     pha = ui.get_data()
 
     with pytest.raises(DataErr) as de:
-        # This does not throw an error
         getattr(ui, f"set_{label}")(vals)
 
     assert str(de.value) == f"size mismatch between channel and {label}"

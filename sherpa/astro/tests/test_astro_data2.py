@@ -1164,7 +1164,6 @@ def test_pha_grouping_changed_filter_1160(make_test_pha):
     assert d4 == pytest.approx([2, 3])
 
 
-@pytest.mark.xfail
 def test_pha_remove_grouping(make_test_pha):
     """Check we can remove the grouping array."""
 
@@ -1184,7 +1183,6 @@ def test_pha_remove_grouping(make_test_pha):
 
     # Can we remove the grouping column?
     pha.grouping = None
-    # This thinks that pha.grouped is sill set
     assert not pha.grouped
     d2 = pha.get_dep(filter=True)
     assert d2 == pytest.approx(no_data)
@@ -1274,7 +1272,6 @@ def test_pha_quality_bad_filter_remove(make_test_pha):
     assert pha.get_filter() == "2:4"
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("label", ["grouping", "quality"])
 @pytest.mark.parametrize("vals", [True, [1, 1], np.ones(10)])
 def test_pha_column_size(label, vals, make_test_pha):
@@ -1282,7 +1279,6 @@ def test_pha_column_size(label, vals, make_test_pha):
 
     pha = make_test_pha
     with pytest.raises(DataErr) as de:
-        # This does not throw an error
         setattr(pha, label, vals)
 
     assert str(de.value) == f"size mismatch between channel and {label}"

@@ -1382,8 +1382,6 @@ class DataPHA(Data1D):
     syserror
     bin_lo
     bin_hi
-    grouping
-    quality
     exposure
     backscal
     areascal
@@ -1479,6 +1477,77 @@ class DataPHA(Data1D):
 
     grouped = property(_get_grouped, _set_grouped,
                        doc='Are the data grouped?')
+
+    def _get_grouping(self):
+        return self._grouping
+
+    def _set_grouping(self, val):
+        if val is None:
+            self._grouping = None
+            if self.grouped:
+                self.grouped = False
+
+            return
+
+        val = numpy.asarray(val)
+
+        # We allow channel to be None so we can only check the length if
+        # it's set (technically we could also check the counts field but
+        # let's assume that channel is the "important" one).
+        #
+        if self.channel is not None:
+            try:
+                if len(self.channel) != len(val):
+                    raise DataErr('mismatch', 'channel', 'grouping')
+            except TypeError:
+                # if val is a scalar; we assume that channel is not a scalar
+                raise DataErr('mismatch', 'channel', 'grouping') from None
+
+        # TODO: should this change _original_groups?
+        self._grouping = val
+
+    grouping = property(_get_grouping, _set_grouping,
+                        doc="""The grouping scheme (integer values).
+
+The first element in a group has the value of 1 and the
+remaining elements are -1. So the grouping scheme of
+[1, 1, -1, -1, 1, -1] for channels 1 to 6 consists of
+the three channel groups 1, 2 to 4, and 5 to 6.
+""")
+
+    def _get_quality(self):
+        return self._quality
+
+    def _set_quality(self, val):
+        if val is None:
+            self._quality = None
+            return
+
+        val = numpy.asarray(val)
+
+        # We allow channel to be None so we can only check the length if
+        # it's set (technically we could also check the counts field but
+        # let's assume that channel is the "important" one).
+        #
+        if self.channel is not None:
+            try:
+                if len(self.channel) != len(val):
+                    raise DataErr('mismatch', 'channel', 'quality')
+            except TypeError:
+                # if val is a scalar; we assume that channel is not a scalar
+                raise DataErr('mismatch', 'channel', 'quality') from None
+
+        self._quality = val
+
+    quality = property(_get_quality, _set_quality,
+                        doc="""The quality scheme (integer values).
+
+A value of 0 indicates a "good" channel, otherwise it is
+considered "bad". The OGIP standard uses values of 2 for
+user-defined "bad" values (e.g. an incomplete group), and
+values of 1 and 5 indicate the channel has been marked as
+bad or dubious by software.
+""")
 
     def _get_subtracted(self):
         return self._subtracted
@@ -1618,8 +1687,11 @@ must be an integer.""")
         self.counts = counts
         self.bin_lo = bin_lo
         self.bin_hi = bin_hi
-        self.quality = quality
+        self._grouped = grouping is not None  # define before _grouping
+        self._grouping = None  # keep pylint/etc happy
+        self._quality = None
         self.grouping = grouping
+        self.quality = quality
         self.exposure = exposure
         self.backscal = backscal
         self.areascal = areascal
@@ -1631,7 +1703,6 @@ must be an integer.""")
                       "FILTER": "none", "POISSERR": True}
 
         self.header = header
-        self._grouped = grouping is not None
 
         # _original_groups is set False if the grouping is changed via
         # the _dynamic_groups method. This is currently only used by the
