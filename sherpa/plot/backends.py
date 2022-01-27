@@ -1,5 +1,6 @@
 #
-#  Copyright (C) 2007, 2015, 2020, 2021  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2007, 2015, 2020, 2021, 2022
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -33,13 +34,13 @@ class BasicBackend():
     '''A dummy backend for plotting.
 
     This backend implements only minimal functionality (some formatting of
-    strings as HTML or LaTeX which are usually used as axis labels), but no real
-    plotting capabilities. It is here to ensure that the `sherpa.plot` module can
-    be imported, even if no plotting backend is installed.
+    strings as HTML or LaTeX which are usually used as axis labels), but no
+    real plotting capabilities. It is here to ensure that the `sherpa.plot`
+    module can be imported, even if no plotting backend is installed.
 
-    In this sense, this backend can be understood as the "base" for backends. 
-    The string-formatting is implemented here so that other backends don't have to
-    dublicate that; they can call the functions here.
+    In this sense, this backend can be understood as the "base" for backends.
+    The string-formatting is implemented here so that other backends don't
+    have to dublicate that; they can call the functions here.
     '''
     def setup_plot(self, axes, title, xlabel, ylabel, xlog=False, ylog=False):
         """Basic plot setup.
@@ -185,20 +186,20 @@ class BasicBackend():
              **kwargs):
         """Draw x,y data.
         
-        This method combines a number of different way to draw x/y data:
-        - a line connecting the dots
+        This method combines a number of different ways to draw x/y data:
+        - a line connecting the points
         - scatter plot of symbols
         - errorbars
 
         All three of them can be used together (symbols with errorbars
         connected by a line), but it is also possible to use only one or two
-        of them. By default, a line is shown (`linestyle='solid'`), but marker
-        and error bars are not (`marker='None'` and `xerrorbars=False` and 
-        `yerrorbars=False`).
+        of them. By default, a line is shown (``linestyle='solid'``), but marker
+        and error bars are not (``marker='None'`` and ``xerrorbars=False``
+        as well as ``yerrorbars=False``).
 
         Parameters
         ----------
-        x, y : array-like or scalar number
+        x : array-like or scalar number
             x values
         y : array-like or scalar number
             y values, same dimension as `x`.
@@ -206,7 +207,9 @@ class BasicBackend():
             The errorbar sizes:
               - scalar: Symmetric +/- values for all data points.
               - shape(N,): Symmetric +/-values for each data point.
-              - shape(2, N): Separate - and + values for each bar. First row contains the lower errors, the second row contains the upper errors.
+              - shape(2, N): Separate - and + values for each bar.
+                First row contains the lower errors, 
+                the second row contains the upper errors.
               - None: No errorbar.
 
              Note that all error arrays should have positive values.
@@ -220,7 +223,7 @@ class BasicBackend():
             Should x/y axes be logartihmic (default: linear)?
             Only used if a new plot is created.
         overplot : bool
-            If `True`, the plot is added to an existing plot, it not
+            If `True`, the plot is added to an existing plot, if not
             (the default) a new plot is created.
         clearwindow : bool
             If `True` (the default) the entire figure area is cleared
@@ -232,11 +235,20 @@ class BasicBackend():
             `xerrorbars` is that the prepare method of a plot can create the errors
             and pass them to this method, but the user can still decide to change the
             style of the plot and choose if error bars should be displayed.
-        color : TO BE DECIDED
-            WHAT BACKEND-INDEPENDENT COLOR SPECIFICATION DO WE WANT?
+        color : string (some backend may accept other)
+            The following colors are accepted by all backends:
+            ``'b'`` (blue), ``'r'`` (red), ``'g'`` (green), ``'k'`` (black),
+            ``'w'`` (white), ``'c'`` (cyan), ``'y'`` (yellow), ``'m``` (magenta)
+            but they may not translate to the exact same RGB values in each backend,
+            e.g. ``'b'`` could be a different shade of blue depending on the backend.
+
+            Some backend might accept additional values.
         linestyle : string
             The following values are accepted by all backends:
-            noline, solid, dot, dash, dotdash
+            ``'noline'``, ``'solid'``, ``'dot'``, ``'dash'``, 
+            ``'dotdash'``, ``'-'`` (solid line), ``':'`` (dotted),
+            ``'--'`` (dashed), ``'-.'`` (dot-dashed), ``''`` (empty string,
+            no line shown), `None` (default - usually solid line).
 
             Some backends may accept additional values.
         linewidth : float
@@ -245,23 +257,25 @@ class BasicBackend():
             DO WE NEED THIS IN BACKEND-INDEPENDENT INTERFACE?
         marker : string
             The following values are accepted by all backends:
-            "None" (as a string), "." (dot), "o" (cicle), "+", "s" (square)
+            "None" (as a string, no marker shown), "." (dot), "o" (cicle), "+", "s" (square),
+             "" (empty string, no marker shown)
 
             Some backends my accept additional values.
 
         alpha : float
             Number between 0 and 1, setting the transparency.
-        markerfacecolor : TO BO DECIDED
-            SEE COLOR
+        markerfacecolor : string
+            see `color`
         markersize : float, optional
             Size of a marker. The scale may also depend on the backend.
             None uses the backend-specific default.
-        ecolor : TO BE DECIDED
+        ecolor : string
             Color of the errorbars.
         capzise : float
             Size of the cap drawn at the end of the errorbars.
         """
-
+        warning(f'{self.__class__} does not implement line/symbol plotting.' +
+            'No plot will be produced.')
 
     def histo(self, xlo, xhi, y, *,
               yerr=None, 
@@ -293,8 +307,8 @@ class BasicBackend():
         Points are drawn at the middle of the bin, along with any
         error values.
         """
-        warning(f'{self.__class__} does not implement plotting capability.' + 
-                'No plot will be produced.')
+        warning(f'{self.__class__} does not implement histogram plotting.' +
+                'No histogram will be produced.')
 
     def contour(self, x0, x1, y, 
                 levels=None,
@@ -310,8 +324,8 @@ class BasicBackend():
         """Draw 2D contour data.
 
         """
-        warning(f'{self.__class__} does not implement plotting capability.' + 
-                'No plot will be produced.')
+        warning(f'{self.__class__} does not implement contour plotting.' +
+                'No countour will be produced.')
 
     def image(self, x0, x1, y, *,
               extent=None,
@@ -322,8 +336,8 @@ class BasicBackend():
               color=None,
               alpha=None,
               **kwargs):
-        warning(f'{self.__class__} does not implement plotting capability.' + 
-                'No plot will be produced.')
+        warning(f'{self.__class__} does not implement image plotting.' +
+                'No image will be produced.')
 
     def vline(self, x, *,
               ymin=0, ymax=1,
@@ -334,8 +348,8 @@ class BasicBackend():
               linewidth=None,
               **kwargs):
         """Draw a vertical line"""
-        warning(f'{self.__class__} does not implement plotting capability.' + 
-                'No plot will be produced.')
+        warning(f'{self.__class__} does not implement line plotting.' +
+                'No line will be produced.')
 
     def hline(self, y, *,
               xmin=0, xmax=1,
@@ -346,8 +360,8 @@ class BasicBackend():
               linewidth=None,
               **kwargs):
         """Draw a horizontal line"""
-        warning(f'{self.__class__} does not implement plotting capability.' + 
-                'No plot will be produced.')
+        warning(f'{self.__class__} does not implement line plotting.' + 
+                'No line will be produced.')
 
     def get_latex_for_string(self, txt):
         """Convert LaTeX formula
