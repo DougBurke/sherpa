@@ -436,11 +436,10 @@ class PylabBackend(BasicBackend):
 
         if levels is None:
             axes.contour(x0, x1, y, alpha=alpha,
-                        colors=colors, linewidths=linewidths)
+                         colors=colors, linewidths=linewidths)
         else:
             axes.contour(x0, x1, y, levels, alpha=alpha,
-                        colors=colors, linewidths=linewidths)
-
+                         colors=colors, linewidths=linewidths)
 
     def set_subplot(row, col, nrows, ncols, clearaxes=True,
                     left=None,
