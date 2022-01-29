@@ -17,17 +17,86 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import functools
+from inspect import signature
 import logging
 
-from sherpa.utils import get_keyword_defaults
 from sherpa.utils import formatting
 
 
-__all__ = ('BasicBackend')
+__all__ = ('BasicBackend',
+           'backend_indep_kwargs',
+           )
 
 
 lgr = logging.getLogger(__name__)
 warning = lgr.warning
+
+
+# Should None be an options for all of them?
+backend_indep_kwargs = {
+    'color': 'rgbkwcymk',
+    'ecolor': 'rgbkwcymk',
+    'markerfacecolor': 'rgbkwcymk',
+    'linestyle': ['noline', 'solid', 'dot', 'dash', 'dotdash', '-', ':', '--',
+                  '-.', '', None],
+    'marker': ['', "None", ".", "o", "+", "s"]
+}
+
+
+def translate_args(func):
+    @functools.wraps(func)
+    def inner(self, *args, **kwargs):
+        for kw, val in kwargs.items():
+            if kw in self.translate_args:
+                transl = self.translate_kwargs[kw]
+
+                if callable(transl):
+                    # It's a function
+                    kwargs[kw] = transl(val)
+                else:
+                    # It should be a dict
+                    # Let's check if val is one of those that need to
+                    # be translated
+                    if val in transl:
+                        kwargs[kw] = transl[val]
+        func(self, *args, **kwargs)
+
+    return inner
+
+# In principle, still need test for get_keyword_default
+# However, I expect to remove that in step 2 of the plotting plan,
+# so I don't want to spend too much time on that right now.
+
+
+def get_keyword_defaults(func, ignore_args=['title', 'xlabel', 'ylabel',
+                                            'overplot', 'clearwindow']):
+    '''Get default values for keyword arguments
+
+    Parameters
+    ----------
+    func : callable
+        function or method to inspect
+    ignore_args : list
+        Any keyword arguments with names listed here will be ignored
+
+    Returns
+    -------
+    default_values : dict
+        Dictionary with argument names and default values
+
+    See also
+    --------
+    sherpa.utils.get_keyword_defaults
+    '''
+    default_values = {}
+    sig = signature(func)
+
+    for param in sig.parameters.values():
+        if (param.default is not param.empty and
+                param.name not in ignore_args):
+            default_values[param.name] = param.default
+    return default_values
 
 
 class BasicBackend():
@@ -42,6 +111,30 @@ class BasicBackend():
     The string-formatting is implemented here so that other backends don't
     have to dublicate that; they can call the functions here.
     '''
+
+    translate_kwargs = {}
+    '''
+    Dict of keyword arguments that need to be translated for this backend.
+
+    The keys in this dict are keyword arguments (e.g. ``'markerfacecolor'``)
+    and the values are one of the following:
+    - A dict where the keys are the backend-independent values and the values
+      are the values expressed for this backend. For values not listed in the
+      dict, no translation is done.
+    - A callable. The callable translation function is called with any argument
+      given and allows the backend arbitrary translations. It should, at the
+      very least, accept all backend independent values for this parameter
+      without error.
+
+    Example:
+
+       >>> translate_args = {'markerfacecolor': {'k': (0., 0., 0.)},
+                             'alpha': lambda a: 256 * a}
+
+    This translates the color 'k' to tuple of RGB values and alpha values
+    to a number between 0 and 256.
+    '''
+
     def setup_plot(self, axes, title, xlabel, ylabel, xlog=False, ylog=False):
         """Basic plot setup.
 
@@ -62,8 +155,8 @@ class BasicBackend():
                     **kwargs):
         """ Select a plot space in a grid of plots or create new grid
 
-        This method adds a new subplot in a grid of plots. 
- 
+        This method adds a new subplot in a grid of plots.
+
         Parameters
         ----------
         row, col : int
@@ -71,12 +164,12 @@ class BasicBackend():
         nrows, ncols : int
             Number of rows and column in the plot grid
         clearaxes : bool
-            If True, clear entire plotting area before adding the new 
+            If True, clear entire plotting area before adding the new
             subplot.
 
         Note
         ----
-        This method is intended for grids of plots with the same number of 
+        This method is intended for grids of plots with the same number of
         plots in each row and each column. In some backends, more
         complex layouts (e.g. one wide plot on row 1 and two smaller plots
         in row 2) might be possible.
@@ -84,7 +177,7 @@ class BasicBackend():
         pass
 
     def set_jointplot(row, col, nrows, ncols, create=True,
-                    top=0, ratio=2):
+                      top=0, ratio=2):
         """Move to the plot, creating them if necessary.
         Parameters
         ----------
@@ -108,7 +201,7 @@ class BasicBackend():
 
     def clear_window():
         """Provide empty plot window
-        
+
         Depending on te backend, this may provide a new,
         empty window or clear the existing, current window.
         """
@@ -163,8 +256,9 @@ class BasicBackend():
         '''Called from the UI after an interactivep lot is done'''
         pass
 
+    @translate_args
     def plot(self, x, y, *,
-             xerr=None, yerr=None, 
+             xerr=None, yerr=None,
              title=None, xlabel=None, ylabel=None,
              xlog=False, ylog=False,
              overplot=False, clearwindow=True,
@@ -185,17 +279,15 @@ class BasicBackend():
              ratioline=False,  # HMG suggest to drop this
              **kwargs):
         """Draw x,y data.
-        
-        This method combines a number of different ways to draw x/y data:
-        - a line connecting the points
-        - scatter plot of symbols
-        - errorbars
 
-        All three of them can be used together (symbols with errorbars
-        connected by a line), but it is also possible to use only one or two
-        of them. By default, a line is shown (``linestyle='solid'``), but marker
-        and error bars are not (``marker='None'`` and ``xerrorbars=False``
-        as well as ``yerrorbars=False``).
+        This method combines a number of different ways to draw x/y data: - a
+        line connecting the points - scatter plot of symbols - errorbars
+
+        All three of them can be used together (symbols with errorbars connected
+        by a line), but it is also possible to use only one or two of them. By
+        default, a line is shown (``linestyle='solid'``), but marker and error
+        bars are not (``marker='None'`` and ``xerrorbars=False`` as well as
+        ``yerrorbars=False``).
 
         Parameters
         ----------
@@ -207,48 +299,49 @@ class BasicBackend():
             The errorbar sizes:
               - scalar: Symmetric +/- values for all data points.
               - shape(N,): Symmetric +/-values for each data point.
-              - shape(2, N): Separate - and + values for each bar.
-                First row contains the lower errors, 
-                the second row contains the upper errors.
+              - shape(2, N): Separate - and + values for each bar. First row
+                contains the lower errors, the second row contains the upper
+                errors.
               - None: No errorbar.
 
              Note that all error arrays should have positive values.
         title : string, optional
-            Plot title (can contain LaTeX formulas).
-            Only used if a new plot is created.
+            Plot title (can contain LaTeX formulas). Only used if a new plot is
+            created.
         xlabel, ylabel : string, optional
-            Axis labels (can contain LaTeX formulas).
-            Only used if a new plot is created.
+            Axis labels (can contain LaTeX formulas). Only used if a new plot
+            is created.
         xlog, ylog : bool
-            Should x/y axes be logartihmic (default: linear)?
-            Only used if a new plot is created.
+            Should x/y axes be logartihmic (default: linear)? Only used if
+            a new plot is created.
         overplot : bool
-            If `True`, the plot is added to an existing plot, if not
-            (the default) a new plot is created.
+            If `True`, the plot is added to an existing plot, if not (the
+            default) a new plot is created.
         clearwindow : bool
-            If `True` (the default) the entire figure area is cleared
-            to make space for a new plot.
+            If `True` (the default) the entire figure area is cleared to make
+            space for a new plot.
         xerrorbars, yerrorbars : bool
-            Should x/y error bars be shown? If this is set to `True ` errorbars are
-            shown, but only if the size of the errorbars is provided in the 
+            Should x/y error bars be shown? If this is set to `True ` errorbars
+            are shown, but only if the size of the errorbars is provided in the
             `xerr`/`yerr` parameters. The purpose of having a separate switch
-            `xerrorbars` is that the prepare method of a plot can create the errors
-            and pass them to this method, but the user can still decide to change the
-            style of the plot and choose if error bars should be displayed.
+            `xerrorbars` is that the prepare method of a plot can create the
+            errors and pass them to this method, but the user can still decide
+            to change the style of the plot and choose if error bars should be
+            displayed.
         color : string (some backend may accept other)
-            The following colors are accepted by all backends:
-            ``'b'`` (blue), ``'r'`` (red), ``'g'`` (green), ``'k'`` (black),
-            ``'w'`` (white), ``'c'`` (cyan), ``'y'`` (yellow), ``'m``` (magenta)
-            but they may not translate to the exact same RGB values in each backend,
-            e.g. ``'b'`` could be a different shade of blue depending on the backend.
+            The following colors are accepted by all backends: ``'b'`` (blue),
+            ``'r'`` (red), ``'g'`` (green), ``'k'`` (black), ``'w'`` (white),
+            ``'c'`` (cyan), ``'y'`` (yellow), ``'m``` (magenta) but they may not
+            translate to the exact same RGB values in each backend, e.g. ``'b'``
+            could be a different shade of blue depending on the backend.
 
             Some backend might accept additional values.
         linestyle : string
-            The following values are accepted by all backends:
-            ``'noline'``, ``'solid'``, ``'dot'``, ``'dash'``, 
-            ``'dotdash'``, ``'-'`` (solid line), ``':'`` (dotted),
-            ``'--'`` (dashed), ``'-.'`` (dot-dashed), ``''`` (empty string,
-            no line shown), `None` (default - usually solid line).
+            The following values are accepted by all backends: ``'noline'``,
+            ``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
+            line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
+            ``''`` (empty string, no line shown), `None` (default - usually
+            solid line).
 
             Some backends may accept additional values.
         linewidth : float
@@ -256,8 +349,8 @@ class BasicBackend():
         drawstyle : string
             DO WE NEED THIS IN BACKEND-INDEPENDENT INTERFACE?
         marker : string
-            The following values are accepted by all backends:
-            "None" (as a string, no marker shown), "." (dot), "o" (cicle), "+", "s" (square),
+            The following values are accepted by all backends: "None" (as a
+            string, no marker shown), "." (dot), "o" (cicle), "+", "s" (square),
              "" (empty string, no marker shown)
 
             Some backends my accept additional values.
@@ -267,18 +360,19 @@ class BasicBackend():
         markerfacecolor : string
             see `color`
         markersize : float, optional
-            Size of a marker. The scale may also depend on the backend.
-            None uses the backend-specific default.
+            Size of a marker. The scale may also depend on the backend. None
+            uses the backend-specific default.
         ecolor : string
             Color of the errorbars.
         capzise : float
             Size of the cap drawn at the end of the errorbars.
         """
         warning(f'{self.__class__} does not implement line/symbol plotting.' +
-            'No plot will be produced.')
+                'No plot will be produced.')
 
+    @translate_args
     def histo(self, xlo, xhi, y, *,
-              yerr=None, 
+              yerr=None,
               title=None, xlabel=None, ylabel=None,
               overplot=False, clearwindow=True,
               xlog=False, ylog=False,
@@ -310,7 +404,8 @@ class BasicBackend():
         warning(f'{self.__class__} does not implement histogram plotting.' +
                 'No histogram will be produced.')
 
-    def contour(self, x0, x1, y, 
+    @translate_args
+    def contour(self, x0, x1, y, *,
                 levels=None,
                 title=None, xlabel=None, ylabel=None,
                 overplot=False, clearwindow=True,
@@ -327,6 +422,7 @@ class BasicBackend():
         warning(f'{self.__class__} does not implement contour plotting.' +
                 'No countour will be produced.')
 
+    @translate_args
     def image(self, x0, x1, y, *,
               extent=None,
               title=None, xlabel=None, ylabel=None,
@@ -339,6 +435,7 @@ class BasicBackend():
         warning(f'{self.__class__} does not implement image plotting.' +
                 'No image will be produced.')
 
+    @translate_args
     def vline(self, x, *,
               ymin=0, ymax=1,
               title=None, xlabel=None, ylabel=None,
@@ -351,6 +448,7 @@ class BasicBackend():
         warning(f'{self.__class__} does not implement line plotting.' +
                 'No line will be produced.')
 
+    @translate_args
     def hline(self, y, *,
               xmin=0, xmax=1,
               title=None, xlabel=None, ylabel=None,
@@ -360,7 +458,7 @@ class BasicBackend():
               linewidth=None,
               **kwargs):
         """Draw a horizontal line"""
-        warning(f'{self.__class__} does not implement line plotting.' + 
+        warning(f'{self.__class__} does not implement line plotting.' +
                 'No line will be produced.')
 
     def get_latex_for_string(self, txt):
@@ -414,64 +512,114 @@ class BasicBackend():
             meta.append((name, val))
 
         ls = [formatting.html_section(meta, open_block=True,
-                                    summary=type(data).__name__)]
+                                      summary=type(data).__name__)]
         return formatting.html_from_sections(data, ls)
 
     # The follwowing methods will almost all be removed in Step 2
+    # and thus no documentation has been added.
     def get_split_plot_defaults(self):
-        return get_keyword_defaults(self.set_subplot, 3)
-
+        return get_keyword_defaults(self.set_subplot, 1)
 
     def get_plot_defaults(self):
-        return get_keyword_defaults(self.plot, 7)
-
-
-    def get_point_defaults(self):
-        return get_keyword_defaults(self.point, 2)
-
-
-    def get_contour_defaults(self):
-        return get_keyword_defaults(self.contour, 6)
-
+        return get_keyword_defaults(self.plot)
 
     def get_histo_defaults(self):
-        return get_keyword_defaults(self.histo, 6)
+        return get_keyword_defaults(self.histo)
 
+    def get_confid_point_defaults(self):
+        d = self.get_point_defaults()
+        d['symbol'] = '+'
+        return d
+
+    def get_data_plot_defaults(self):
+        d = self.get_plot_defaults()
+
+        d['yerrorbars'] = True
+        d['linestyle'] = 'None'
+        d['marker'] = '.'
+        return d
+
+    def get_model_histo_defaults(self):
+        d = self.get_histo_defaults()
+        return d
+
+    def get_model_plot_defaults(self):
+        d = self.get_plot_defaults()
+
+        d['linestyle'] = '-'
+        d['marker'] = 'None'
+        return d
+
+    def get_fit_plot_defaults(self):
+        return {}
+
+    def get_resid_plot_defaults(self):
+        d = self.get_data_plot_defaults()
+        d['xerrorbars'] = True
+        d['capsize'] = 0
+        # d['marker'] = '_'
+        d['xaxis'] = True
+        return d
+
+    def get_ratio_plot_defaults(self):
+        d = self.get_data_plot_defaults()
+        d['xerrorbars'] = True
+        d['capsize'] = 0
+        # d['marker'] = '_'
+        d['ratioline'] = True
+        return d
+
+    def get_confid_plot_defaults(self):
+        d = self.get_plot_defaults()
+        d['linestyle'] = '-'
+        d['marker'] = 'None'
+        return d
+
+    def get_contour_defaults(self):
+        return get_keyword_defaults(self.contour)
+
+    get_data_contour_defaults = get_contour_defaults
+    get_model_contour_defaults = get_contour_defaults
+
+    def get_fit_contour_defaults(self):
+        return {}
+
+    get_confid_contour_defaults = get_data_contour_defaults
+    get_resid_contour_defaults = get_data_contour_defaults
+    get_ratio_contour_defaults = get_data_contour_defaults
+    get_component_plot_defaults = get_model_plot_defaults
+    get_component_histo_defaults = get_model_histo_defaults
+
+    def get_cdf_plot_defaults(self):
+        d = self.get_model_plot_defaults()
+        return d
+
+    def get_scatter_plot_defaults(self):
+        d = self.get_data_plot_defaults()
+        return d
+
+    def get_contour_defaults(self):
+        return get_keyword_defaults(self.contour)
 
     def get_dummy_defaults(self):
         return {}
 
-
-    get_data_plot_defaults = get_dummy_defaults
-    get_model_plot_defaults = get_dummy_defaults
-    get_fit_plot_defaults = get_dummy_defaults
-    get_resid_plot_defaults = get_dummy_defaults
-    get_ratio_plot_defaults = get_dummy_defaults
-
     get_data_contour_defaults = get_dummy_defaults
     get_model_contour_defaults = get_dummy_defaults
-    get_fit_contour_defaults = get_dummy_defaults
     get_resid_contour_defaults = get_dummy_defaults
     get_ratio_contour_defaults = get_dummy_defaults
-
-    get_confid_point_defaults = get_dummy_defaults
-    get_confid_plot_defaults = get_dummy_defaults
     get_confid_contour_defaults = get_dummy_defaults
     get_model_histo_defaults = get_dummy_defaults
     get_component_plot_defaults = get_dummy_defaults
     get_component_histo_defaults = get_dummy_defaults
-    get_scatter_plot_defaults = get_dummy_defaults
-    get_cdf_plot_defaults = get_dummy_defaults
 
     def as_html_histogram(self, plot):
         return self.as_html(plot,
-                    ['xlo', 'xhi', 'y', 'title', 'xlabel', 'ylabel'])
-
+                        ['xlo', 'xhi', 'y', 'title', 'xlabel', 'ylabel'])
 
     def as_html_pdf(self, plot):
         return self.as_html(plot,
                     ['points', 'xlo', 'xhi', 'y', 'title', 'xlabel', 'ylabel'])
-
 
     def as_html_cdf(self, plot):
         return self.as_html(plot,
@@ -479,42 +627,35 @@ class BasicBackend():
                         'median', 'lower', 'upper',
                         'title', 'xlabel', 'ylabel'])
 
-
     def as_html_lr(self, plot):
         return self.as_html(plot,
                     ['ratios', 'lr', 'xlo', 'xhi', 'y',
                         'title', 'xlabel', 'ylabel'])
-
 
     def as_html_data(self, plot):
         return self.as_html(plot,
                     ['x', 'xerr', 'y', 'yerr',
                         'title', 'xlabel', 'ylabel'])
 
-
     def as_html_datacontour(self, plot):
         return self.as_html(plot,
                     ['x0', 'x1', 'y', 'levels',
                         'title', 'xlabel', 'ylabel'])
-
 
     def as_html_model(self, plot):
         return self.as_html(plot,
                     ['x', 'xerr', 'y', 'yerr',
                         'title', 'xlabel', 'ylabel'])
 
-
     def as_html_modelcontour(self, plot):
         return self.as_html(plot,
                     ['x0', 'x1', 'y', 'levels',
                         'title', 'xlabel', 'ylabel'])
 
-
     def get_html(self, attr):
         if attr is None:
             return ''
         return attr._repr_html_()
-
 
     def as_html_fit(self, plot):
         # Would like to do a better combination than this
@@ -523,9 +664,7 @@ class BasicBackend():
 
         if dplot == '' and mplot == '':
             return None
-
         return dplot + mplot
-
 
     def as_html_fitcontour(self, plot):
         # Would like to do a better combination than this
@@ -534,15 +673,12 @@ class BasicBackend():
 
         if dplot == '' and mplot == '':
             return None
-
         return dplot + mplot
-
 
     def as_html_contour1d(self, plot):
         return self.as_html(plot,
                     ['x', 'y', 'min', 'max', 'nloop',
                         'delv', 'fac', 'log'])
-
 
     def as_html_contour2d(self, plot):
         return self.as_html(plot,

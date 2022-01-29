@@ -32,7 +32,7 @@ Which backend is used?
 When this module is first imported, Sherpa tries to import the
 backends installed with Sherpa in the order listed in the
 ``options.plot_pkg`` setting from the ``sherpa.rc`` startup file.
-The first module that imports successfully is set as the active 
+The first module that imports successfully is set as the active\
 backend. The following command prints the name and the location
 on disk of that module::
 
@@ -73,15 +73,19 @@ warning = lgr.warning
 _ = numpy.seterr(invalid='ignore')
 
 plot_opt = config.get('options', 'plot_pkg', fallback='dummy')
-plot_opt = [o.strip().lower() + '_backend' for o in plot_opt.split()]
+plot_opt = [o.strip().lower() for o in plot_opt.split()]
+
+plot_backends = {'pylab': 'sherpa.plot.pylab_backend.PylabBackend',
+                 'matplotlib': 'sherpa.plot.pylab_backend.PylabBackend',
+                 'dummy': 'sherpa.plot.backends.BasicBackend',
+                 }
 
 backend = None
 '''Currently active backend module for plotting.'''
 
 for plottry in plot_opt:
     try:
-        backend = importlib.import_module('.' + plottry,
-                                          package='sherpa.plot')
+        backend_class = importlib.import_module()
         break
     except ImportError:
         pass

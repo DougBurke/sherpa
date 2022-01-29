@@ -112,7 +112,7 @@ does understand (``'black'`` in this case).
 Backends may also accept additional keywords to specify more plotting properties
 such as the transparancy of an element or an URL that is opened when clicking on
 an element. Those can simply be passed to the Sherpa plotting command, which
-will pass them through to the plotting backend:
+will pass them through to the plotting backend **alpha is part of the API. Pick different example**:
 
   >>> from sherpa.data import Data1D
   >>> from sherpa.plot import DataPlot
