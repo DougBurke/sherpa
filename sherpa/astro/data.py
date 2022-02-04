@@ -145,38 +145,51 @@ def _notice_resp(chans, arf, rmf):
 
     """
 
-    bin_mask = None
+    if arf is None and rmf is None:
+        # This is not expected but allow it
+        return
 
-    if rmf is not None and arf is not None:
+    if arf is None:
+        rmf.notice(chans)
+        return
 
-        bin_mask = rmf.notice(chans)
-        if len(rmf.energ_lo) == len(arf.energ_lo):
-            arf.notice(bin_mask)
+    if rmf is None:
+        # TODO: should this be chans and not None?
+        arf.notice(None)
+        return
 
-        # If the response is mis-matched, determine which energy bins in the
-        # RMF correspond to energy bins in the ARF and which are noticed.
-        # Propogate the noticed RMF energy bins to the ARF energy  bins.
-        elif len(rmf.energ_lo) < len(arf.energ_lo):
-            arf_mask = None
-            if bin_mask is not None:
-                arf_mask = numpy.zeros(len(arf.energ_lo), dtype=bool)
-                for ii, val in enumerate(bin_mask):
-                    if val:
-                        los = (rmf.energ_lo[ii],)
-                        his = (rmf.energ_hi[ii],)
-                        grid = (arf.energ_lo, arf.energ_hi)
-                        # TODO: should this set integrated=True?
-                        #       we only have one test of this code in
-                        #       sherpa/astro/tests/test_astro.py:test_missmatch_arf
-                        idx = filter_bins(los, his, grid).nonzero()[0]
-                        arf_mask[idx] = True
-            arf.notice(arf_mask)
+    bin_mask = rmf.notice(chans)
 
-    else:
-        if rmf is not None:
-            bin_mask = rmf.notice(chans)
-        if arf is not None:
-            arf.notice(bin_mask)
+    narf = len(arf.energ_lo)
+    nrmf = len(rmf.energ_lo)
+
+    if nrmf == narf:
+        arf.notice(bin_mask)
+        return
+
+    # TODO: shouldn't we do something about this case?
+    if nrmf > narf:
+        return
+
+    # If the response is mis-matched, determine which energy bins in the
+    # RMF correspond to energy bins in the ARF and which are noticed.
+    # Propogate the noticed RMF energy bins to the ARF energy  bins.
+    #
+    arf_mask = None
+    if bin_mask is not None:
+        arf_mask = numpy.zeros(narf, dtype=bool)
+        for ii, val in enumerate(bin_mask):
+            if val:
+                los = (rmf.energ_lo[ii],)
+                his = (rmf.energ_hi[ii],)
+                grid = (arf.energ_lo, arf.energ_hi)
+                # TODO: should this set integrated=True?
+                #       we only have one test of this code in
+                #       sherpa/astro/tests/test_astro.py:test_missmatch_arf
+                idx = filter_bins(los, his, grid).nonzero()[0]
+                arf_mask[idx] = True
+
+    arf.notice(arf_mask)
 
 
 def display_header(header, key):
@@ -2899,9 +2912,9 @@ must be an integer.""")
             if self.mask is not True:
                 self.mask = self.mask & qual_flags
                 return
-            else:
-                self.mask = qual_flags
-                return
+
+            self.mask = qual_flags
+            return
 
         # self.quality_filter used for pre-grouping filter
         self.quality_filter = qual_flags
@@ -3822,19 +3835,20 @@ must be an integer.""")
             The mask, in channels, or None.
 
         """
-        groups = self.grouping
         if self.mask is False:
             return None
 
         if self.mask is True or not self.grouped:
             if self.quality_filter is not None:
                 return self.quality_filter
-            elif numpy.iterable(self.mask):
+            if numpy.iterable(self.mask):
                 return self.mask
             return None
 
+        groups = self.grouping
         if self.quality_filter is not None:
             groups = groups[self.quality_filter]
+
         return expand_grouped_mask(self.mask, groups)
 
     def get_noticed_expr(self):
@@ -3945,11 +3959,13 @@ must be an integer.""")
         #
         chans = self.get_noticed_channels()
 
-        # Special case all data has been masked. Should it
-        # error out or return either '' or 'No noticed bins'?
+        # Special case all data has been masked. It would make sense
+        # to return the same as when self.mask is False, but a nunber
+        # of our tests fail, so leave it returning '' for
+        # now. However, these tests do all seem to be just checking
+        # what the return value is for this case, so could be changed.
         #
         if len(chans) == 0:
-            # raise DataErr('notmask')
             # return 'No noticed bins'
             return ''
 
