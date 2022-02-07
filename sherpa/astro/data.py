@@ -1489,7 +1489,7 @@ class DataPHA(Data1D):
 
             return
 
-        val = numpy.asarray(val)
+        val = numpy.asarray(val, dtype=numpy.int16)
 
         # We allow channel to be None so we can only check the length if
         # it's set (technically we could also check the counts field but
@@ -1523,7 +1523,7 @@ the three channel groups 1, 2 to 4, and 5 to 6.
             self._quality = None
             return
 
-        val = numpy.asarray(val)
+        val = numpy.asarray(val, dtype=numpy.int16)
 
         # We allow channel to be None so we can only check the length if
         # it's set (technically we could also check the counts field but

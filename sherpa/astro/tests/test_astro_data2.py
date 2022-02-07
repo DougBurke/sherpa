@@ -1302,7 +1302,6 @@ def test_pha_column_scal_size(label, vals, make_test_pha):
     assert str(de.value) == f"size mismatch between channel and {label}"
 
 
-@pytest.mark.xfail
 def test_pha_change_grouping_type(make_test_pha):
     """Check the grouping column is converted to int"""
     pha = make_test_pha
@@ -1311,11 +1310,9 @@ def test_pha_change_grouping_type(make_test_pha):
 
     # Since integer values can do an exact check
     assert (pha.grouping == np.asarray([1, -1, -1, 1])).all()
-    # At the moment the array is not converted to an int type
     assert pha.grouping.dtype == np.int16
 
 
-@pytest.mark.xfail
 def test_pha_change_quality_type(make_test_pha):
     """Check the quality column is converted to int"""
     pha = make_test_pha
@@ -1325,11 +1322,9 @@ def test_pha_change_quality_type(make_test_pha):
 
     # Since integer values can do an exact check
     assert (pha.quality == np.asarray([0, 2, 5, -1])).all()
-    # At the moment the array is not converted to an int type
     assert pha.quality.dtype == np.int16
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("label", ["grouping", "quality"])
 def test_pha_change_grouping_rounding(label, make_test_pha):
     """What happens with non-integer values?
@@ -1347,9 +1342,6 @@ def test_pha_change_grouping_rounding(label, make_test_pha):
     vals = np.asarray([0.5, 1.5, -0.5, 0.9])
     setattr(pha, label, vals)
 
-    # At the moment there is no conversion so the return
-    # value matches the input (i.e. vals).
-    #
     got = getattr(pha, label)
     assert (got == np.asarray([0, 1, 0, 0])).all()
 
