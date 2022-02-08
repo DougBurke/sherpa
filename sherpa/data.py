@@ -1415,6 +1415,9 @@ class Data1DInt(Data1D):
     def _init_data_space(self, filter, *data):
         if len(data) != 2:
             raise DataErr("mismatch", "independent axis", "data")
+        if len(data[1]) != len(data[0]):
+            raise DataErr("The independent axes do not have the same size")
+
         return IntegratedDataSpace1D(filter, *data)
 
     def get_x(self, filter=False, model=None, use_evaluation_space=False):
@@ -1586,6 +1589,8 @@ class Data2D(Data):
     def _init_data_space(self, filter, *data):
         if len(data) != 2:
             raise DataErr("mismatch", "independent axis", "data")
+        if len(data[1]) != len(data[0]):
+            raise DataErr("The independent axes do not have the same size")
         return DataSpace2D(filter, *data)
 
     def get_x0(self, filter=False):
@@ -1705,6 +1710,9 @@ class Data2DInt(Data2D):
     def _init_data_space(self, filter, *data):
         if len(data) != 4:
             raise DataErr("mismatch", "independent axis", "data")
+        n = set([len(d) for d in data])
+        if len(n) != 1:
+            raise DataErr("The independent axes do not have the same size")
         return IntegratedDataSpace2D(filter, *data)
 
     def get_x0(self, filter=False):

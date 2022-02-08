@@ -1518,7 +1518,6 @@ def test_invalid_independent_axis(data):
         data.indep = tuple(list(indep) * 2)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("data", (Data1DInt, Data2D, Data2DInt), indirect=True)
 def test_invalid_independent_axis_component(data):
     """What happens if we use mis-matched sizes?
@@ -1528,7 +1527,6 @@ def test_invalid_independent_axis_component(data):
     second component,
     """
 
-    # At the moment this does not error out
     indep = list(data.indep)
     indep[1] = indep[1][:-1]
     with pytest.raises(DataErr):

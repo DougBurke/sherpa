@@ -2662,7 +2662,6 @@ def test_invalid_independent_axis(data):
         data.indep = tuple(list(indep) * 2)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("data",
                          [DataARF("arf", np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3)),
                           DataRMF("emf", 3, np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3),
@@ -2682,7 +2681,6 @@ def test_invalid_independent_axis_component(data):
     We remove one entry from the second component,
     """
 
-    # At the moment this does not error out
     indep = list(data.indep)
     indep[1] = indep[1][:-1]
     with pytest.raises(DataErr):
