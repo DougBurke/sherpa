@@ -94,6 +94,8 @@ def _check(array):
 def _check_nomask(array):
     if hasattr(array, 'mask'):
         warnings.warn(f'Input array {array} has a mask attribute. Because masks are supported for dependent variables only the mask attribute of the independent array is ignored and values `behind the mask` are used.')
+
+    # should this return _check(array)? Unfortunately a few tests fail if we do so.
     return array
 
 
@@ -669,7 +671,7 @@ class Data(NoNewAttributesAfterInit, BaseData):
         self.name = name
         self._data_space = self._init_data_space(Filter(), *indep)
         self.y, self.mask = _check_dep(y)
-        self.staterror = _check_err(staterror, y)
+        self.staterror = staterror
         self.syserror = _check_err(syserror, y)
         NoNewAttributesAfterInit.__init__(self)
 
@@ -716,6 +718,13 @@ class Data(NoNewAttributesAfterInit, BaseData):
 
     @mask.setter
     def mask(self, val):
+        # Assumption is that all the independent axes have the same size
+        # and there must be at least one of them.
+        #indep0 = self.indep[0]
+        #if numpy.iterable(val) and indep0 is not None \
+        #   and len(val) != len(indep0):
+        #    raise DataErr('mismatch', 'indep', 'mask')
+
         self._data_space.filter.mask = val
 
     def get_dims(self):
@@ -844,6 +853,44 @@ class Data(NoNewAttributesAfterInit, BaseData):
             y = (y, yfunc)
 
         return y
+
+    @property
+    def staterror(self):
+        """The statistical error on the dependent axis, if set.
+
+        This must match the size of the independent axis.
+        """
+        return self._staterror
+
+    @staterror.setter
+    def staterror(self, val):
+        val = _check_err(val, self.y)
+
+        indep0 = self.indep[0]
+        if numpy.iterable(val) and indep0 is not None \
+           and len(val) != len(indep0):
+            raise DataErr('mismatch', 'indep', 'staterror')
+
+        self._staterror = val
+
+    @property
+    def syserror(self):
+        """The systematic error on the dependent axis, if set.
+
+        This must match the size of the independent axis.
+        """
+        return self._syserror
+
+    @syserror.setter
+    def syserror(self, val):
+        val = _check_err(val, self.y)
+
+        indep0 = self.indep[0]
+        if numpy.iterable(val) and indep0 is not None \
+           and len(val) != len(indep0):
+            raise DataErr('mismatch', 'indep', 'syserror')
+
+        self._syserror = val
 
     def get_staterror(self, filter=False, staterrfunc=None):
         """Return the statistical error on the dependent axis of a data set.
