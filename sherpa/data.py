@@ -1138,6 +1138,8 @@ class Data1D(Data):
         return html_data1d(self)
 
     def _init_data_space(self, filter, *data):
+        if len(data) != 1:
+            raise DataErr("mismatch", "independent axis", "data")
         return DataSpace1D(filter, *data)
 
     def get_x(self, filter=False, model=None, use_evaluation_space=False):
@@ -1411,6 +1413,8 @@ class Data1DInt(Data1D):
         return html_data1dint(self)
 
     def _init_data_space(self, filter, *data):
+        if len(data) != 2:
+            raise DataErr("mismatch", "independent axis", "data")
         return IntegratedDataSpace1D(filter, *data)
 
     def get_x(self, filter=False, model=None, use_evaluation_space=False):
@@ -1580,6 +1584,8 @@ class Data2D(Data):
         return html_data2d(self)
 
     def _init_data_space(self, filter, *data):
+        if len(data) != 2:
+            raise DataErr("mismatch", "independent axis", "data")
         return DataSpace2D(filter, *data)
 
     def get_x0(self, filter=False):
@@ -1697,6 +1703,8 @@ class Data2DInt(Data2D):
         Data.__init__(self, name, (x0lo, x1lo, x0hi, x1hi), y, staterror, syserror)
 
     def _init_data_space(self, filter, *data):
+        if len(data) != 4:
+            raise DataErr("mismatch", "independent axis", "data")
         return IntegratedDataSpace2D(filter, *data)
 
     def get_x0(self, filter=False):

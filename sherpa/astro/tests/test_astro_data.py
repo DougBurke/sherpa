@@ -2637,7 +2637,6 @@ def test_pha_channel0_subtract():
 # We don't really care if the arguments don't make much sense, at least
 # not until we add validation code which will mean these need fixing up.
 #
-@pytest.mark.xfail
 @pytest.mark.parametrize("data",
                          [DataARF("arf", np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3)),
                           DataRMF("emf", 3, np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3),
@@ -2658,7 +2657,6 @@ def test_invalid_independent_axis(data):
     We just duplicate the current axes.
     """
 
-    # At the moment this does not error out
     indep = data.indep
     with pytest.raises(DataErr):
         data.indep = tuple(list(indep) * 2)

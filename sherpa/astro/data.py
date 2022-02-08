@@ -4905,6 +4905,8 @@ class DataIMGInt(DataIMG):
         Data.__init__(self, name, (x0lo, x1lo, x0hi, x1hi), y, staterror, syserror)
 
     def _init_data_space(self, filter, *data):
+        if len(data) != 4:
+            raise DataErr("mismatch", "independent axis", "data")
         return IntegratedDataSpace2D(filter, *data)
 
     def get_logical(self):
