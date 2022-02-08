@@ -1289,6 +1289,24 @@ def test_pha_column_size(label, vals, make_test_pha):
 
 
 @pytest.mark.xfail
+@pytest.mark.parametrize("label", ["backscal", "areascal"])
+@pytest.mark.parametrize("vals", [[1, 1], np.ones(10)])
+def test_pha_column_scal_size(label, vals, make_test_pha):
+    """Check we error out if column=label has the wrong size
+
+    For these columns we can set them to a scalar, so we need
+    a slightly-different test to test_pha_column_size.
+    """
+
+    pha = make_test_pha
+    with pytest.raises(DataErr) as de:
+        # this does not raise an error
+        setattr(pha, label, vals)
+
+    assert str(de.value) == f"size mismatch between channel and {label}"
+
+
+@pytest.mark.xfail
 def test_pha_change_grouping_type(make_test_pha):
     """Check the grouping column is converted to int"""
     pha = make_test_pha
@@ -1338,6 +1356,20 @@ def test_pha_change_grouping_rounding(label, make_test_pha):
     #
     got = getattr(pha, label)
     assert (got == np.asarray([0, 1, 0, 0])).all()
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize("label", ["backscal", "areascal"])
+def test_pha_change_scal_type(label, make_test_pha):
+    """Check the *scal column is converted to SherpaFloat"""
+    pha = make_test_pha
+    scal = np.asarray([10, 12, 1, 2], dtype=int)
+    setattr(pha, label, scal)
+
+    got = getattr(pha, label)
+    assert got == pytest.approx(scal * 1.0)
+    # the dtype is np.int64
+    assert got.dtype == np.float64
 
 
 @requires_group
