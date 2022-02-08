@@ -1420,3 +1420,87 @@ def test_data1dint_check_limit(ignore, lo, hi, evals):
     c1, c2, c3 = evals
     expected = [vout] * c1 + [vin] * c2 + [vout] * c3
     assert d.mask == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("data", (Data, ) + DATA_1D_CLASSES, indirect=True)
+def test_reduce_axis_size_1d(data):
+    """What happens if we reduce the independent axis?"""
+
+    nindep = len(data.indep)
+    for indep in data.indep:
+        assert len(indep) == 10
+
+    for attr in ["dep", "staterror", "syserror"]:
+        aval = getattr(data, attr)
+        assert len(aval) == 10
+
+    # Sanity checks.
+    #
+    for a, b in zip(data.indep, data.get_indep()):
+        assert numpy.all(a == b)
+
+    # Let's make the independent axis smaller.
+    #
+    smaller = []
+    for indep in data.indep:
+        smaller.append(indep[1:-1])
+
+    data.indep = tuple(smaller)
+
+    # Check what has changed.
+    #
+    assert len(data.indep) == nindep
+    for indep in data.indep:
+        assert len(indep) == 8
+
+    # Note that the other values have not changed.
+    #
+    for attr in ["dep", "staterror", "syserror"]:
+        aval = getattr(data, attr)
+        assert len(aval) == 10
+
+
+@pytest.mark.parametrize("data", DATA_2D_CLASSES, indirect=True)
+def test_reduce_axis_size_2d(data):
+    """What happens if we reduce the independent axis?
+
+    There is a shape attribute which could be changed, or
+    maybe should be changed.
+    """
+
+    nindep = len(data.indep)
+    for indep in data.indep:
+        assert len(indep) == 100
+
+    for attr in ["dep", "staterror", "syserror"]:
+        aval = getattr(data, attr)
+        assert len(aval) == 100
+
+    assert data.shape == (10, 10)
+
+    # Sanity checks.
+    #
+    for a, b in zip(data.indep, data.get_indep()):
+        assert numpy.all(a == b)
+
+    # Let's make the independent axis smaller.
+    #
+    smaller = []
+    for indep in data.indep:
+        smaller.append(indep[1:-1])
+
+    data.indep = tuple(smaller)
+
+    # Check what has changed.
+    #
+    assert len(data.indep) == nindep
+    for indep in data.indep:
+        assert len(indep) == 98
+
+    # Note that the other values have not changed.
+    #
+    assert data.shape == (10, 10)
+
+    for attr in ["dep", "staterror", "syserror"]:
+        aval = getattr(data, attr)
+        assert len(aval) == 100
