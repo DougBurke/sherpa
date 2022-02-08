@@ -1383,8 +1383,6 @@ class DataPHA(Data1D):
     bin_lo
     bin_hi
     exposure
-    backscal
-    areascal
 
     Notes
     -----
@@ -1549,6 +1547,74 @@ values of 1 and 5 indicate the channel has been marked as
 bad or dubious by software.
 """)
 
+    def _get_backscal(self):
+        return self._backscal
+
+    def _set_backscal(self, val):
+        if val is None:
+            self._backscal = None
+            return
+
+        if numpy.isscalar(val):
+            val = SherpaFloat(val)
+            # if val <= 0.0:
+            #     val = 1.0
+            self._backscal = val
+            return
+
+        val = numpy.asarray(val, dtype=SherpaFloat)
+        if self.channel is not None and len(self.channel) != len(val):
+            raise DataErr('mismatch', 'channel', 'backscal')
+
+        # We have code that does this so may as well apply it at the
+        # source, but is it a good idea? Actually, we have some tests
+        # that fail (for areascal) if this is done so drop it for now.
+        #
+        # val = val.copy()
+        # val[val <= 0.0] = 1.0
+        self._backscal = val
+
+    backscal = property(_get_backscal, _set_backscal,
+                        doc="""The background scaling value.
+
+The BACKSCAL value for the PHA file. It can be None,
+a scalar, or an array that matches the channel field.
+""")
+
+    def _get_areascal(self):
+        return self._areascal
+
+    def _set_areascal(self, val):
+        if val is None:
+            self._areascal = None
+            return
+
+        if numpy.isscalar(val):
+            val = SherpaFloat(val)
+            # if val <= 0.0:
+            #     val = 1.0
+            self._areascal = val
+            return
+
+        val = numpy.asarray(val, dtype=SherpaFloat)
+        if self.channel is not None and len(self.channel) != len(val):
+            raise DataErr('mismatch', 'channel', 'areascal')
+
+        # We have code that does this so may as well apply it at the
+        # source, but is it a good idea? Turns out we have a couple of
+        # tests that fail thanks to this, so drop it for now.
+        #
+        # val = val.copy()
+        # val[val <= 0.0] = 1.0
+        self._areascal = val
+
+    areascal = property(_get_areascal, _set_areascal,
+                        doc="""The area scaling value.
+
+The AREASCAL value for the PHA file. It can be None,
+a scalar, or an array that matches the channel field.
+""")
+
     def _get_subtracted(self):
         return self._subtracted
 
@@ -1683,13 +1749,19 @@ must be an integer.""")
         channel = _check(channel)
         counts = _check(counts)
 
+        # These are used to store the values for the named attribute,
+        # so declare them here to keep pylint happy.
+        #
+        self._grouping = None
+        self._quality = None
+        self._backscal = None
+        self._areascal = None
+
         self.channel = channel
         self.counts = counts
         self.bin_lo = bin_lo
         self.bin_hi = bin_hi
         self._grouped = grouping is not None  # define before _grouping
-        self._grouping = None  # keep pylint/etc happy
-        self._quality = None
         self.grouping = grouping
         self.quality = quality
         self.exposure = exposure

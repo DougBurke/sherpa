@@ -1284,7 +1284,6 @@ def test_pha_column_size(label, vals, make_test_pha):
     assert str(de.value) == f"size mismatch between channel and {label}"
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("label", ["backscal", "areascal"])
 @pytest.mark.parametrize("vals", [[1, 1], np.ones(10)])
 def test_pha_column_scal_size(label, vals, make_test_pha):
@@ -1346,7 +1345,6 @@ def test_pha_change_grouping_rounding(label, make_test_pha):
     assert (got == np.asarray([0, 1, 0, 0])).all()
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("label", ["backscal", "areascal"])
 def test_pha_change_scal_type(label, make_test_pha):
     """Check the *scal column is converted to SherpaFloat"""
@@ -1356,7 +1354,6 @@ def test_pha_change_scal_type(label, make_test_pha):
 
     got = getattr(pha, label)
     assert got == pytest.approx(scal * 1.0)
-    # the dtype is np.int64
     assert got.dtype == np.float64
 
 
