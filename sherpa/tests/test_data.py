@@ -1504,3 +1504,17 @@ def test_reduce_axis_size_2d(data):
     for attr in ["dep", "staterror", "syserror"]:
         aval = getattr(data, attr)
         assert len(aval) == 100
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize("data", ALL_DATA_CLASSES, indirect=True)
+def test_invalid_independent_axis(data):
+    """What happens if we use the wrong number of independent axes?
+
+    We just duplicate the current axes.
+    """
+
+    # At the moment this does not error out
+    indep = data.indep
+    with pytest.raises(DataErr):
+        data.indep = tuple(list(indep) * 2)

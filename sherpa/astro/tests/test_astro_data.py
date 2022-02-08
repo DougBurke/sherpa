@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2007, 2015, 2017, 2018, 2020, 2021
+#  Copyright (C) 2007, 2015, 2017, 2018, 2020, 2021, 2022
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 
 from sherpa.astro.ui.utils import Session
-from sherpa.astro.data import DataARF, DataPHA, DataRMF
+from sherpa.astro.data import DataARF, DataPHA, DataRMF, DataIMG, DataIMGInt
 from sherpa.utils import parse_expr
 from sherpa.utils.err import DataErr
 from sherpa.utils.testing import requires_data, requires_fits, requires_group
@@ -2630,3 +2630,35 @@ def test_pha_channel0_subtract():
         np.array([0, 1, 2, 0, 3, 1], dtype=np.int16)
     assert p1.get_dep(filter=True) == pytest.approx(expected[1:4])
     assert p0.get_dep(filter=True) == pytest.approx(expected[2:5])
+
+
+
+
+# We don't really care if the arguments don't make much sense, at least
+# not until we add validation code which will mean these need fixing up.
+#
+@pytest.mark.xfail
+@pytest.mark.parametrize("data",
+                         [DataARF("arf", np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3)),
+                          DataRMF("emf", 3, np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3),
+                                  np.ones(3), np.ones(3), np.ones(3)),
+                          DataPHA("pha", np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4]), np.ones(3)),
+                          DataIMG("img", np.array([1, 2, 3, 4] * 3), np.array([1] * 4 + [2] * 4 + [3] * 4),
+                                  np.ones(12)),
+                          DataIMGInt("imgint",
+                                     np.array([1, 2, 3, 4] * 3),
+                                     np.array([1] * 4 + [2] * 4 + [3] * 4),
+                                     np.array([1, 2, 3, 4] * 3) + 1,
+                                     np.array([1] * 4 + [2] * 4 + [3] * 4) + 1,
+                                     np.ones(12)),
+                          ])
+def test_invalid_independent_axis(data):
+    """What happens if we use the wrong number of independent axes?
+
+    We just duplicate the current axes.
+    """
+
+    # At the moment this does not error out
+    indep = data.indep
+    with pytest.raises(DataErr):
+        data.indep = tuple(list(indep) * 2)
