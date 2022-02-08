@@ -1440,20 +1440,29 @@ class DataPHA(Data1D):
         if val and self.grouping is None:
             raise DataErr('nogrouping', self.name)
 
-        if self._grouped == val:
+        # We used to do return here if self._grouped == val but this
+        # is potentially problematic (e.g. if the grouping has changed
+        # and self._grouped is True then we want to re-generate the
+        # mask), and changes to _dynamic_group suggest we should
+        # always recreate the filter when we can.
+        #
+        if not numpy.iterable(self.mask):
+            # the mask should either be True or False
+            self._grouped = val
             return
 
-        # As the grouping status is being changed, we need to reset the mask
-        # to be correct size, while still noticing groups within the filter
+        # Store the current filter, apply the new grouping, and
+        # then re-create the filter range.
         #
-        if numpy.iterable(self.mask):
-            old_filter = self.get_filter(group=val)
-            self._grouped = val
-            self.ignore()
-            for vals in parse_expr(old_filter):
-                self.notice(*vals)
-
+        # An alternative would be to use get_noticed_channels but then
+        # how do we select those groups which are partially filled? By
+        # using notice() we handle this.
+        #
+        ranges = parse_expr(self.get_filter())
         self._grouped = val
+        self.ignore()
+        for vals in ranges:
+            self.notice(*vals)
 
     grouped = property(_get_grouped, _set_grouped,
                        doc='Are the data grouped?')
@@ -2904,22 +2913,16 @@ must be an integer.""")
             if kwargs[key] is None:
                 kwargs.pop(key)
 
-        old_filter = self.get_filter(group=False)
-        do_notice = numpy.iterable(self.mask)
+        # Change the grouping with ungrouped data as that simplifies
+        # identifying the filter in the group call below. Is this
+        # still needed once #1219 lands?
+        #
+        if self.grouped:
+            self.ungroup()
 
         self.grouping, self.quality = group_func(*args, **kwargs)
         self.group()
         self._original_groups = False
-
-        if do_notice:
-            # self.group() above has cleared the filter if applicable
-            # No, that just sets a flag.  So manually clear filter
-            # here
-            self.ignore()
-            for vals in parse_expr(old_filter):
-                self.notice(*vals)
-
-        # warning('grouping flags have changed, noticing all bins')
 
     # Have to move this check here; as formerly written, reference
     # to pygroup functions happened *before* checking groupstatus,
@@ -4185,6 +4188,9 @@ must be an integer.""")
             return
 
         # Go on if we are also supposed to filter the source data
+        #
+        # TODO: should this worry about the ignore setting?
+        #
         if lo is None and hi is None:
             self.quality_filter = None
             self.notice_response(False)
