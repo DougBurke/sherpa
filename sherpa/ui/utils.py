@@ -7761,16 +7761,19 @@ class Session(NoNewAttributesAfterInit):
         return f
 
     def _prepare_fit(self, id, otherids=()):
+        """Ensure we have all the requested ids, datasets, and models.
+
+        """
 
         # prep data ids for fitting
         ids = self._get_fit_ids(id, otherids)
 
-        # Gather up lists of data objects and models to fit
-        # to them.  Add to lists *only* if there actually is
-        # a model to fit.  E.g., if data sets 1 and 2 exist,
-        # but only data set 1 has a model, then "fit all" is
-        # understood to mean "fit 1".  If both data sets have
-        # models, then "fit all" means "fit 1 and 2 together".
+        # Which of the requested ids have
+        # - data
+        # - model
+        # - the data and model match dimensinoality
+        #   (this is taken to be an error if they do not match)
+        #
         datasets = []
         models = []
         fit_to_ids = []
@@ -7780,20 +7783,23 @@ class Session(NoNewAttributesAfterInit):
             if i in self._models or i in self._sources:
                 mod = self.get_model(i)
 
-            # The issue with putting a try/catch here is that if an exception
-            # is thrown folding a model, it will be swallowed up and the user
-            # will be confused why the model is not fit.
-            # ex. PSF folding where parameter values are particular
+            if mod is None:
+                continue
+
+            # Ensure the data and model match dimensionality. It is
+            # expected that both data and model nave a ndim attribute
+            # but allow them to be missing (e.g. user-defined or
+            # loaded from a pickled file before ndim was added).
             #
-            #
-            # try:
-            #    mod = self.get_model(i)
-            # except:
-            #    mod = None
-            if mod is not None:
-                datasets.append(ds)
-                models.append(mod)
-                fit_to_ids.append(i)
+            ddim = getattr(ds, 'ndim', None)
+            mdim = getattr(mod, 'ndim', None)
+            if mdim is not None and ddim is not None and mdim != ddim:
+                print(f"[UI] Data and model dimensionality do not match: {ddim}D and {mdim}D")
+                # raise sherpa.utils.err.DataErr(f"[UI] Data and model dimensionality do not match: {ddim}D and {mdim}D")
+
+            datasets.append(ds)
+            models.append(mod)
+            fit_to_ids.append(i)
 
         # If no data sets have models assigned to them, stop now.
         if len(models) < 1:
