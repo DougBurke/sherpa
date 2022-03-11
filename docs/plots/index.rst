@@ -272,3 +272,4 @@ Reference/API
    astroplot
    image
    utils
+   backends

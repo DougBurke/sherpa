@@ -12,15 +12,15 @@ written in a backend-independent way; they work with any plotting backend that
 is supported by Sherpa. We also use the term *backend* to refer to Sherpa
 classes that connect the Sherpy plot objects with the plotting backend by
 translating Sherpa options into backend-specific commands. The details of that
-are explained below, but in short a backend class would translate the sherpa
+are explained below, but, in short, a backend class would translate the sherpa
 backend-independent "plot a line in red from here to there" into backend
-specific ``plt.plot(x,y, linecolor='r')``.
+specific ``plt.plot(x,y, linecolor='r')`` (if the backend is :term:`matplotlib`).
 
 Instead of utilizing Sherpa classes and commands to plot data, users can
 alternatively just access the data in the Sherpa data objects (e.g. the x and y
 values of a dataset) and perform plotting operations directly with any plotting
 backend that is available ot them. This method may be less convenient, but it
-also works for ploting backends not (yet) supported by Sherpa.
+works for ploting backends not (yet) supported by Sherpa.
 
 Backend-independent plotting options
 ====================================
@@ -44,7 +44,7 @@ accept are chosen to match common :term:`matplotlib` settings which are familiar
 to many scientific Python users, and to maintain backwards compatibility with
 previous version of Sherpa. They offer limited choices, but those are sufficient
 for most plots. For example, only few different line styles are specified, but
-in practice, most plots can be done with just solild, dashed, and mayby dotted
+in practice, most plots can be done with just solild, dashed, and maybe dotted
 lines.
 
 The following settings are accepted for all Sherpa plotting backends:
@@ -62,6 +62,7 @@ Colors are used for the color of lines, symbols, errorbars etc.
 - ``'c'`` (cyan)
 - ``'y'`` (yellow)
 - ``'m``` (magenta)
+- ``None`` (ploting backend default)
 
 Line styles
 ------------
@@ -69,7 +70,8 @@ Line styles
 Because of legacy from both Chips and :term:`matplotlib` backends, line styles
 can be specified in more than one form:
 
-- ``'noline'`` or  ``''`` (empty string) means that no line shall be plotted.
+- ``'noline'`` or  ``''`` (empty string) or ``'None'`` (as a string)
+  means that no line shall be plotted.
 - ``'solid'`` or ``'-'``  for solid lines,
 - `None`  for the default style - usually a solid line, too,
 - ``'dot'`` or ``':'`` for dotted lines,
@@ -81,8 +83,8 @@ Markers
 - ``"None"`` as a string or ``""`` (empty string) means that no marker will be
   shown, 
 - ``"."`` shows dots,
--  ``"o"`` shows cicles (filled or unfilled dependong on the backend), 
-- ``"+"`` shows plus sings, 
+-  ``"o"`` shows cicles (filled or unfilled depending on the backend), 
+- ``"+"`` shows plus signs, 
 - ``"s"`` shows squares.
 
 Additional backend-specific settings
@@ -105,25 +107,26 @@ the backend independent list are guaranteed to work in every case. For example,
 
 will succeed with the `~sherpa.plot.pylab_backend.PylabBackend`, but raise an
 error if the active backend is `~sherpa.plot.bokeh_backend.BokehBackend`. In
-contrast, ``color='k'`` is also not understood by bokeh, but because it is on
+contrast, ``color='k'`` is also not understood by bokeh natively, but because it is on
 the backend-independent list, Sherpa will translate ``'k'`` to a form that bokeh
 does understand (``'black'`` in this case).
 
 Backends may also accept additional keywords to specify more plotting properties
 such as the transparancy of an element or an URL that is opened when clicking on
 an element. Those can simply be passed to the Sherpa plotting command, which
-will pass them through to the plotting backend **alpha is part of the API. Pick different example**:
+will pass them through to the plotting backend:
 
   >>> from sherpa.data import Data1D
   >>> from sherpa.plot import DataPlot
   >>> d = Data1D('example data', [1, 2, 3], [3, 2, 5])
   >>> dplot = DataPlot()
   >>> dplot.prepare(d)
-  >>> dplot.plot(alpha=0.5)
+  >>> dplot.plot(url='https://www.example.com')
 
-Since Sherpa does not process those options itself, but jsut passes them on to
+Since Sherpa does not process those options itself, but just passes them on to
 the underlying backend module, they are not documented here - see the
-documenation of the specific plotting module for details.
+documenation of the specific plotting module for details. Also, they will fail and
+raise an error if the plotting backend in use doesn ot understand the ``url`` keyword.
 
 In some cases, the Sherpa plotting commands create several visualization
 elements at the same time (lines, symbols, error bars, axes, labels). This makes
@@ -139,14 +142,22 @@ Backend interface
 
 .. note::
 
-   This section is relevant for developers or advanced users who write new
+   This section is mostly relevant for developers or advanced users who write new
    Sherpa plot classes or new backends.
 
 This section describes the API that all Sherpa backends offer to explain how to
-use it and why it was designed this way. See `sherpa.plot.backend.BasicBackend`
-for a complete listing of the calling signature for each function. All required
-functions are implemented in `~sherpa.plot.backend.BasicBackend` and new Sherpa
-backend classes shoudl be derived from that class.
+use it and why it was designed this way. See `sherpa.plot.backend.BaseBackend`
+for a complete listing of the calling signature for each function. 
+The `sherpa.plot.backend.BasicBackend` backend extends 
+``sherpa.plot.backend.BaseBackend` by raising a warning message for 
+plotting functions (plot, image, histrogram etc.) that are not implemented.
+It is a the base for any real functional backend, which will override those
+methods, but offer useful user feedback for any method not provided.
+This future-proofs any backend derived from this class: When sherpa adds new
+functions to its backend definition, they will be added here with a warning
+message. Thus, any backend derived from this class will always provide the
+interface that sherpa requires from a plotting backend.
+
 
 Plotting functions
 ------------------
@@ -162,14 +173,14 @@ The plotting functions are not separated by "how things look on paper" (thus "pl
 a long method that is responsible for points, lines, and errorbars), but
 by "what is the input data type":
 
-- `~sherpa.plot.backend.BasicBackend.plot` (for scatter plots with markerstyle
+- `~sherpa.plot.backend.BaseBackend.plot` (for scatter plots with markerstyle
   set, for line plots with linestyle set, and for errorbars with ``xerr`` or
   ``yerr`` set to `True`); accepts (x, y) data with optional error bars in each
   dimension. Data can be scalar (for a single marker), or array-like.
-- `~sherpa.plot.backend.BasicBackend.histogram` (similar to plot, but with
+- `~sherpa.plot.backend.BaseBackend.histo` (similar to plot, but with
   "histogram-style" lines); accepts (xlo, xhi, y) data with optional xerr, yerr.
-- `~sherpa.plot.backend.BasicBackend.contour` for (x0, x1, z) data
-- `~sherpa.plot.backend.BasicBackend.image` for (x0, x1, z) data on a regular
+- `~sherpa.plot.backend.BaseBackend.contour` for (x0, x1, z) data
+- `~sherpa.plot.backend.BaseBackend.image` for (x0, x1, z) data on a regular
   grid. An image is different from a contour in the sense that an image is
   pixelated on a regular grid, while a contour can in principle describe a
   continuous quantity or an irregular grid, even if the current implementation
@@ -178,19 +189,19 @@ by "what is the input data type":
 Annotations
 -----------
 
-Backends also need to implement the follwing annotation functions. They do not
+Backends should also implement the follwing annotation functions. They do not
 depend on the data plotted, but just annotate the plot, e.g. a
 `~sherpa.plot.RatioPlot` shows the ratio betwen data and model and can use an
 annotation to mark the ``ratio=1`` line.
 
-- `~sherpa.plot.backend.BasicBackend.hline` (horizontal across the entire axes)
-- `~sherpa.plot.backend.BasicBackend.vline` (vertical across the entire axes)
+- `~sherpa.plot.backend.BaseBackend.hline` (horizontal across the entire axes)
+- `~sherpa.plot.backend.BaseBackend.vline` (vertical across the entire axes)
 
 Other annotations (e.g. text labels) might be added to the API in the future.
-For this reason new backends should be derived from
+For this reason new backends should inherit from
 `~sherpa.plot.backend.BasicBackend`. Any function added to the API will be
-implemented in `~sherpa.plot.backend.BasicBackend` as a no-op (possibly with a
-warning to the user like "Feature XYZ is not available in your backend "). That
+implemented in `~sherpa.plot.backend.BasicBackend` as a no-op with a
+warning to the user like "Feature XYZ is not available in your backend ". That
 way, all Shepa plots can immediately make use of newly added functions without
 breaking existing plotting backends; the worst that happens is that not all
 annotation will be visible in every backend.
@@ -202,16 +213,22 @@ Sherpa does not expect a specific return argument from any plotting function,
 but they are allowed to have return values if that is helpful for their internal
 implementation, e.g. in the matplotlib backend, plotting a line might return a
 line object so that error bars plotted later can use ``line.color`` to match the
-colot of that line.
+color of that line.
 
 Creating plots and panels, clearing and overplotting
 ----------------------------------------------------
-At this stage, we keep the existing API for creating plot and panels, for clearing and overplotting, i.e. each of the plotting functions above accepts the following argument: title, xlabel, ylabel, xlog, ylog, overplot, clearwindow
-Multi-panels plot can be set with clear_window, set_subplot, set_jointplot[copy documentation from CAIO 4.14 pylab_backend.clear_window etc. into here because that describes use and function]
+At this stage, we keep the existing API for creating plot and panels, for
+clearing and overplotting, i.e. each of the plotting functions above accepts
+ the following arguments: title, xlabel, ylabel, xlog, ylog, overplot, clearwindow
+
+Multi-panels plot can be set with clear_window, set_subplot, set_jointplot
+[copy documentation from CAIO 4.14 pylab_backend.clear_window etc. into here because that describes use and function]
 
 Interaction with interactive plots in the UI
 --------------------------------------------
-Each backend has additional functions that are called before, during and after interactive plots (begin, exception, and end), and for the setup of multi-panel plots [those are taken essentially unchanged from the 4.14 version, so can copy from code into specs]
+Each backend has additional functions that are called before, during and after
+interactive plots (begin, exception, and end), and for the setup of 
+multi-panel plots [those are taken essentially unchanged from the 4.14 version, so can copy from code into specs]
 
 Other methods
 --------------
@@ -221,7 +238,8 @@ Backends need to have a few methods
 - ``as_html_XXX`` (where XXX is a plot type) that are used for interactive
   display in the notebook with ``_repr_html_``.  These functions take a plot
   object and return an html representation as a string.
-- ``get_XXX_plot/hist_prefs`` (where XXX is a plot type) which returns a dictionary of preferences that is used for displaying this plot.
+- ``get_XXX_plot/hist_prefs`` (where XXX is a plot type) which returns a
+  dictionary of preferences that is used for displaying this plot.
 - `~sherpa.plot.backend.BasicBackend.get_latex_for_string` to format latex in strings.
 
 

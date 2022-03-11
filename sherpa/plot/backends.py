@@ -26,21 +26,22 @@ from sherpa.utils import formatting
 
 __all__ = ('BasicBackend',
            'backend_indep_kwargs',
+           'IndepOnlyBackend',
            )
 
 
 lgr = logging.getLogger(__name__)
 warning = lgr.warning
 
+backend_indep_colors = list('rgbkwcymk') + [None]
 
-# Should None be an options for all of them?
 backend_indep_kwargs = {
-    'color': 'rgbkwcymk',
-    'ecolor': 'rgbkwcymk',
-    'markerfacecolor': 'rgbkwcymk',
-    'linestyle': ['noline', 'solid', 'dot', 'dash', 'dotdash', '-', ':', '--',
-                  '-.', '', None],
-    'marker': ['', "None", ".", "o", "+", "s"]
+    'color': backend_indep_colors,
+    'ecolor': backend_indep_colors,
+    'markerfacecolor': backend_indep_colors,
+    'linestyle': [None, 'noline', 'solid', 'dot', 'dash', 'dotdash', '-', ':', '--',
+                  '-.', '', "None"],
+    'marker': [None, '', "None", ".", "o", "+", "s"]
 }
 
 
@@ -48,8 +49,8 @@ def translate_args(func):
     @functools.wraps(func)
     def inner(self, *args, **kwargs):
         for kw, val in kwargs.items():
-            if kw in self.translate_args:
-                transl = self.translate_kwargs[kw]
+            if kw in self.translate_dict:
+                transl = self.translate_dict[kw]
 
                 if callable(transl):
                     # It's a function
@@ -60,17 +61,15 @@ def translate_args(func):
                     # be translated
                     if val in transl:
                         kwargs[kw] = transl[val]
-        func(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
 
     return inner
 
-# In principle, still need test for get_keyword_default
-# However, I expect to remove that in step 2 of the plotting plan,
-# so I don't want to spend too much time on that right now.
-
 
 def get_keyword_defaults(func, ignore_args=['title', 'xlabel', 'ylabel',
-                                            'overplot', 'clearwindow']):
+                                            'overplot', 'overcontour', 
+                                            'clearwindow', 'clearaxes',
+                                            'xerr', 'yerr']):
     '''Get default values for keyword arguments
 
     Parameters
@@ -99,7 +98,7 @@ def get_keyword_defaults(func, ignore_args=['title', 'xlabel', 'ylabel',
     return default_values
 
 
-class BasicBackend():
+class BaseBackend():
     '''A dummy backend for plotting.
 
     This backend implements only minimal functionality (some formatting of
@@ -112,7 +111,7 @@ class BasicBackend():
     have to dublicate that; they can call the functions here.
     '''
 
-    translate_kwargs = {}
+    translate_dict = {}
     '''
     Dict of keyword arguments that need to be translated for this backend.
 
@@ -128,7 +127,7 @@ class BasicBackend():
 
     Example:
 
-       >>> translate_args = {'markerfacecolor': {'k': (0., 0., 0.)},
+       >>> translate_dict = {'markerfacecolor': {'k': (0., 0., 0.)},
                              'alpha': lambda a: 256 * a}
 
     This translates the color 'k' to tuple of RGB values and alpha values
@@ -151,7 +150,7 @@ class BasicBackend():
         """
         pass
 
-    def set_subplot(row, col, nrows, ncols, clearaxes=True,
+    def set_subplot(self, row, col, nrows, ncols, clearaxes=True,
                     **kwargs):
         """ Select a plot space in a grid of plots or create new grid
 
@@ -176,7 +175,7 @@ class BasicBackend():
         """
         pass
 
-    def set_jointplot(row, col, nrows, ncols, create=True,
+    def set_jointplot(self, row, col, nrows, ncols, create=True,
                       top=0, ratio=2):
         """Move to the plot, creating them if necessary.
         Parameters
@@ -199,15 +198,15 @@ class BasicBackend():
         """
         pass
 
-    def clear_window():
+    def clear_window(self):
         """Provide empty plot window
 
-        Depending on te backend, this may provide a new,
+        Depending on the backend, this may provide a new,
         empty window or clear the existing, current window.
         """
         pass
 
-    def initialize_plot(dataset, ids):
+    def initialize_plot(self, dataset, ids):
         """Create the plot window or figure for the given dataset.
 
         Parameters
@@ -224,7 +223,7 @@ class BasicBackend():
         """
         pass
 
-    def select_plot(dataset, ids):
+    def select_plot(self, dataset, ids):
         """Select the plot window or figure for the given dataset.
 
         The plot for this dataset is assumed to have been created.
@@ -309,11 +308,11 @@ class BasicBackend():
             Plot title (can contain LaTeX formulas). Only used if a new plot is
             created.
         xlabel, ylabel : string, optional
-            Axis labels (can contain LaTeX formulas). Only used if a new plot
-            is created.
+            Axis labels (can contain LaTeX formulas). Only used if a new plot is
+            created.
         xlog, ylog : bool
-            Should x/y axes be logartihmic (default: linear)? Only used if
-            a new plot is created.
+            Should x/y axes be logartihmic (default: linear)? Only used if a new
+            plot is created.
         overplot : bool
             If `True`, the plot is added to an existing plot, if not (the
             default) a new plot is created.
@@ -338,6 +337,7 @@ class BasicBackend():
             Some backend might accept additional values.
         linestyle : string
             The following values are accepted by all backends: ``'noline'``,
+            ``'None'`` (as string, same as ``'noline'``),
             ``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
             line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
             ``''`` (empty string, no line shown), `None` (default - usually
@@ -367,8 +367,7 @@ class BasicBackend():
         capzise : float
             Size of the cap drawn at the end of the errorbars.
         """
-        warning(f'{self.__class__} does not implement line/symbol plotting.' +
-                'No plot will be produced.')
+        pass
 
     @translate_args
     def histo(self, xlo, xhi, y, *,
@@ -389,20 +388,19 @@ class BasicBackend():
               markersize=None,
               ecolor=None,
               capsize=None,
-              barsabove=False,
+              #barsabove=False,
               **kwargs):
         """Draw histogram data.
 
         The histogram is drawn as horizontal lines connecting the
         start and end points of each bin, with vertical lines connecting
         consecutive bins. Non-consecutive bins are drawn with a
-        (Nan, NaN) between them so no line is drawn connecting them.
+        (NaN, NaN) between them so no line is drawn connecting them.
 
         Points are drawn at the middle of the bin, along with any
         error values.
         """
-        warning(f'{self.__class__} does not implement histogram plotting.' +
-                'No histogram will be produced.')
+        pass
 
     @translate_args
     def contour(self, x0, x1, y, *,
@@ -411,16 +409,15 @@ class BasicBackend():
                 overplot=False, clearwindow=True,
                 xlog=False, ylog=False,
                 label=None,
-                color=None,
-                linestyle='solid',
-                linewidth=None,
+                colors=None,
+                linestyles='solid',
+                linewidths=None,
                 alpha=None,
                 **kwargs):
         """Draw 2D contour data.
 
         """
-        warning(f'{self.__class__} does not implement contour plotting.' +
-                'No countour will be produced.')
+        pass
 
     @translate_args
     def image(self, x0, x1, y, *,
@@ -432,8 +429,13 @@ class BasicBackend():
               color=None,
               alpha=None,
               **kwargs):
-        warning(f'{self.__class__} does not implement image plotting.' +
-                'No image will be produced.')
+        pass
+
+    @translate_args
+    def point(self, x, y, *, overplot=True, clearwindow=False,
+              symbol=None, alpha=None,
+              color=None):
+        pass
 
     @translate_args
     def vline(self, x, *,
@@ -445,8 +447,7 @@ class BasicBackend():
               linewidth=None,
               **kwargs):
         """Draw a vertical line"""
-        warning(f'{self.__class__} does not implement line plotting.' +
-                'No line will be produced.')
+        pass
 
     @translate_args
     def hline(self, y, *,
@@ -458,8 +459,7 @@ class BasicBackend():
               linewidth=None,
               **kwargs):
         """Draw a horizontal line"""
-        warning(f'{self.__class__} does not implement line plotting.' +
-                'No line will be produced.')
+        pass
 
     def get_latex_for_string(self, txt):
         """Convert LaTeX formula
@@ -477,7 +477,7 @@ class BasicBackend():
             will be displayed properly.
 
         """
-        return txt
+        return "${}$".format(txt)
 
     # HTML representation as tabular data
     #
@@ -518,10 +518,13 @@ class BasicBackend():
     # The follwowing methods will almost all be removed in Step 2
     # and thus no documentation has been added.
     def get_split_plot_defaults(self):
-        return get_keyword_defaults(self.set_subplot, 1)
+        return get_keyword_defaults(self.set_subplot)
 
     def get_plot_defaults(self):
         return get_keyword_defaults(self.plot)
+
+    def get_point_defaults(self):
+        return get_keyword_defaults(self.point)
 
     def get_histo_defaults(self):
         return get_keyword_defaults(self.histo)
@@ -598,59 +601,45 @@ class BasicBackend():
         d = self.get_data_plot_defaults()
         return d
 
-    def get_contour_defaults(self):
-        return get_keyword_defaults(self.contour)
-
-    def get_dummy_defaults(self):
-        return {}
-
-    get_data_contour_defaults = get_dummy_defaults
-    get_model_contour_defaults = get_dummy_defaults
-    get_resid_contour_defaults = get_dummy_defaults
-    get_ratio_contour_defaults = get_dummy_defaults
-    get_confid_contour_defaults = get_dummy_defaults
-    get_model_histo_defaults = get_dummy_defaults
-    get_component_plot_defaults = get_dummy_defaults
-    get_component_histo_defaults = get_dummy_defaults
-
     def as_html_histogram(self, plot):
         return self.as_html(plot,
-                        ['xlo', 'xhi', 'y', 'title', 'xlabel', 'ylabel'])
+                            ['xlo', 'xhi', 'y', 'title', 'xlabel', 'ylabel'])
 
     def as_html_pdf(self, plot):
         return self.as_html(plot,
-                    ['points', 'xlo', 'xhi', 'y', 'title', 'xlabel', 'ylabel'])
+                            ['points', 'xlo', 'xhi', 'y', 'title', 'xlabel',
+                             'ylabel'])
 
     def as_html_cdf(self, plot):
         return self.as_html(plot,
-                    ['points', 'x', 'y',
-                        'median', 'lower', 'upper',
-                        'title', 'xlabel', 'ylabel'])
+                            ['points', 'x', 'y',
+                             'median', 'lower', 'upper',
+                             'title', 'xlabel', 'ylabel'])
 
     def as_html_lr(self, plot):
         return self.as_html(plot,
-                    ['ratios', 'lr', 'xlo', 'xhi', 'y',
-                        'title', 'xlabel', 'ylabel'])
+                            ['ratios', 'lr', 'xlo', 'xhi', 'y',
+                             'title', 'xlabel', 'ylabel'])
 
     def as_html_data(self, plot):
         return self.as_html(plot,
-                    ['x', 'xerr', 'y', 'yerr',
-                        'title', 'xlabel', 'ylabel'])
+                            ['x', 'xerr', 'y', 'yerr',
+                             'title', 'xlabel', 'ylabel'])
 
     def as_html_datacontour(self, plot):
         return self.as_html(plot,
-                    ['x0', 'x1', 'y', 'levels',
-                        'title', 'xlabel', 'ylabel'])
+                            ['x0', 'x1', 'y', 'levels',
+                             'title', 'xlabel', 'ylabel'])
 
     def as_html_model(self, plot):
         return self.as_html(plot,
-                    ['x', 'xerr', 'y', 'yerr',
-                        'title', 'xlabel', 'ylabel'])
+                            ['x', 'xerr', 'y', 'yerr',
+                             'title', 'xlabel', 'ylabel'])
 
     def as_html_modelcontour(self, plot):
         return self.as_html(plot,
-                    ['x0', 'x1', 'y', 'levels',
-                        'title', 'xlabel', 'ylabel'])
+                            ['x0', 'x1', 'y', 'levels',
+                             'title', 'xlabel', 'ylabel'])
 
     def get_html(self, attr):
         if attr is None:
@@ -677,12 +666,193 @@ class BasicBackend():
 
     def as_html_contour1d(self, plot):
         return self.as_html(plot,
-                    ['x', 'y', 'min', 'max', 'nloop',
-                        'delv', 'fac', 'log'])
+                            ['x', 'y', 'min', 'max', 'nloop',
+                             'delv', 'fac', 'log'])
 
     def as_html_contour2d(self, plot):
         return self.as_html(plot,
-                    ['parval0', 'parval1', 'sigma',
-                        'x0', 'x1', 'y', 'levels',
-                        'min', 'max', 'nloop',
-                        'delv', 'fac', 'log'])
+                            ['parval0', 'parval1', 'sigma',
+                             'x0', 'x1', 'y', 'levels',
+                             'min', 'max', 'nloop',
+                             'delv', 'fac', 'log'])
+
+
+class BasicBackend(BaseBackend):
+    '''A dummy backend for plotting.
+
+    This backend extends `BaseBackend` by raising a warning message for 
+    plotting functions (plot, image, histrogram etc.) that are not implemented.
+    It is a the base for any real functional backend, which will override those
+    methods, but offer useful user feedback for any method not provided.
+    This future-proofs any backend derived from this class: When sherpa adds new
+    functions to its backend definition, they will be added here with a warning
+    message. Thus, any backend derived from this class will always provide the
+    interface that sherpa requires from a plotting backend.
+    '''
+
+    @translate_args
+    def plot(self, x, y, *,
+             xerr=None, yerr=None,
+             title=None, xlabel=None, ylabel=None,
+             xlog=False, ylog=False,
+             overplot=False, clearwindow=True,
+             label=None,
+             xerrorbars=False,
+             yerrorbars=False,
+             color=None,
+             linestyle='solid',
+             linewidth=None,
+             drawstyle='default',  # HMG: Do we need this?
+             marker='None',
+             alpha=None,
+             markerfacecolor=None,
+             markersize=None,
+             ecolor=None,
+             capsize=None,
+             xaxis=False,  # HMG: suggest to drop this
+             ratioline=False,  # HMG suggest to drop this
+             **kwargs):
+        warning(f'{self.__class__} does not implement line/symbol plotting. ' +
+                'No plot will be produced.')
+
+    @translate_args
+    def histo(self, xlo, xhi, y, *,
+              yerr=None,
+              title=None, xlabel=None, ylabel=None,
+              overplot=False, clearwindow=True,
+              xlog=False, ylog=False,
+              label=None,
+              xerrorbars=False,
+              yerrorbars=False,
+              color=None,
+              linestyle='solid',
+              linewidth=None,
+              drawstyle='default',
+              marker='None',
+              alpha=None,
+              markerfacecolor=None,
+              markersize=None,
+              ecolor=None,
+              capsize=None,
+              #barsabove=False,
+              **kwargs):
+        warning(f'{self.__class__} does not implement histogram plotting. ' +
+                'No histogram will be produced.')
+
+    @translate_args
+    def contour(self, x0, x1, y, *,
+                levels=None,
+                title=None, xlabel=None, ylabel=None,
+                overplot=False, clearwindow=True,
+                xlog=False, ylog=False,
+                label=None,
+                colors=None,
+                linestyles='solid',
+                linewidths=None,
+                alpha=None,
+                **kwargs):
+        warning(f'{self.__class__} does not implement contour plotting. ' +
+                'No contour will be produced.')
+
+    @translate_args
+    def image(self, x0, x1, y, *,
+              extent=None,
+              title=None, xlabel=None, ylabel=None,
+              overplot=False, clearwindow=True,
+              xlog=False, ylog=False,
+              label=None,
+              color=None,
+              alpha=None,
+              **kwargs):
+        warning(f'{self.__class__} does not implement image plotting. ' +
+                'No image will be produced.')
+
+    @translate_args
+    def point(self, x, y, *, overplot=True, clearwindow=False,
+              symbol=None, alpha=None,
+              color=None):
+        warning(f'{self.__class__} does not implement point plotting. ' +
+                'No image will be produced.')
+
+    @translate_args
+    def vline(self, x, *,
+              ymin=0, ymax=1,
+              title=None, xlabel=None, ylabel=None,
+              overplot=False, clearwindow=True,
+              color=None,
+              linestyle=None,
+              linewidth=None,
+              **kwargs):
+        """Draw a vertical line"""
+        warning(f'{self.__class__} does not implement line plotting. ' +
+                'No line will be produced.')
+
+    @translate_args
+    def hline(self, y, *,
+              xmin=0, xmax=1,
+              title=None, xlabel=None, ylabel=None,
+              overplot=False, clearwindow=True,
+              color=None,
+              linestyle=None,
+              linewidth=None,
+              **kwargs):
+        """Draw a horizontal line"""
+        warning(f'{self.__class__} does not implement line plotting. ' +
+                'No line will be produced.')
+
+
+
+class IndepOnlyBackend(BasicBackend):
+    '''A backend that accepts only backend-independent options and arguments
+
+    This is meant for testing code and testing the documentation to ensure that
+    examples only use backend independent options.
+    '''
+    def __init__(self, *args, **kwargs):
+        super(*args, **kwargs)
+
+        # We want to change the instance attribute, not the class attribute.
+        self.translate_dict = {}
+
+        def _check(key, values):
+            def check_in_list(v):
+                if v not in values:
+                    raise ValueError('The following backend-independent ' +
+                        f'values are defined for {k}: {values}, but got {v}')
+                else:
+                    return v
+            return check_in_list
+
+        for k, v in backend_indep_kwargs.items():
+            self.translate_dict[k] = _check(k, v)
+
+    def __getattribute__(self, __name: str):
+        '''Override attribute acces
+
+        When looking up a method, get the method of the base class,
+        inspect its signature and return a function that tests if
+        the caller uses any keyword arguments that are not matched
+        to names parameters in the signature, i.e. any that would
+        go into **kwargs. If that is the case, raise a TypeError.
+
+        The simple way do to that would be to copy and paste the
+        method signature from every method in the base class into
+        this class, remove the "**kwargs" where present and make
+        every function a no-op. However, that means that everything
+        has to be maintained here, too, and it is easy to get the
+        two classes out of sync in the future. So, instead, we do a
+        litte excersize in meta-programming.
+        '''
+        attr = super().__getattribute__(__name)
+        if callable(attr):
+            sig = signature(attr)
+
+            def checked_func(*args, **kwargs):
+                for k in kwargs:
+                    if k not in sig.parameters:
+                        raise TypeError(f'{attr.__name__} got keyword argument {k}, ' +
+                                        'which is not part of the named keyword arguments.')
+                return attr(*args, **kwargs)
+            return checked_func
+        else:
+            return attr

@@ -33,6 +33,8 @@ import numpy as np
 
 import pytest
 
+from sherpa.utils.testing import requires_data, requires_fits
+
 from sherpa.astro import ui
 from sherpa.astro.instrument import create_arf
 from sherpa.astro.data import DataRMF
@@ -458,8 +460,15 @@ def test_eval_multi_arfrmf_reorder(clean_astro_ui):
     check_eval_multi_arfrmf()
 
 
-def setup_order_plot(make_data_path):
-    """Set up a faked dataset with multiple orders."""
+@requires_data
+@requires_fits
+def test_plot_order_multi(make_data_path, clean_astro_ui):
+    """Rather than fake data, use a known dataset.
+
+    Here we pretend we have three orders but with the same
+    response (except that the ARF is 0.5, 0.4, 0.25 of the
+    normal ARF).
+    """
 
     pha = make_data_path('3c273.pi')
     ui.load_pha(pha)

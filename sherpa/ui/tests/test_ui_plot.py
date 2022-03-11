@@ -41,7 +41,7 @@ from sherpa.models import basic
 import sherpa.plot
 from sherpa.stats import Chi2Gehrels
 from sherpa.utils.err import ArgumentTypeErr, IdentifierErr, PlotErr
-from sherpa.utils.testing import requires_plotting, requires_pylab
+from sherpa.utils.testing import requires_pylab
 
 
 _data_x = [10, 20, 40, 90]
@@ -129,7 +129,6 @@ def test_get_fit_plot(idval, clean_ui):
     assert mp.title == 'Model'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 @pytest.mark.parametrize("ptype", ["data", "model"])
 @pytest.mark.parametrize("arg", [None, 1, 'foo'])
@@ -160,7 +159,6 @@ def test_plot_prefs_xxx(session, ptype, arg):
     assert not prefs3['xlog']
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 @pytest.mark.parametrize("ptype", ["data", "model"])
 def test_plot_prefs_xxx_data1dint(session, ptype):
@@ -594,7 +592,6 @@ _plot_change_opts = [(p['plot'], p['change'], p['check_changed'])
                      for p in _plot_all]
 
 
-@requires_plotting
 @pytest.mark.parametrize("idval", [None, 1, "one", 23])
 @pytest.mark.parametrize("pfunc, checkfunc", _plot_opts)
 def test_plot_xxx(idval, pfunc, checkfunc, clean_ui):
@@ -630,7 +627,6 @@ def test_plot_xxx(idval, pfunc, checkfunc, clean_ui):
     checkfunc(idval)
 
 
-@requires_plotting
 @pytest.mark.parametrize("idval", [None, 1, "one", 23])
 @pytest.mark.parametrize("plotfunc,changefunc,checkfunc", _plot_replot_opts)
 def test_plot_xxx_replot(idval, plotfunc, changefunc, checkfunc, clean_ui):
@@ -674,7 +670,6 @@ def test_plot_xxx_replot(idval, plotfunc, changefunc, checkfunc, clean_ui):
     checkfunc(idval)
 
 
-@requires_plotting
 @pytest.mark.parametrize("idval", [None, 1, "one", 23])
 @pytest.mark.parametrize("plotfunc,changefunc,checkfunc", _plot_change_opts)
 def test_plot_xxx_change(idval, plotfunc, changefunc, checkfunc, clean_ui):
@@ -725,7 +720,6 @@ _dplot = (ui.get_data_plot_prefs, ui.get_data_plot, ui.plot_data)
 _mplot = (ui.get_model_plot_prefs, ui.get_model_plot, ui.plot_model)
 
 
-@requires_plotting
 @pytest.mark.parametrize("getprefs,getplot,plotfunc",
                          [_dplot, _mplot])
 def test_prefs_change_session_objects(getprefs, getplot, plotfunc, clean_ui):
@@ -770,7 +764,6 @@ def test_prefs_change_session_objects(getprefs, getplot, plotfunc, clean_ui):
     assert not session.plot_prefs['xlog']
 
 
-@requires_plotting
 def test_prefs_change_session_objects_fit(clean_ui):
     """Is plot-preference change reflected in the fitplot session object?
 
@@ -904,7 +897,7 @@ def test_get_psf_plot_recalc(session):
 
 
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
-def test_plot_kernel(session, caplog):
+def test_plot_kernel(session, caplog, plot_backends):
     """Very basic check we can call plot_kernel/get_kernel_plot
 
     This can be run even without a plotting backend available.
@@ -990,7 +983,6 @@ def test_get_kernel_plot_recalc(session):
     assert plotobj.y == pytest.approx(yexp2)
 
 
-@requires_plotting
 @pytest.mark.parametrize("getplot,plotfunc",
                          [(ui.get_resid_plot, ui.plot_resid),
                           (ui.get_delchi_plot, ui.plot_delchi)
@@ -1017,7 +1009,6 @@ def test_plot_resid_ignores_ylog(getplot, plotfunc, clean_ui):
     assert not prefs['ylog']
 
 
-@requires_plotting
 @pytest.mark.parametrize("getplot,plotfunc",
                          [(ui.get_resid_plot, ui.plot_fit_resid),
                           (ui.get_delchi_plot, ui.plot_fit_delchi)
@@ -1369,7 +1360,6 @@ def test_get_scatter_plot_empty(session):
         assert getattr(p, f) is None
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_get_scatter_plot(session):
     """Very basic check we can call plot_scatter/get_scatter_plot
@@ -1395,7 +1385,6 @@ def test_get_scatter_plot(session):
     assert p.title == 'Scatter: (x,y)'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_get_scatter_plot_labels_noname(session):
     """Very basic check we can call plot_scatter/get_scatter_plot
@@ -1421,7 +1410,6 @@ def test_get_scatter_plot_labels_noname(session):
     assert p.title == 'Scatter: (x,y)'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_get_scatter_plot_labels(session):
     """Very basic check we can call plot_scatter/get_scatter_plot
@@ -1461,7 +1449,6 @@ def test_get_trace_plot_empty(session):
         assert getattr(p, f) is None
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_get_trace_plot(session):
     """Very basic check we can call get_trace_plot/plot_trace
@@ -1486,7 +1473,6 @@ def test_get_trace_plot(session):
     assert p.title == 'Trace: x'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_get_trace_plot_labels_noname(session):
     """Very basic check we can call get_trace_plot/plot_trace
@@ -1513,7 +1499,6 @@ def test_get_trace_plot_labels_noname(session):
     assert p.title == 'Trace: x'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_get_trace_plot_labels(session):
     """Very basic check we can call get_trace_plot/plot_trace
@@ -1602,7 +1587,6 @@ def test_plot_cdf_replot(session):
     plt.close()
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_cdf(session):
 
@@ -1626,7 +1610,6 @@ def test_plot_cdf(session):
     assert p.title == 'CDF: x'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_cdf_labels_noname(session):
 
@@ -1643,7 +1626,6 @@ def test_plot_cdf_labels_noname(session):
     assert p.title == 'CDF: x'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_cdf_labels(session):
 
@@ -1660,7 +1642,6 @@ def test_plot_cdf_labels(session):
     assert p.title == 'CDF: b a'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_show_cdf_plot_empty(session):
 
@@ -1683,7 +1664,6 @@ def test_show_cdf_plot_empty(session):
     assert toks[8] == 'title  = None'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 @pytest.mark.parametrize("use_numpy", [False, True])
 def test_show_cdf_plot(session, use_numpy, old_numpy_printing):
@@ -1728,7 +1708,6 @@ def test_get_pdf_plot_empty(session):
         assert getattr(p, f) is None
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_pdf(session):
 
@@ -1823,7 +1802,6 @@ def test_plot_pdf_replot(session):
     plt.close()
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_pdf_labels_noname(session):
 
@@ -1844,7 +1822,6 @@ def test_plot_pdf_labels_noname(session):
     assert p.title == 'PDF: x'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_pdf_labels(session):
 
@@ -1865,7 +1842,6 @@ def test_plot_pdf_labels(session):
     assert p.title == 'PDF: no name'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_show_pdf_plot_empty(session):
 
@@ -1886,7 +1862,6 @@ def test_show_pdf_plot_empty(session):
     assert toks[6] == 'title  = None'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_show_pdf_plot(session, old_numpy_printing):
     """This is important as it also checks normed=False
@@ -2191,9 +2166,8 @@ def test_plot_pvalue_requires_alt_model(session):
     assert str(te.value) == 'alternative model cannot be None'
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
-def test_plot_pvalue(session, caplog):
+def test_plot_pvalue(session, caplog, plot_backends):
     """Basic testing of plot_pvalue
 
     This is a made-up test, and I have no idea whether it's

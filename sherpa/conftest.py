@@ -43,13 +43,18 @@ except ImportError:
     has_xspec = False
 
 
-import sherpa.plot
-import sherpa.astro.plot
-from sherpa.plot import dummy_backend
+from sherpa.plot.backends import BaseBackend, IndepOnlyBackend
+from sherpa.plot import TemporaryPlottingBackend
+
+ALL_PLOT_BACKENDS = [BaseBackend(), IndepOnlyBackend()]
+PLOT_BACKENDS = [BaseBackend()]
+
 try:
-    from sherpa.plot import pylab_backend
+    from sherpa.plot.pylab_backend import PylabBackend
+    ALL_PLOT_BACKENDS.append(PylabBackend())
+    PLOT_BACKENDS.append(PylabBackend())
 except ImportError:
-    pylab_backend = None
+    pass
 
 
 # In some instances, if some xvfb processes did not stop cleanly
@@ -556,50 +561,40 @@ def old_numpy_printing():
         np.set_printoptions(legacy=oldopts['legacy'])
 
 
-PLOT_BACKENDS = [dummy_backend]
-if pylab_backend is not None:
-    PLOT_BACKENDS.append(pylab_backend)
-
-
-@pytest.fixture(params=PLOT_BACKENDS)
-def override_plot_backend(request):
+@pytest.fixture(params=ALL_PLOT_BACKENDS)
+def all_plot_backends(request):
     """Override the plot backend for this test
 
     Runs the test with the given plot backend and then restores the
     original value.
 
-    Note that this does not reload the ui layers, which will have
+    Note that it is not clear at this point if
+    this does or does not reload the ui layers, which will have
     retain reference to the original backend throughout.
 
     """
-
-    old = sherpa.plot.backend
-
-    changed = old.name != request.param.name
-    if changed:
-        sherpa.plot.backend = request.param
-        sherpa.astro.plot.backend = request.param
-
-    yield
-    if changed:
-        sherpa.plot.backend = old
-        sherpa.astro.plot.backend = old
+    with TemporaryPlottingBackend(request.param):
+        yield
 
 
-@pytest.fixture(autouse=True, scope="session")
-def cleanup_pylab_backend():
-    """Ensure that the pylab backend has closed down all windows.
+@pytest.fixture(params=PLOT_BACKENDS)
+def plot_backends(request):
+    """Override the plot backend for this test
 
-    This is related to https://github.com/The-Compiler/pytest-xvfb/issues/11
-    and the idea is to ensure that all matplotlib windows are closed at the
-    end of the tests.
+    Runs the test with the given plot backend and then restores the
+    original value.
+
+    Note that it is not clear at this point if
+    this does or does not reload the ui layers, which could
+    retain references to the original backend.
+
     """
 
     yield
 
     # Technically the system could have matplotlib installed but not
     # selected. However, this is not easily checked, so just check
-    # if we can install matplotlib and, if so, close down any windows.
+    # if we can import matplotlib and, if so, close down any windows.
     #
     try:
         from matplotlib import pyplot as plt

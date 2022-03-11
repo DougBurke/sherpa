@@ -30,7 +30,7 @@ from sherpa.models import basic
 from sherpa import plot as sherpaplot
 from sherpa.data import Data1D, Data1DInt
 from sherpa.utils.err import ConfidenceErr
-from sherpa.utils.testing import requires_data, requires_plotting
+from sherpa.utils.testing import requires_data
 
 
 _datax = numpy.array(
@@ -151,7 +151,6 @@ def test_ratioplot(setup_plot):
     # tp.plot()
 
 
-@requires_plotting
 @pytest.mark.parametrize("plottype", [sherpa.DelchiPlot,
                                       sherpa.RatioPlot,
                                       sherpa.ResidPlot])
@@ -476,9 +475,8 @@ def test_region_uncertainty(setup_confidence):
     # setup_confidence.ru.contour()
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
-def test_source_component_arbitrary_grid(session):
+def test_source_component_arbitrary_grid(session, all_plot_backends):
     ui = session()
 
     # depending on how the test is used we need to have
@@ -519,7 +517,6 @@ def test_source_component_arbitrary_grid(session):
     tst(x, y, re_x, [0,  0, 10, 10, 10,  0,  0,  0,  0,  0])
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_plot_model_arbitrary_grid_integrated(session):
     ui = session()
@@ -561,7 +558,6 @@ def test_plot_model_arbitrary_grid_integrated(session):
     tst(x, y, re_x, yy)
 
 
-@requires_plotting
 @pytest.mark.parametrize("session", [BaseSession, AstroSession])
 def test_source_component_arbitrary_grid_int(session):
     ui = session()

@@ -19,17 +19,15 @@
 #
 import io
 import logging
-import functools
 
 import numpy
 
 from matplotlib import pyplot as plt
 
-from sherpa.utils import get_keyword_defaults
 from sherpa.utils.err import ArgumentErr, NotImplementedErr
 from sherpa.utils import formatting
 from sherpa.plot.utils import histogram_line
-from shera.plot.backends import BasicBackend
+from sherpa.plot.backends import BasicBackend, translate_args
 
 __all__ = ['PylabBackend']
 
@@ -38,27 +36,36 @@ logger = logging.getLogger(__name__)
 
 class PylabBackend(BasicBackend):
 
-    translate_args = {'linestyle': {
+    # name = 'pylab'
+    # '''Deprecated. Alternative string names for plotting backend.
+    #
+    # Within Sherpa, we updated to use the class name, but external code such
+    # as ciao_contrib scripts might still depend on this name being present.
+    # '''
+
+    translate_dict = {'linestyle': {
         'noline': ' ',
         'solid': '-',
         'dot': ':',
         'dash': '--',
         'dotdash': '-.',
-    }}
+        'None': ' ',
+    },
+    'label': {None: '_nolegend_'}}
 
-    def end():
-        set_window_redraw(True)
+    def end(self):
+        self.set_window_redraw(True)
         if plt.isinteractive():
             plt.draw()
 
-    def clear_window():
+    def clear_window(self):
         plt.clf()
 
-    def set_window_redraw(redraw):
+    def set_window_redraw(self, redraw):
         if redraw:
             plt.draw()
 
-    def setup_axes(overplot, clearwindow):
+    def setup_axes(self, overplot, clearwindow):
         """Return the axes object, creating it if necessary.
 
         Parameters
@@ -74,11 +81,11 @@ class PylabBackend(BasicBackend):
 
         # Do we need to clear the window?
         if not overplot and clearwindow:
-            clear_window()
+            self.clear_window()
 
         return plt.gca()
 
-    def setup_plot(axes, title, xlabel, ylabel, xlog=False, ylog=False):
+    def setup_plot(self, axes, title, xlabel, ylabel, xlog=False, ylog=False):
         """Basic plot setup.
 
         Parameters
@@ -102,7 +109,7 @@ class PylabBackend(BasicBackend):
         if ylabel:
             axes.set_ylabel(ylabel)
 
-    def find_zorder(axes):
+    def find_zorder(self, axes):
         """Try to come up with a good zorder value
 
         Parameters
@@ -166,11 +173,12 @@ class PylabBackend(BasicBackend):
 
         return None
 
-    def point(x, y, overplot=True, clearwindow=False,
-            symbol=None, alpha=None,
-            color=None):
+    def point(self, x, y, overplot=True, clearwindow=False,
+              symbol=None, alpha=None,
+              color=None,
+              label=None):
 
-        axes = setup_axes(overplot, clearwindow)
+        axes = self.setup_axes(overplot, clearwindow)
 
         if color is None:
             style = '{}'.format(symbol)
@@ -180,26 +188,32 @@ class PylabBackend(BasicBackend):
         axes.plot(numpy.array([x]), numpy.array([y]), style, alpha=alpha)
 
     @translate_args
-    def histo(xlo, xhi, y, yerr=None, title=None, xlabel=None, ylabel=None,
-            overplot=False, clearwindow=True,
-            xerrorbars=False,
-            yerrorbars=False,
-            ecolor=None,
-            capsize=None,
-            barsabove=False,
-            xlog=False,
-            ylog=False,
-            linestyle='solid',
-            drawstyle='default',
-            color=None,
-            alpha=None,
-            marker='None',
-            markerfacecolor=None,
-            markersize=None,
-            linecolor=None):
+    def histo(self, xlo, xhi, y, * ,
+              yerr=None, title=None,
+              xlabel=None, ylabel=None,
+              overplot=False, clearwindow=True,
+              xerrorbars=False,
+              yerrorbars=False,
+              ecolor=None,
+              capsize=None,
+              barsabove=False,
+              xlog=False,
+              ylog=False,
+              linestyle='solid',
+              drawstyle='default',
+              color=None,
+              alpha=None,
+              marker='None',
+              markerfacecolor=None,
+              markersize=None,
+              linecolor=None,
+              label=None,
+              linewidth=None,
+              ):
 
         if linecolor is not None:
-            logger.warning("The linecolor attribute ({}) is unused.".format(linecolor))
+            logger.warning("The linecolor attribute ({}) is unused.".format(
+                linecolor))
         x, y2 = histogram_line(xlo, xhi, y)
 
         # Note: this handles clearing the plot if needed.
@@ -248,8 +262,12 @@ class PylabBackend(BasicBackend):
                       barsabove=barsabove,
                       zorder=zorder)
 
-    @translate_args
-    def _set_line(line, linecolor=None, linestyle=None, linewidth=None):
+    # Note that this is an internal method that is not wrapped in 
+    # @ translate_args
+    # This is called from methods like plot, histo, etc.
+    # so the arguments passed to this method are already translated and we do
+    # not want to apply the translation a second time.
+    def _set_line(self, line, linecolor=None, linestyle=None, linewidth=None):
         """Apply the line attributes, if set.
 
         Parameters
@@ -269,62 +287,65 @@ class PylabBackend(BasicBackend):
             set('color', linecolor)
 
         if linestyle is not None:
-            set('linestyle', _linestyle_map[linestyle])
+            set('linestyle', linestyle)
 
         if linewidth is not None:
             set('linewidth', linewidth)
 
-
     # There is no support for alpha in the Plot.vline class
     @translate_args
-    def vline(x, ymin=0, ymax=1,
-            linecolor=None,
-            linestyle=None,
-            linewidth=None,
-            overplot=False, clearwindow=True):
+    def vline(self, x, ymin=0, ymax=1,
+              linecolor=None,
+              linestyle=None,
+              linewidth=None,
+              overplot=False, clearwindow=True):
 
-        axes = setup_axes(overplot, clearwindow)
+        axes = self.setup_axes(overplot, clearwindow)
 
         line = axes.axvline(x, ymin, ymax)
-        _set_line(line, linecolor=linecolor, linestyle=linestyle,
-                linewidth=linewidth)
-
+        self._set_line(line, linecolor=linecolor, linestyle=linestyle,
+                       linewidth=linewidth)
 
     # There is no support for alpha in the Plot.hline class
-    #
-    @translate_args
-    def hline(y, xmin=0, xmax=1,
-            linecolor=None,
-            linestyle=None,
-            linewidth=None,
-            overplot=False, clearwindow=True):
 
-        axes = setup_axes(overplot, clearwindow)
+    @translate_args
+    def hline(self, y, xmin=0, xmax=1,
+              linecolor=None,
+              linestyle=None,
+              linewidth=None,
+              overplot=False, clearwindow=True):
+
+        axes = self.setup_axes(overplot, clearwindow)
 
         line = axes.axhline(y, xmin, xmax)
-        _set_line(line, linecolor=linecolor, linestyle=linestyle,
-                linewidth=linewidth)
+        self._set_line(line, linecolor=linecolor, linestyle=linestyle,
+                       linewidth=linewidth)
 
     @translate_args
-    def plot(x, y, yerr=None, xerr=None, title=None, xlabel=None, ylabel=None,
-            overplot=False, clearwindow=True,
-            xerrorbars=False,
-            yerrorbars=False,
-            ecolor=None,
-            capsize=None,
-            barsabove=False,
-            xlog=False,
-            ylog=False,
-            linestyle='solid',
-            drawstyle='default',
-            color=None,
-            marker='None',
-            markerfacecolor=None,
-            markersize=None,
-            alpha=None,
-            xaxis=False,
-            ratioline=False,
-            linecolor=None):
+    def plot(self, x, y, *,
+             yerr=None, xerr=None, title=None,
+             xlabel=None, ylabel=None,
+             overplot=False, clearwindow=True,
+             xerrorbars=False,
+             yerrorbars=False,
+             ecolor=None,
+             capsize=None,
+             barsabove=False,
+             xlog=False,
+             ylog=False,
+             linestyle='solid',
+             drawstyle='default',
+             color=None,
+             marker='None',
+             markerfacecolor=None,
+             markersize=None,
+             alpha=None,
+             xaxis=False,
+             ratioline=False,
+             linecolor=None,
+             label=None,
+             linewidth=None,
+             ):
         """Draw x,y data.
 
         Note that the linecolor is not used, and is only included
@@ -332,18 +353,19 @@ class PylabBackend(BasicBackend):
         """
 
         if linecolor is not None:
-            logger.warning("The linecolor attribute, set to {}, is unused.".format(linecolor))
+            logger.warning("linecolor attribute, set to {}, is unused.".format(
+                linecolor))
 
-        axes = setup_axes(overplot, clearwindow)
+        axes = self.setup_axes(overplot, clearwindow)
 
         # Set up the axes
         if not overplot:
-            setup_plot(axes, title, xlabel, ylabel, xlog=xlog, ylog=ylog)
+            self.setup_plot(axes, title, xlabel, ylabel, xlog=xlog, ylog=ylog)
 
         # See the discussion in find_zorder
         zorder = None
         if overplot:
-            zorder = find_zorder(axes)
+            zorder = self.find_zorder(axes)
 
         # Rely on color-cycling to work for both the "no errorbar" and
         # "errorbar" case.
@@ -411,13 +433,18 @@ class PylabBackend(BasicBackend):
         return objs
 
     @translate_args
-    def contour(x0, x1, y, levels=None, title=None, xlabel=None, ylabel=None,
+    def contour(self, x0, x1, y, *,
+                levels=None, title=None,
+                xlabel=None, ylabel=None,
                 overcontour=False, clearwindow=True,
                 xlog=False,
                 ylog=False,
                 alpha=None,
                 linewidths=None,
-                colors=None):
+                linestyles='solid',
+                colors=None,
+                label=None,
+                ):
 
         x0 = numpy.unique(x0)
         x1 = numpy.unique(x1)
@@ -428,11 +455,11 @@ class PylabBackend(BasicBackend):
 
         y = y.reshape(x1.size, x0.size)
 
-        axes = setup_axes(overcontour, clearwindow)
+        axes = self.setup_axes(overcontour, clearwindow)
 
         # Set up the axes
         if not overcontour:
-            setup_plot(axes, title, xlabel, ylabel, xlog=xlog, ylog=ylog)
+            self.setup_plot(axes, title, xlabel, ylabel, xlog=xlog, ylog=ylog)
 
         if levels is None:
             axes.contour(x0, x1, y, alpha=alpha,
@@ -441,7 +468,7 @@ class PylabBackend(BasicBackend):
             axes.contour(x0, x1, y, levels, alpha=alpha,
                          colors=colors, linewidths=linewidths)
 
-    def set_subplot(row, col, nrows, ncols, clearaxes=True,
+    def set_subplot(self, row, col, nrows, ncols, clearaxes=True,
                     left=None,
                     right=None,
                     bottom=None,
@@ -461,8 +488,8 @@ class PylabBackend(BasicBackend):
         if clearaxes:
             plt.cla()
 
-    def set_jointplot(row, col, nrows, ncols, create=True,
-                    top=0, ratio=2):
+    def set_jointplot(self, row, col, nrows, ncols, create=True,
+                      top=0, ratio=2):
         """Move to the plot, creating them if necessary.
         Parameters
         ----------
@@ -498,7 +525,7 @@ class PylabBackend(BasicBackend):
             ratios[top] = ratio
             gs = {'height_ratios': ratios}
             fig, axes = plt.subplots(nrows, ncols, sharex=True, num=1,
-                                    gridspec_kw=gs)
+                                     gridspec_kw=gs)
             fig.subplots_adjust(hspace=0.05)
 
             # Change all but the bottom row. By setting sharex
@@ -510,7 +537,7 @@ class PylabBackend(BasicBackend):
                 axes = axes[:-1]
 
             plt.setp([a.get_xticklabels() for a in axes[:-1]],
-                    visible=False)
+                     visible=False)
 
         try:
             ax = plt.gcf().axes[plotnum]
@@ -520,30 +547,9 @@ class PylabBackend(BasicBackend):
 
         plt.sca(ax)
 
-    def get_latex_for_string(txt):
-        """Convert to LaTeX form for the matplotlib back end.
-
-        Parameters
-        ----------
-        txt : str
-            The text component in LaTeX form (e.g. r'\alpha^2'). It
-            should not contain any non-LaTeX content.
-
-        Returns
-        -------
-        latex : str
-            The input text surrounded by $. Note that there's no
-            attempt to protect any $ characters in txt.
-
-        """
-
-        return "${}$".format(txt)
-
-
     # HTML representation as SVG plots
-    #
 
-    def as_svg(func):
+    def as_svg(self, func):
         """Create HTML representation of a plot
 
         The output is a SVG representation of the data, as a HTML
@@ -583,8 +589,7 @@ class PylabBackend(BasicBackend):
 
         return svg[idx:]
 
-
-    def as_html_plot(data, summary=None):
+    def as_html_plot(self, data, summary=None):
         """Create HTML representation of a plot
 
         The output is a SVG representation of the data, as a HTML
@@ -612,7 +617,7 @@ class PylabBackend(BasicBackend):
             data.plot()
             return fig
 
-        svg = as_svg(plotfunc)
+        svg = self.as_svg(plotfunc)
         if svg is None:
             return None
 
@@ -622,8 +627,7 @@ class PylabBackend(BasicBackend):
         ls = [formatting.html_svg(svg, summary)]
         return formatting.html_from_sections(data, ls)
 
-
-    def as_html_contour(data, summary=None):
+    def as_html_contour(self, data, summary=None):
         """Create HTML representation of a contour
 
         The output is a SVG representation of the data, as a HTML
@@ -651,7 +655,7 @@ class PylabBackend(BasicBackend):
             data.contour()
             return fig
 
-        svg = as_svg(plotfunc)
+        svg = self.as_svg(plotfunc)
         if svg is None:
             return None
 
@@ -675,7 +679,7 @@ class PylabBackend(BasicBackend):
     as_html_contour2d = as_html_contour
 
     # Needed for datastack plotting wrapper
-    def initialize_plot(dataset, ids):
+    def initialize_plot(self, dataset, ids):
         """Create the plot window or figure for the given dataset.
 
         Parameters
@@ -692,8 +696,7 @@ class PylabBackend(BasicBackend):
         """
         plt.figure(ids.index(dataset['id']) + 1)
 
-
-    def select_plot(dataset, ids):
+    def select_plot(self, dataset, ids):
         """Select the plot window or figure for the given dataset.
 
         The plot for this dataset is assumed to have been created.

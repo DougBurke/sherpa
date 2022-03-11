@@ -40,7 +40,7 @@ from sherpa.ui.utils import Session
 from sherpa.utils.err import ArgumentErr, ArgumentTypeErr, \
     IdentifierErr, SessionErr
 from sherpa.utils.logging import SherpaVerbosity
-from sherpa.utils.testing import requires_plotting, requires_xspec
+from sherpa.utils.testing import requires_xspec
 
 TEST = [1, 2, 3]
 TEST2 = [4, 5, 6]
@@ -53,7 +53,6 @@ TEST2 = [4, 5, 6]
 # return an empty dictionary rather than a filled one. However,
 # this seems to cause problems so keep the fixture.
 #
-@requires_plotting
 def test_set_log():
     session = Session()
     assert not session.get_data_plot_prefs()['xlog']
