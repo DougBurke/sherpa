@@ -179,27 +179,20 @@ def test_plot_prefs_xxx_data1dint(session, ptype):
     # prefs
     prefs = get_prefs('bob')
     assert 'xerrorbars' in prefs
-    assert 'xaxis' in prefs
-    assert 'ratioline' in prefs
     assert not prefs['xlog']
     prefs['xlog'] = True
 
     # It's not easy to check the difference between
-    # point and histogram preferences. Some differences
-    # are xaxis and ratioline.
+    # point and histogram preferences.
     #
     # I also check xerrorbars as we want this for histograms.
     #
     prefs = get_prefs()
     assert 'xerrorbars' in prefs
-    assert 'xaxis' not in prefs
-    assert 'ratioline' not in prefs
     assert not prefs['xlog']
 
     prefs = get_prefs(2)
     assert 'xerrorbars' in prefs
-    assert 'xaxis' in prefs
-    assert 'ratioline' in prefs
     assert prefs['xlog']
 
 

@@ -173,20 +173,6 @@ class PylabBackend(BasicBackend):
 
         return None
 
-    def point(self, x, y, overplot=True, clearwindow=False,
-              symbol=None, alpha=None,
-              color=None,
-              label=None):
-
-        axes = self.setup_axes(overplot, clearwindow)
-
-        if color is None:
-            style = '{}'.format(symbol)
-        else:
-            style = '{}{}'.format(color, symbol)
-
-        axes.plot(numpy.array([x]), numpy.array([y]), style, alpha=alpha)
-
     @translate_args
     def histo(self, xlo, xhi, y, * ,
               yerr=None, title=None,
@@ -206,14 +192,9 @@ class PylabBackend(BasicBackend):
               marker='None',
               markerfacecolor=None,
               markersize=None,
-              linecolor=None,
               label=None,
               linewidth=None,
               ):
-
-        if linecolor is not None:
-            logger.warning("The linecolor attribute ({}) is unused.".format(
-                linecolor))
         x, y2 = histogram_line(xlo, xhi, y)
 
         # Note: this handles clearing the plot if needed.
@@ -227,7 +208,7 @@ class PylabBackend(BasicBackend):
                          linestyle=linestyle,
                          drawstyle=drawstyle,
                          color=color, marker=None, alpha=alpha,
-                         xaxis=False, ratioline=False)
+                         )
 
         # Draw points and error bars at the mid-point of the bins.
         # Use the color used for the data plot: should it
@@ -294,7 +275,8 @@ class PylabBackend(BasicBackend):
 
     # There is no support for alpha in the Plot.vline class
     @translate_args
-    def vline(self, x, ymin=0, ymax=1,
+    def vline(self, x, *,
+              ymin=0, ymax=1,
               linecolor=None,
               linestyle=None,
               linewidth=None,
@@ -309,7 +291,8 @@ class PylabBackend(BasicBackend):
     # There is no support for alpha in the Plot.hline class
 
     @translate_args
-    def hline(self, y, xmin=0, xmax=1,
+    def hline(self, y, *,
+              xmin=0, xmax=1,
               linecolor=None,
               linestyle=None,
               linewidth=None,
@@ -340,21 +323,9 @@ class PylabBackend(BasicBackend):
              markerfacecolor=None,
              markersize=None,
              alpha=None,
-             xaxis=False,
-             ratioline=False,
-             linecolor=None,
              label=None,
              linewidth=None,
              ):
-        """Draw x,y data.
-
-        Note that the linecolor is not used, and is only included
-        to support old code that may have set this option.
-        """
-
-        if linecolor is not None:
-            logger.warning("linecolor attribute, set to {}, is unused.".format(
-                linecolor))
 
         axes = self.setup_axes(overplot, clearwindow)
 
@@ -423,12 +394,6 @@ class PylabBackend(BasicBackend):
             lw = axes.spines['left'].get_linewidth()
         except (AttributeError, KeyError):
             lw = 1.0
-
-        if xaxis:
-            axes.axhline(y=0, xmin=0, xmax=1, color='k', linewidth=lw)
-
-        if ratioline:
-            axes.axhline(y=1, xmin=0, xmax=1, color='k', linewidth=lw)
 
         return objs
 

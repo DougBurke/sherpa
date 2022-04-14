@@ -455,7 +455,7 @@ class Point(NoNewAttributesAfterInit):
 
         """
         opts = self._merge_settings(kwargs)
-        backend.point(x, y,
+        backend.plot(x, y,
                       overplot=overplot, clearwindow=clearwindow,
                       **opts)
 
@@ -2070,6 +2070,8 @@ class DelchiPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
+        super().hline(y=1, xmin=0, xmax=1, linecolor='k', 
+                      linewidth=kwargs.get('linewidth', 1), overplot=True)
 
 
 class ChisqrPlot(ModelPlot):
@@ -2185,6 +2187,8 @@ class ResidPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
+        super().hline(y=0, xmin=0, xmax=1, linecolor='k', 
+                      linewidth=kwargs.get('linewidth', 1), overplot=True)
 
 
 class ResidContour(ModelContour):
@@ -2276,6 +2280,8 @@ class RatioPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
+        super().hline(y=1, xmin=0, xmax=1, linecolor='k', 
+                      linewidth=kwargs.get('linewidth', 1), overplot=True)
 
 
 class RatioContour(ModelContour):

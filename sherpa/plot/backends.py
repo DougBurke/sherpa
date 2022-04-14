@@ -274,8 +274,6 @@ class BaseBackend():
              markersize=None,
              ecolor=None,
              capsize=None,
-             xaxis=False,  # HMG: suggest to drop this
-             ratioline=False,  # HMG suggest to drop this
              **kwargs):
         """Draw x,y data.
 
@@ -432,17 +430,11 @@ class BaseBackend():
         pass
 
     @translate_args
-    def point(self, x, y, *, overplot=True, clearwindow=False,
-              symbol=None, alpha=None,
-              color=None):
-        pass
-
-    @translate_args
     def vline(self, x, *,
               ymin=0, ymax=1,
               title=None, xlabel=None, ylabel=None,
               overplot=False, clearwindow=True,
-              color=None,
+              linecolor=None,
               linestyle=None,
               linewidth=None,
               **kwargs):
@@ -454,7 +446,7 @@ class BaseBackend():
               xmin=0, xmax=1,
               title=None, xlabel=None, ylabel=None,
               overplot=False, clearwindow=True,
-              color=None,
+              linecolor=None,
               linestyle=None,
               linewidth=None,
               **kwargs):
@@ -523,15 +515,17 @@ class BaseBackend():
     def get_plot_defaults(self):
         return get_keyword_defaults(self.plot)
 
-    def get_point_defaults(self):
-        return get_keyword_defaults(self.point)
-
     def get_histo_defaults(self):
         return get_keyword_defaults(self.histo)
 
+    def get_point_defaults(self):
+        d = self.get_plot_defaults()
+        d['linecolor'] = d.pop('color')
+        return d
+
     def get_confid_point_defaults(self):
-        d = self.get_point_defaults()
-        d['symbol'] = '+'
+        d = self.get_plot_defaults()
+        d['marker'] = '+'
         return d
 
     def get_data_plot_defaults(self):
@@ -561,7 +555,6 @@ class BaseBackend():
         d['xerrorbars'] = True
         d['capsize'] = 0
         # d['marker'] = '_'
-        d['xaxis'] = True
         return d
 
     def get_ratio_plot_defaults(self):
@@ -569,7 +562,6 @@ class BaseBackend():
         d['xerrorbars'] = True
         d['capsize'] = 0
         # d['marker'] = '_'
-        d['ratioline'] = True
         return d
 
     def get_confid_plot_defaults(self):
@@ -709,8 +701,6 @@ class BasicBackend(BaseBackend):
              markersize=None,
              ecolor=None,
              capsize=None,
-             xaxis=False,  # HMG: suggest to drop this
-             ratioline=False,  # HMG suggest to drop this
              **kwargs):
         warning(f'{self.__class__} does not implement line/symbol plotting. ' +
                 'No plot will be produced.')
@@ -768,18 +758,11 @@ class BasicBackend(BaseBackend):
                 'No image will be produced.')
 
     @translate_args
-    def point(self, x, y, *, overplot=True, clearwindow=False,
-              symbol=None, alpha=None,
-              color=None):
-        warning(f'{self.__class__} does not implement point plotting. ' +
-                'No image will be produced.')
-
-    @translate_args
     def vline(self, x, *,
               ymin=0, ymax=1,
               title=None, xlabel=None, ylabel=None,
               overplot=False, clearwindow=True,
-              color=None,
+              linecolor=None,
               linestyle=None,
               linewidth=None,
               **kwargs):
@@ -792,7 +775,7 @@ class BasicBackend(BaseBackend):
               xmin=0, xmax=1,
               title=None, xlabel=None, ylabel=None,
               overplot=False, clearwindow=True,
-              color=None,
+              linecolor=None,
               linestyle=None,
               linewidth=None,
               **kwargs):
