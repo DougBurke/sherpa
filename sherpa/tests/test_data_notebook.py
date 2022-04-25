@@ -35,7 +35,7 @@ def test_data1d(old_numpy_printing, all_plot_backends):
     r = d._repr_html_()
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert '<div class="sherpa-text-fallback">&lt;sherpa.plot.DataPlot object at ' in r
 
         assert '<summary>Data1D Plot</summary>' in r
@@ -63,7 +63,7 @@ def test_data1d_errs(old_numpy_printing, all_plot_backends):
     r = d._repr_html_()
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert '<div class="sherpa-text-fallback">&lt;sherpa.plot.DataPlot object at ' in r
 
         assert '<summary>Data1D Plot</summary>' in r
@@ -93,7 +93,7 @@ def test_data1dint(old_numpy_printing, all_plot_backends):
     r = d._repr_html_()
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert '<div class="sherpa-text-fallback">&lt;sherpa.plot.DataHistogramPlot object at ' in r
 
         assert '<summary>Data1DInt Plot</summary>' in r

@@ -47,7 +47,7 @@ def check(r, summary, name, label, nmeta):
     """Very limited checks of the structure"""
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert f'<summary>{summary} Plot</summary>' in r
         assert '<svg ' in r
 
@@ -243,7 +243,7 @@ def test_img(header, old_numpy_printing, all_plot_backends):
     # structure doesn't quite match the other cases
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert '<summary>DataIMG Plot</summary>' in r
         assert '<svg ' in r
 
@@ -272,7 +272,7 @@ def test_img_real(coord, make_data_path, old_numpy_printing, all_plot_backends):
 
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert '<summary>DataIMG Plot</summary>' in r
 
     assert '<summary>Coordinates: physical (3)</summary>' in r
@@ -307,7 +307,7 @@ def test_img_real_filtered(coord, make_data_path,
 
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert '<summary>DataIMG Plot</summary>' in r
 
     assert '<summary>Coordinates: physical (3)</summary>' in r

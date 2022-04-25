@@ -17,12 +17,13 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import functools
 from inspect import signature
 import logging
 
 from sherpa.utils import formatting
-
+from sherpa.plot.backend_utils import (translate_args,
+                                       add_kwargs_to_doc,
+                                       get_keyword_defaults)
 
 __all__ = ('BasicBackend',
            'backend_indep_kwargs',
@@ -45,58 +46,78 @@ backend_indep_kwargs = {
 }
 
 
-def translate_args(func):
-    @functools.wraps(func)
-    def inner(self, *args, **kwargs):
-        for kw, val in kwargs.items():
-            if kw in self.translate_dict:
-                transl = self.translate_dict[kw]
+kwargs_doc = {'xerr': ['float or array-like, shape(N,) or shape(2, N)',
+'''The errorbar sizes can be:
+  - scalar: Symmetric +/- values for all data points.
+  - shape(N,): Symmetric +/-values for each data point.
+  - shape(2, N): Separate - and + values for each bar. First row
+    contains the lower errors, the second row contains the upper
+    errors.
+  - None: No errorbar.
+Note that all error arrays should have positive values.'''],
+'title': ['string',
+          'Plot title (can contain LaTeX formulas). Only used if a new plot is created.'],
+'xlabel': ['string',
+           'Axis label (can contain LaTeX formulas). Only used if a new plot is created.'],
+'ylabel': ['string',
+           'Axis label (can contain LaTeX formulas). Only used if a new plot is created.'],
+'xlog': ['bool',
+         'Should the x axis be logarithmic (default: linear)? Only used if a new plot is created.'],
+'ylog': ['bool',
+         'Should the y axis be logarithmic (default: linear)? Only used if a new plot is created.'],
+'overplot': ['bool',
+             'If `True`, the plot is added to an existing plot, if not a new plot is created.'],
+'clearwindow' : ['bool',
+                 'If `True` the entire figure area is cleared to make space for a new plot.'],
+'xerrorbars' : ['bool',
+'''Should x error bars be shown? If this is set to `True` errorbars
+are shown, but only if the size of the errorbars is provided in the
+`xerr`parameters. The purpose of having a separate switch
+`xerrorbars` is that the prepare method of a plot can create the
+errors and pass them to this method, but the user can still decide
+to change the style of the plot and choose if error bars should be
+displayed.'''],
+'yerrorbars' : ['bool',
+'''Should y error bars be shown? If this is set to `True` errorbars
+are shown, but only if the size of the errorbars is provided in the
+`yerr`parameters. The purpose of having a separate switch
+`yerrorbars` is that the prepare method of a plot can create the
+errors and pass them to this method, but the user can still decide
+to change the style of the plot and choose if error bars should be
+displayed.'''],
+'color' : ['string',
+'''The following colors are accepted by all backends: ``'b'`` (blue),
+``'r'`` (red), ``'g'`` (green), ``'k'`` (black), ``'w'`` (white),
+``'c'`` (cyan), ``'y'`` (yellow), ``'m'`` (magenta) but they may not
+translate to the exact same RGB values in each backend, e.g. ``'b'``
+could be a different shade of blue depending on the backend.
 
-                if callable(transl):
-                    # It's a function
-                    kwargs[kw] = transl(val)
-                else:
-                    # It should be a dict
-                    # Let's check if val is one of those that need to
-                    # be translated
-                    if val in transl:
-                        kwargs[kw] = transl[val]
-        return func(self, *args, **kwargs)
+Some backend might accept additional values.'''],
+'linestyle' : ['string',
+'''The following values are accepted by all backends: ``'noline'``,
+``'None'`` (as string, same as ``'noline'``),
+``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
+line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
+``''`` (empty string, no line shown), `None` (default - usually
+solid line).
 
-    return inner
+Some backends may accept additional values.'''],
+'linewidth' : ['float', 'Thickness of the line.'],
+'drawstyle' : ['string', 'DO WE NEED THIS IN BACKEND-INDEPENDENT INTERFACE?'],
+'marker' : ['string',
+'''The following values are accepted by all backends: "None" (as a
+string, no marker shown), "." (dot), "o" (circle), "+", "s" (square),
+ "" (empty string, no marker shown)
 
-
-def get_keyword_defaults(func, ignore_args=['title', 'xlabel', 'ylabel',
-                                            'overplot', 'overcontour', 
-                                            'clearwindow', 'clearaxes',
-                                            'xerr', 'yerr']):
-    '''Get default values for keyword arguments
-
-    Parameters
-    ----------
-    func : callable
-        function or method to inspect
-    ignore_args : list
-        Any keyword arguments with names listed here will be ignored
-
-    Returns
-    -------
-    default_values : dict
-        Dictionary with argument names and default values
-
-    See also
-    --------
-    sherpa.utils.get_keyword_defaults
-    '''
-    default_values = {}
-    sig = signature(func)
-
-    for param in sig.parameters.values():
-        if (param.default is not param.empty and
-                param.name not in ignore_args):
-            default_values[param.name] = param.default
-    return default_values
-
+Some backends may accept additional values.'''],
+'alpha' : ['float', 'Number between 0 and 1, setting the transparency.'],
+'markerfacecolor' : ['string', 'see `color`'],
+'markersize' : ['float',
+'''Size of a marker. The scale may also depend on the backend. `None`
+uses the backend-specific default.'''],
+'ecolor' : ['string', 'Color of the errorbars.'],
+'capsize' : ['float', 'Size of the cap drawn at the end of the errorbars.']
+}
 
 class BaseBackend():
     '''A dummy backend for plotting.
@@ -109,6 +130,10 @@ class BaseBackend():
     In this sense, this backend can be understood as the "base" for backends.
     The string-formatting is implemented here so that other backends don't
     have to dublicate that; they can call the functions here.
+
+    No plotting is implemented in this backend, but all functions are
+    documented by what they should do, so that this backend can serve as a
+    template to implement actual plotting interfaces.
     '''
 
     translate_dict = {}
@@ -134,27 +159,42 @@ class BaseBackend():
     to a number between 0 and 256.
     '''
 
-    def setup_plot(self, axes, title, xlabel, ylabel, xlog=False, ylog=False):
+    @property
+    def name(self):
+        '''An easy-to-read string name
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+        '''
+        return self.__class__.__name__
+
+    @add_kwargs_to_doc(kwargs_doc)
+    def setup_plot(self, axes, title=None, xlabel=None, ylabel=None,
+                   xlog=False, ylog=False):
         """Basic plot setup.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
 
         Parameters
         ----------
         axes
             The plot axes (output of setup_axes).
-        title, xlabel, ylabel : str or None
-            The plot, x-axis, and y-axis titles. They are skipped if
-            the empty string or None.
-        xlog , ylog : bool
-            Should the scale be logarithmic (True) or linear (False)?
-
+        {kwargs}
         """
         pass
 
     def set_subplot(self, row, col, nrows, ncols, clearaxes=True,
                     **kwargs):
-        """ Select a plot space in a grid of plots or create new grid
+        """Select a plot space in a grid of plots or create new grid
 
         This method adds a new subplot in a grid of plots.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
 
         Parameters
         ----------
@@ -178,6 +218,11 @@ class BaseBackend():
     def set_jointplot(self, row, col, nrows, ncols, create=True,
                       top=0, ratio=2):
         """Move to the plot, creating them if necessary.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
         Parameters
         ----------
         row : int
@@ -203,18 +248,26 @@ class BaseBackend():
 
         Depending on the backend, this may provide a new,
         empty window or clear the existing, current window.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
         """
         pass
 
     def initialize_plot(self, dataset, ids):
         """Create the plot window or figure for the given dataset.
 
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
         Parameters
         ----------
         dataset : str or int
-        The dataset.
+            The dataset.
         ids : array_like
-        The identifier array from the DataStack object.
+            The identifier array from the DataStack object.
 
         See Also
         --------
@@ -228,12 +281,16 @@ class BaseBackend():
 
         The plot for this dataset is assumed to have been created.
 
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
         Parameters
         ----------
         dataset : str or int
-        The dataset.
+            The dataset.
         ids : array_like
-        The identifier array from the DataStack object.
+            The identifier array from the DataStack object.
 
         See Also
         --------
@@ -243,18 +300,33 @@ class BaseBackend():
         pass
 
     def begin(self):
-        '''Called from the UI before and interactive plot is started.
+        '''Called from the UI before an interactive plot is started.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
         '''
         pass
 
     def exceptions(self):
-        '''Called from the UI if any exceptions occur during plotting.'''
+        '''Called from the UI if any exceptions occur during plotting.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+        '''
         pass
 
     def end(self):
-        '''Called from the UI after an interactivep lot is done'''
+        '''Called from the UI after an interactive plot is done.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+        '''
         pass
 
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def plot(self, x, y, *,
              xerr=None, yerr=None,
@@ -272,13 +344,13 @@ class BaseBackend():
              alpha=None,
              markerfacecolor=None,
              markersize=None,
-             ecolor=None,
-             capsize=None,
              **kwargs):
         """Draw x,y data.
 
-        This method combines a number of different ways to draw x/y data: - a
-        line connecting the points - scatter plot of symbols - errorbars
+        This method combines a number of different ways to draw x/y data:
+            - a line connecting the points
+            - scatter plot of symbols
+            - errorbars
 
         All three of them can be used together (symbols with errorbars connected
         by a line), but it is also possible to use only one or two of them. By
@@ -286,87 +358,21 @@ class BaseBackend():
         bars are not (``marker='None'`` and ``xerrorbars=False`` as well as
         ``yerrorbars=False``).
 
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
         Parameters
         ----------
         x : array-like or scalar number
             x values
         y : array-like or scalar number
             y values, same dimension as `x`.
-        xerr, yerr: float or array-like, shape(N,) or shape(2, N), optional
-            The errorbar sizes:
-              - scalar: Symmetric +/- values for all data points.
-              - shape(N,): Symmetric +/-values for each data point.
-              - shape(2, N): Separate - and + values for each bar. First row
-                contains the lower errors, the second row contains the upper
-                errors.
-              - None: No errorbar.
-
-             Note that all error arrays should have positive values.
-        title : string, optional
-            Plot title (can contain LaTeX formulas). Only used if a new plot is
-            created.
-        xlabel, ylabel : string, optional
-            Axis labels (can contain LaTeX formulas). Only used if a new plot is
-            created.
-        xlog, ylog : bool
-            Should x/y axes be logartihmic (default: linear)? Only used if a new
-            plot is created.
-        overplot : bool
-            If `True`, the plot is added to an existing plot, if not (the
-            default) a new plot is created.
-        clearwindow : bool
-            If `True` (the default) the entire figure area is cleared to make
-            space for a new plot.
-        xerrorbars, yerrorbars : bool
-            Should x/y error bars be shown? If this is set to `True ` errorbars
-            are shown, but only if the size of the errorbars is provided in the
-            `xerr`/`yerr` parameters. The purpose of having a separate switch
-            `xerrorbars` is that the prepare method of a plot can create the
-            errors and pass them to this method, but the user can still decide
-            to change the style of the plot and choose if error bars should be
-            displayed.
-        color : string (some backend may accept other)
-            The following colors are accepted by all backends: ``'b'`` (blue),
-            ``'r'`` (red), ``'g'`` (green), ``'k'`` (black), ``'w'`` (white),
-            ``'c'`` (cyan), ``'y'`` (yellow), ``'m``` (magenta) but they may not
-            translate to the exact same RGB values in each backend, e.g. ``'b'``
-            could be a different shade of blue depending on the backend.
-
-            Some backend might accept additional values.
-        linestyle : string
-            The following values are accepted by all backends: ``'noline'``,
-            ``'None'`` (as string, same as ``'noline'``),
-            ``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
-            line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
-            ``''`` (empty string, no line shown), `None` (default - usually
-            solid line).
-
-            Some backends may accept additional values.
-        linewidth : float
-            Thickness of the line.
-        drawstyle : string
-            DO WE NEED THIS IN BACKEND-INDEPENDENT INTERFACE?
-        marker : string
-            The following values are accepted by all backends: "None" (as a
-            string, no marker shown), "." (dot), "o" (cicle), "+", "s" (square),
-             "" (empty string, no marker shown)
-
-            Some backends my accept additional values.
-
-        alpha : float
-            Number between 0 and 1, setting the transparency.
-        markerfacecolor : string
-            see `color`
-        markersize : float, optional
-            Size of a marker. The scale may also depend on the backend. None
-            uses the backend-specific default.
-        ecolor : string
-            Color of the errorbars.
-        capzise : float
-            Size of the cap drawn at the end of the errorbars.
+        {kwargs}
         """
         pass
 
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def histo(self, xlo, xhi, y, *,
               yerr=None,
@@ -397,14 +403,29 @@ class BaseBackend():
 
         Points are drawn at the middle of the bin, along with any
         error values.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
+        Parameters
+        ----------
+        x0 : array-like or scalar number
+            lower bin boundary values
+        x1 : array-like or scalar number
+            upper bin boundary values
+        y : array-like or scalar number
+            y values, same dimension as `x0`.
+        {kwargs}
         """
         pass
 
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def contour(self, x0, x1, y, *,
                 levels=None,
                 title=None, xlabel=None, ylabel=None,
-                overplot=False, clearwindow=True,
+                overcontour=False, clearwindow=True,
                 xlog=False, ylog=False,
                 label=None,
                 colors=None,
@@ -414,6 +435,19 @@ class BaseBackend():
                 **kwargs):
         """Draw 2D contour data.
 
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
+        Parameters
+        ----------
+        x0 : array-like
+            independent axis in the first dimenation (on regular grid, flattened)
+        x1 : array-like
+            independent axis in the second dimenation (on regular grid, flattened)
+        y : array-like
+            dependent axis (i.e. image values) (on regular grid, flattened)
+        {kwargs}
         """
         pass
 
@@ -427,6 +461,22 @@ class BaseBackend():
               color=None,
               alpha=None,
               **kwargs):
+        """Draw 2D image data.
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
+        Parameters
+        ----------
+        x0 : array-like
+            independent axis in the first dimenation (on regular grid, flattened)
+        x1 : array-like
+            independent axis in the second dimenation (on regular grid, flattened)
+        y : array-like
+            dependent axis (i.e. image values) (on regular grid, flattened)
+        {kwargs}
+        """
         pass
 
     @translate_args
@@ -438,7 +488,21 @@ class BaseBackend():
               linestyle=None,
               linewidth=None,
               **kwargs):
-        """Draw a vertical line"""
+        """Draw a vertical line
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
+        Parameters
+        ----------
+        x : float
+            x position of the vertical line in data units
+        ymin, ymax : float
+            beginning and end of the vertical line in axes coordinates, i.e. from
+            0 (bottom) to 1 (top).
+        {kwargs}
+        """
         pass
 
     @translate_args
@@ -450,7 +514,21 @@ class BaseBackend():
               linestyle=None,
               linewidth=None,
               **kwargs):
-        """Draw a horizontal line"""
+        """Draw a horizontal line
+
+        .. warning::
+           This backend is a non-functional dummy. The documentation is provided
+           as a template only.
+
+        Parameters
+        ----------
+        y : float
+            x position of the vertical line in data units
+        xmin, xmax : float
+            beginning and end of the vertical line in axes coordinates, i.e. from
+            0 (bottom) to 1 (top).
+        {kwargs}
+        """
         pass
 
     def get_latex_for_string(self, txt):
@@ -465,7 +543,7 @@ class BaseBackend():
         Returns
         -------
         latex : str
-            The txt modified as appropriate for a backend so that the LaTeX
+            The text modified as appropriate for a backend so that the LaTeX
             will be displayed properly.
 
         """
@@ -507,7 +585,7 @@ class BaseBackend():
                                       summary=type(data).__name__)]
         return formatting.html_from_sections(data, ls)
 
-    # The follwowing methods will almost all be removed in Step 2
+    # The following methods will almost all be removed in Step 2
     # and thus no documentation has been added.
     def get_split_plot_defaults(self):
         return get_keyword_defaults(self.set_subplot)
@@ -672,7 +750,7 @@ class BaseBackend():
 class BasicBackend(BaseBackend):
     '''A dummy backend for plotting.
 
-    This backend extends `BaseBackend` by raising a warning message for 
+    This backend extends `BaseBackend` by raising a warning message for
     plotting functions (plot, image, histrogram etc.) that are not implemented.
     It is a the base for any real functional backend, which will override those
     methods, but offer useful user feedback for any method not provided.
@@ -702,6 +780,13 @@ class BasicBackend(BaseBackend):
              ecolor=None,
              capsize=None,
              **kwargs):
+        '''Draw x,y data.
+
+        .. warning::
+           No output will be produced by this backend, since the implementation
+           is incomplete.
+        '''
+
         warning(f'{self.__class__} does not implement line/symbol plotting. ' +
                 'No plot will be produced.')
 
@@ -726,6 +811,12 @@ class BasicBackend(BaseBackend):
               capsize=None,
               #barsabove=False,
               **kwargs):
+        '''Display 1D histrogram
+
+        .. warning::
+           No output will be produced by this backend, since the implementation
+           is incomplete.
+        '''
         warning(f'{self.__class__} does not implement histogram plotting. ' +
                 'No histogram will be produced.')
 
@@ -733,7 +824,7 @@ class BasicBackend(BaseBackend):
     def contour(self, x0, x1, y, *,
                 levels=None,
                 title=None, xlabel=None, ylabel=None,
-                overplot=False, clearwindow=True,
+                overcontour=False, clearwindow=True,
                 xlog=False, ylog=False,
                 label=None,
                 colors=None,
@@ -741,6 +832,12 @@ class BasicBackend(BaseBackend):
                 linewidths=None,
                 alpha=None,
                 **kwargs):
+        '''Draw contour lines.
+
+        .. warning::
+           No output will be produced by this backend, since the implementation
+           is incomplete.
+        '''
         warning(f'{self.__class__} does not implement contour plotting. ' +
                 'No contour will be produced.')
 
@@ -754,6 +851,12 @@ class BasicBackend(BaseBackend):
               color=None,
               alpha=None,
               **kwargs):
+        '''Draw 2D image.
+
+        .. warning::
+           No output will be produced by this backend, since the implementation
+           is incomplete.
+        '''
         warning(f'{self.__class__} does not implement image plotting. ' +
                 'No image will be produced.')
 
@@ -766,7 +869,12 @@ class BasicBackend(BaseBackend):
               linestyle=None,
               linewidth=None,
               **kwargs):
-        """Draw a vertical line"""
+        """Draw a vertical line
+
+        .. warning::
+           No output will be produced by this backend, since the implementation
+           is incomplete.
+        """
         warning(f'{self.__class__} does not implement line plotting. ' +
                 'No line will be produced.')
 
@@ -779,7 +887,12 @@ class BasicBackend(BaseBackend):
               linestyle=None,
               linewidth=None,
               **kwargs):
-        """Draw a horizontal line"""
+        """Draw a horizontal line
+
+        .. warning::
+           No output will be produced by this backend, since the implementation
+           is incomplete.
+           """
         warning(f'{self.__class__} does not implement line plotting. ' +
                 'No line will be produced.')
 
@@ -824,7 +937,7 @@ class IndepOnlyBackend(BasicBackend):
         every function a no-op. However, that means that everything
         has to be maintained here, too, and it is easy to get the
         two classes out of sync in the future. So, instead, we do a
-        litte excersize in meta-programming.
+        little exersize in meta-programming.
         '''
         attr = super().__getattribute__(__name)
         if callable(attr):

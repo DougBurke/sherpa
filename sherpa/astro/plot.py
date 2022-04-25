@@ -609,13 +609,13 @@ class OrderPlot(ModelHistogram):
             raise PlotErr("orderarrfail")
 
     def plot(self, overplot=False, clearwindow=True, **kwargs):
-        default_color = self.histo_prefs['linecolor']
+        default_color = self.histo_prefs['color']
         count = 0
         for xlo, xhi, y, color in \
                 zip(self.xlo, self.xhi, self.y, self.colors):
             if count != 0:
                 overplot = True
-                self.histo_prefs['linecolor'] = color
+                self.histo_prefs['color'] = color
 
             # Note: the user settings are sent to each plot
             shplot.Histogram.plot(self, xlo, xhi, y, title=self.title,
@@ -624,7 +624,7 @@ class OrderPlot(ModelHistogram):
                                   **kwargs)
             count += 1
 
-        self.histo_prefs['linecolor'] = default_color
+        self.histo_prefs['color'] = default_color
 
 
 # TODO: we should probably derive from a histogram plot that

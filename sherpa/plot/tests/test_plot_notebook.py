@@ -38,7 +38,7 @@ from sherpa.stats import Chi2
 def check_empty(r, summary, nsummary=0):
     """Is this an 'empty' response?"""
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert r is None
         return
 
@@ -51,7 +51,7 @@ def check_full(r, summary, label, title, nsummary=0):
 
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert f"<summary>{summary}</summary>" in r
         assert "<svg " in r
         return
@@ -205,7 +205,7 @@ def test_fit(all_plot_backends):
     # different to previous checks
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert "<summary>FitPlot</summary>" in r
         assert "<svg " in r
         return
@@ -244,7 +244,7 @@ def test_fitcontour(all_plot_backends):
     # different to previous checks
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert "<summary>FitContour</summary>" in r
         assert "<svg " in r
         return
@@ -278,7 +278,7 @@ def test_intproj(old_numpy_printing, all_plot_backends):
     r = p._repr_html_()
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert "<summary>IntervalProjection</summary>" in r
         assert "<svg " in r
         return
@@ -313,7 +313,7 @@ def test_regproj(old_numpy_printing, all_plot_backends):
     r = p._repr_html_()
     assert r is not None
 
-    if plot.backend.__class__.__name__ == 'PylabBackend':
+    if plot.backend.name == 'pylab':
         assert "<summary>RegionProjection</summary>" in r
         assert "<svg " in r
         return

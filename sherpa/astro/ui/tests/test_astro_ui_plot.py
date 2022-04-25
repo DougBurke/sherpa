@@ -1116,7 +1116,7 @@ _basic_plotfuncs = [ui.plot_data,
 
 @requires_fits
 @requires_data
-def test_pha1_plot_function(clean_astro_ui, basic_pha1, all_plot_backends):
+def test_pha1_plot_function(clean_astro_ui, basic_pha1):
     # can we call plot; do not try to be exhaustive
     ui.plot("data", "bkg", "fit", "arf")
 
@@ -1124,7 +1124,7 @@ def test_pha1_plot_function(clean_astro_ui, basic_pha1, all_plot_backends):
 @requires_fits
 @requires_data
 @pytest.mark.parametrize("plotfunc", _basic_plotfuncs)
-def test_pha1_plot(plotfunc, clean_astro_ui, basic_pha1, all_plot_backends):
+def test_pha1_plot(plotfunc, clean_astro_ui, basic_pha1):
     plotfunc()
 
 
@@ -1202,7 +1202,7 @@ def test_pha1_plot_clearwindow(hide_logging, clean_astro_ui, basic_pha1,
                                       ui.plot_bkg_fit_ratio,
                                       ui.plot_bkg_fit_delchi])
 def test_pha1_bkg_plot(plotfunc, clean_astro_ui, basic_pha1,
-                       hide_logging, all_plot_backends):
+                       hide_logging):
     """Test issue #943 and general check of plot_bkg_xxx"""
 
     ui.unsubtract()
@@ -1214,8 +1214,7 @@ def test_pha1_bkg_plot(plotfunc, clean_astro_ui, basic_pha1,
 @requires_data
 @pytest.mark.parametrize("plotfunc", [ui.plot_model_component,
                                       ui.plot_source_component])
-def test_pha1_plot_component(clean_astro_ui, basic_pha1, plotfunc,
-                             all_plot_backends):
+def test_pha1_plot_component(clean_astro_ui, basic_pha1, plotfunc):
     plotfunc("pl")
 
 
@@ -1466,7 +1465,7 @@ def test_pha1_plot_with_model_component_no_response(clean_astro_ui,
 
 @requires_fits
 @requires_data
-def test_pha1_plot_order(clean_astro_ui, basic_pha1, all_plot_backends):
+def test_pha1_plot_order(clean_astro_ui, basic_pha1):
     ui.plot_order()
 
 
@@ -2163,7 +2162,7 @@ def test_pha1_plot_foo_flux(energy, plotfunc, getfunc, correlated,
                          [(True, ui.plot_energy_flux, ui.get_energy_flux_hist),
                           (False, ui.plot_photon_flux, ui.get_photon_flux_hist)])
 def test_pha1_plot_foo_flux_recalc(energy, plotfunc, getfunc, clean_astro_ui,
-                                   basic_pha1, all_plot_backends):
+                                   basic_pha1):
     """Just check we can call recalc on the routine
 
     """
@@ -2310,8 +2309,7 @@ def test_pha1_get_foo_flux_hist_scales(getfunc, scale,
 @pytest.mark.parametrize("scale", [1.0, 2.0])
 def test_pha1_plot_foo_flux_scales(plotfunc, getfunc, scale,
                                    clean_astro_ui, basic_pha1,
-                                   hide_logging, reset_seed,
-                                   all_plot_backends):
+                                   hide_logging, reset_seed):
     """Can we call plot_energy/photon_flux with the scales argument.
 
     Based on test_pha1_get_foo_flux_hist_scales. By using some
@@ -2358,8 +2356,7 @@ def test_pha1_plot_foo_flux_scales(plotfunc, getfunc, scale,
                           (ui.plot_photon_flux, ui.get_photon_flux_hist, 1.1892431836751618)])
 def test_pha1_plot_foo_flux_model(plotfunc, getfunc, ratio,
                                   clean_astro_ui, basic_pha1,
-                                  hide_logging, reset_seed,
-                                  all_plot_backends):
+                                  hide_logging, reset_seed):
     """Can we call plot_energy/photon_flux with the model argument.
 
     Based on test_pha1_get_foo_flux_hist_scales. By using some
@@ -2449,8 +2446,7 @@ def test_pha1_plot_foo_flux_model(plotfunc, getfunc, ratio,
 @pytest.mark.parametrize("energy,plotfunc,getfunc",
                          [(True, ui.plot_energy_flux, ui.get_energy_flux_hist),
                           (False, ui.plot_photon_flux, ui.get_photon_flux_hist)])
-def test_pha1_plot_foo_flux_soft(energy, plotfunc, getfunc, clean_astro_ui, basic_pha1,
-                                 all_plot_backends):
+def test_pha1_plot_foo_flux_soft(energy, plotfunc, getfunc, clean_astro_ui, basic_pha1):
     """Check we can send clip=soft
     """
 
@@ -2490,8 +2486,7 @@ def test_pha1_plot_foo_flux_soft(energy, plotfunc, getfunc, clean_astro_ui, basi
 @pytest.mark.parametrize("energy, plotfunc,getfunc",
                          [(True, ui.plot_energy_flux, ui.get_energy_flux_hist),
                           (False, ui.plot_photon_flux, ui.get_photon_flux_hist)])
-def test_pha1_plot_foo_flux_none(energy, plotfunc, getfunc, clean_astro_ui, basic_pha1,
-                                 all_plot_backends):
+def test_pha1_plot_foo_flux_none(energy, plotfunc, getfunc, clean_astro_ui, basic_pha1):
     """Check we can send clip=none
 
     Copy of test_pha1_plot_foo_flux_none
@@ -2531,8 +2526,7 @@ def test_pha1_plot_foo_flux_none(energy, plotfunc, getfunc, clean_astro_ui, basi
 @requires_xspec
 @pytest.mark.parametrize("energy,getfunc", [(True, ui.get_energy_flux_hist),
                                             (False, ui.get_photon_flux_hist)])
-def test_pha1_get_foo_flux_soft(energy, getfunc, clean_astro_ui, basic_pha1,
-                                all_pot_backends):
+def test_pha1_get_foo_flux_soft(energy, getfunc, clean_astro_ui, basic_pha1):
     """Can we send clip=soft?
     """
 
@@ -4269,8 +4263,12 @@ def test_pha_model_plot_filter_range_1024_true(mask, make_data_path,
                          [(False, 'No noticed bins'),
                           (np.zeros(46, dtype=bool), '')])
 def test_pha_model_plot_filter_range_1024_false(mask, expected, make_data_path,
-                                                clean_astro_ui):
+                                                clean_astro_ui, plot_backends):
     """Special-case handling of mask: all masked out.
+
+    Since this test checks for an exception that is only triggered in the
+    plotting process itself, it only makes sense for functional plotting
+    backends, not for dummies that skip the plotting process.
     """
 
     ui.load_pha(make_data_path('3c273.pi'))

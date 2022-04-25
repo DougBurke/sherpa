@@ -47,7 +47,7 @@ from sherpa.plot.backends import BaseBackend, IndepOnlyBackend
 from sherpa.plot import TemporaryPlottingBackend
 
 ALL_PLOT_BACKENDS = [BaseBackend(), IndepOnlyBackend()]
-PLOT_BACKENDS = [BaseBackend()]
+PLOT_BACKENDS = []
 
 try:
     from sherpa.plot.pylab_backend import PylabBackend
@@ -568,10 +568,8 @@ def all_plot_backends(request):
     Runs the test with the given plot backend and then restores the
     original value.
 
-    Note that it is not clear at this point if
-    this does or does not reload the ui layers, which will have
-    retain reference to the original backend throughout.
-
+    Note that this does not reload the ui layers, which will
+    retain a reference to the original backend throughout.
     """
     with TemporaryPlottingBackend(request.param):
         yield
@@ -579,15 +577,16 @@ def all_plot_backends(request):
 
 @pytest.fixture(params=PLOT_BACKENDS)
 def plot_backends(request):
-    """Override the plot backend for this test
+    """Override the plot backend for this test (only for functional backends)
+
+    This fixtures runs tests for all backens that actually produce plots, i.e.
+    not for any type of dummy.
 
     Runs the test with the given plot backend and then restores the
     original value.
 
-    Note that it is not clear at this point if
-    this does or does not reload the ui layers, which could
-    retain references to the original backend.
-
+    Note that this does not reload the ui layers, which will
+    retain a reference to the original backend throughout.
     """
 
     yield

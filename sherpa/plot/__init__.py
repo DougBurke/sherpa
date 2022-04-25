@@ -23,32 +23,8 @@
 Classes provide access to common plotting tasks, which is done by the
 plotting backend defined in the ``options.plot_pkg`` setting of the
 Sherpa configuration file. Note that plot objects can be created
-and used even when there is no available plot backend. It is just
-that no graphical display will be created.
-
-Which backend is used?
-----------------------
-
-When this module is first imported, Sherpa tries to import the
-backends installed with Sherpa in the order listed in the
-``options.plot_pkg`` setting from the ``sherpa.rc`` startup file.
-The first module that imports successfully is set as the active\
-backend. The following command prints the name and the location
-on disk of that module::
-
-   >>> from sherpa import plot
-   >>> print(plot.backend)
-
-Change the backend
-------------------
-
-After the initial import, the backend can be changed by loading one of
-the plotting backends shipped with sherpa (or any other module that
-provides the same interface):
-
-  >>> import sherpa.plot.pylab_backend
-  >>> plot.backend = sherpa.plot.pylab_backend
-
+and used even when the only the `sherpa.plot.backendsBasicBackend` is
+available.
 """
 from configparser import ConfigParser
 import contextlib
@@ -94,13 +70,13 @@ module imported and then the values are shared between all instances of a class.
 That allows one to change those default "globally" (i.e. for all instances of the class)
 but it means that the default values are based on the backend that is active when
 this module is imported. That depends on the sherpa.rc setting and thus `plot_prefs`
-might contain e.g. matplotlib specific defaults that are not applicable when other 
+might contain e.g. matplotlib specific defaults that are not applicable when other
 backends are used.
 Thus, we currently initialize them with the BasicBackend that has only the
 backend-indenpendent (i.e. those that works for any backend) defaults set.
 
 Note that this kind of indicates that the defaults don't have to be taken from a
-backend - they are statics to the class and could live just there, but that is 
+backend - they are statics to the class and could live just there, but that is
 a design change that needs to be discussed in more detail.
 '''
 
@@ -163,7 +139,7 @@ class TemporaryPlottingBackend(contextlib.AbstractContextManager):
     -------
 
     >>> from sherpa.plot.backends import TemporaryPlottingBackend
-    >>> from sherpa.plot.pyllab_backend import PylabBackend
+    >>> from sherpa.plot.pylab_backend import PylabBackend
     >>> with TemporarypPlottingBackend(PylabBackend()):
     ...     plotting code here...
 
@@ -405,7 +381,7 @@ class Contour(NoNewAttributesAfterInit):
                 **kwargs):
         opts = self._merge_settings(kwargs)
         backend.contour(x0, x1, y, title=title,
-                        xlabel=xlabel, ylabel=ylabel, 
+                        xlabel=xlabel, ylabel=ylabel,
                         overcontour=overcontour,
                         clearwindow=clearwindow, **opts)
 
@@ -627,7 +603,7 @@ def get_data_hist_prefs():
     for k, v in dprefs.items():
         if k in hprefs:
             hprefs[k] = v
-            
+
     return hprefs
 
 
@@ -1491,7 +1467,7 @@ class DataContour(Contour):
 
     def contour(self, overcontour=False, clearwindow=True, **kwargs):
         Contour.contour(self, self.x0, self.x1, self.y,
-                        levels=self.levels, title=self.title, 
+                        levels=self.levels, title=self.title,
                         xlabel=self.xlabel, ylabel=self.ylabel,
                         overcontour=overcontour,
                         clearwindow=clearwindow, **kwargs)
@@ -2070,7 +2046,7 @@ class DelchiPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
-        super().hline(y=1, xmin=0, xmax=1, linecolor='k', 
+        super().hline(y=1, xmin=0, xmax=1, linecolor='k',
                       linewidth=kwargs.get('linewidth', 1), overplot=True)
 
 
@@ -2187,7 +2163,7 @@ class ResidPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
-        super().hline(y=0, xmin=0, xmax=1, linecolor='k', 
+        super().hline(y=0, xmin=0, xmax=1, linecolor='k',
                       linewidth=kwargs.get('linewidth', 1), overplot=True)
 
 
@@ -2280,7 +2256,7 @@ class RatioPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
-        super().hline(y=1, xmin=0, xmax=1, linecolor='k', 
+        super().hline(y=1, xmin=0, xmax=1, linecolor='k',
                       linewidth=kwargs.get('linewidth', 1), overplot=True)
 
 

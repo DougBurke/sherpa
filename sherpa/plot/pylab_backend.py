@@ -19,6 +19,7 @@
 #
 import io
 import logging
+from collections import ChainMap
 
 import numpy
 
@@ -27,21 +28,45 @@ from matplotlib import pyplot as plt
 from sherpa.utils.err import ArgumentErr, NotImplementedErr
 from sherpa.utils import formatting
 from sherpa.plot.utils import histogram_line
-from sherpa.plot.backends import BasicBackend, translate_args
+from sherpa.plot.backends import BasicBackend
+from sherpa.plot.backends import kwargs_doc as orig_kwargs_doc
+from sherpa.plot.backend_utils import (translate_args,
+                                       add_kwargs_to_doc)
 
 __all__ = ['PylabBackend']
 
 logger = logging.getLogger(__name__)
 
+# Most of the kwargs docstrings are still true, but some can be updated
+# because matplotlib does support a wider range than just the
+# set of Sherpa backend-independent options.
+updated_kwarg_docs = {
+    'color': ['string or tuple', 'Any matplotlib color'],
+    'marker' : ['string',
+'''"None" (as a string, no marker shown), "" (empty string, no marker shown),
+or any matplotlib marker, e.g. any of `os+v` or others
+(see matplotlib documentation).'''],
+    'linestyle' : ['string',
+'''``'noline'``,
+``'None'`` (as string, same as ``'noline'``),
+``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
+line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
+``''`` (empty string, no line shown), `None` (default - usually
+solid line) or any other matplotlib linestyle.'''],
+    }
+
+kwargs_doc = ChainMap(updated_kwarg_docs, orig_kwargs_doc)
+
+
 
 class PylabBackend(BasicBackend):
 
-    # name = 'pylab'
-    # '''Deprecated. Alternative string names for plotting backend.
-    #
-    # Within Sherpa, we updated to use the class name, but external code such
-    # as ciao_contrib scripts might still depend on this name being present.
-    # '''
+    name = 'pylab'
+    '''Alternative string names for plotting backend.
+    
+    This differs from the class name, beause external code such
+    as ciao_contrib scripts might depend on this name being present.
+    '''
 
     translate_dict = {'linestyle': {
         'noline': ' ',
@@ -54,11 +79,13 @@ class PylabBackend(BasicBackend):
     'label': {None: '_nolegend_'}}
 
     def end(self):
+        '''Called from the UI after an interactive plot is done.'''
         self.set_window_redraw(True)
         if plt.isinteractive():
             plt.draw()
 
     def clear_window(self):
+        """Clear default pyplot figure."""
         plt.clf()
 
     def set_window_redraw(self, redraw):
@@ -85,18 +112,16 @@ class PylabBackend(BasicBackend):
 
         return plt.gca()
 
-    def setup_plot(self, axes, title, xlabel, ylabel, xlog=False, ylog=False):
+    @add_kwargs_to_doc(kwargs_doc)
+    def setup_plot(self, axes, title=None, xlabel=None, ylabel=None,
+                   xlog=False, ylog=False):
         """Basic plot setup.
 
         Parameters
         ----------
         axes
             The plot axes (output of setup_axes).
-        title, xlabel, ylabel : str or None
-            The plot, x-axis, and y-axis titles. They are skipped if
-            the empty string or None.
-        xlog , ylog : bool
-            Should the scale be logarithmic (True) or linear (False)?
+        {kwargs}
 
         """
         axes.set_xscale('log' if xlog else 'linear')
@@ -173,6 +198,7 @@ class PylabBackend(BasicBackend):
 
         return None
 
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def histo(self, xlo, xhi, y, * ,
               yerr=None, title=None,
@@ -194,7 +220,33 @@ class PylabBackend(BasicBackend):
               markersize=None,
               label=None,
               linewidth=None,
+              linecolor=None,
               ):
+        """Draw histogram data.
+
+        The histogram is drawn as horizontal lines connecting the
+        start and end points of each bin, with vertical lines connecting
+        consecutive bins. Non-consecutive bins are drawn with a
+        (NaN, NaN) between them so no line is drawn connecting them.
+
+        Points are drawn at the middle of the bin, along with any
+        error values.
+
+        Note that the linecolor is not used, and is only included
+        to support old code that may have set this option (use `color` instead).
+
+        Parameters
+        ----------
+        x0 : array-like or scalar number
+            lower bin boundary values
+        x1 : array-like or scalar number
+            upper bin boundary values
+        y : array-like or scalar number
+            y values, same dimension as `x0`.
+        {kwargs}
+        """
+        if linecolor is not None:
+            logger.warning("The linecolor attribute ({}) is unused.".format(linecolor))
         x, y2 = histogram_line(xlo, xhi, y)
 
         # Note: this handles clearing the plot if needed.
@@ -274,6 +326,7 @@ class PylabBackend(BasicBackend):
             set('linewidth', linewidth)
 
     # There is no support for alpha in the Plot.vline class
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def vline(self, x, *,
               ymin=0, ymax=1,
@@ -281,7 +334,17 @@ class PylabBackend(BasicBackend):
               linestyle=None,
               linewidth=None,
               overplot=False, clearwindow=True):
+        """Draw a vertical line
 
+        Parameters
+        ----------
+        x : float
+            x position of the vertical line in data units
+        ymin, ymax : float
+            beginning and end of the vertical line in axes coordinates, i.e. from
+            0 (bottom) to 1 (top).
+        {kwargs}
+        """
         axes = self.setup_axes(overplot, clearwindow)
 
         line = axes.axvline(x, ymin, ymax)
@@ -289,7 +352,7 @@ class PylabBackend(BasicBackend):
                        linewidth=linewidth)
 
     # There is no support for alpha in the Plot.hline class
-
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def hline(self, y, *,
               xmin=0, xmax=1,
@@ -297,13 +360,24 @@ class PylabBackend(BasicBackend):
               linestyle=None,
               linewidth=None,
               overplot=False, clearwindow=True):
+        """Draw a horizontal line
 
+        Parameters
+        ----------
+        y : float
+            x position of the vertical line in data units
+        xmin, xmax : float
+            beginning and end of the vertical line in axes coordinates, i.e. from
+            0 (bottom) to 1 (top).
+        {kwargs}
+        """
         axes = self.setup_axes(overplot, clearwindow)
 
         line = axes.axhline(y, xmin, xmax)
         self._set_line(line, linecolor=linecolor, linestyle=linestyle,
                        linewidth=linewidth)
 
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def plot(self, x, y, *,
              yerr=None, xerr=None, title=None,
@@ -325,9 +399,36 @@ class PylabBackend(BasicBackend):
              alpha=None,
              label=None,
              linewidth=None,
+             linecolor=None,
              ):
+        """Draw x,y data.
 
+        This method combines a number of different ways to draw x/y data:
+            - a line connecting the points
+            - scatter plot of symbols
+            - errorbars
+
+        All three of them can be used together (symbols with errorbars connected
+        by a line), but it is also possible to use only one or two of them. By
+        default, a line is shown (``linestyle='solid'``), but marker and error
+        bars are not (``marker='None'`` and ``xerrorbars=False`` as well as
+        ``yerrorbars=False``).
+
+        Note that the linecolor is not used, and is only included
+        to support old code that may have set this option (use `color` instead).
+
+        Parameters
+        ----------
+        x : array-like or scalar number
+            x values
+        y : array-like or scalar number
+            y values, same dimension as `x`.
+        {kwargs}
+        """
         axes = self.setup_axes(overplot, clearwindow)
+
+        if linecolor is not None:
+            logger.warning("The linecolor attribute ({}) is unused.".format(linecolor))
 
         # Set up the axes
         if not overplot:
@@ -373,16 +474,6 @@ class PylabBackend(BasicBackend):
                              markersize=markersize,
                              markerfacecolor=markerfacecolor,
                              zorder=zorder)
-
-        """
-        for var in ('linestyle', 'color', 'marker', 'markerfacecolor',
-                    'markersize'):
-            val = locals()[var]
-            if val is not None:
-                print(' -- set_{}({})'.format(var, val))
-                getattr(line, 'set_' + var)(val)
-        """
-
         # Should the color for these lines be taken from the current axes?
         #
         # Using black (color='k') and the default line width (of 1) in
@@ -397,6 +488,7 @@ class PylabBackend(BasicBackend):
 
         return objs
 
+    @add_kwargs_to_doc(kwargs_doc)
     @translate_args
     def contour(self, x0, x1, y, *,
                 levels=None, title=None,
@@ -410,7 +502,18 @@ class PylabBackend(BasicBackend):
                 colors=None,
                 label=None,
                 ):
+        """Draw 2D contour data.
 
+        Parameters
+        ----------
+        x0 : array-like
+            independent axis in the first dimenation (on regular grid, flattened)
+        x1 : array-like
+            independent axis in the second dimenation (on regular grid, flattened)
+        y : array-like
+            dependent axis (i.e. image values) (on regular grid, flattened)
+        {kwargs}
+        """
         x0 = numpy.unique(x0)
         x1 = numpy.unique(x1)
         y = numpy.asarray(y)
@@ -440,7 +543,20 @@ class PylabBackend(BasicBackend):
                     top=None,
                     wspace=0.3,
                     hspace=0.4):
+        """Select a plot space in a grid of plots or create new grid
 
+        This method adds a new subplot in a grid of plots.
+
+        Parameters
+        ----------
+        row, col : int
+            index (starting at 0) of a subplot in a grid of plots
+        nrows, ncols : int
+            Number of rows and column in the plot grid
+        clearaxes : bool
+            If True, clear entire plotting area before adding the new
+            subplot.
+        """
         plt.subplots_adjust(left=left, right=right, bottom=bottom, top=top,
                             wspace=wspace, hspace=hspace)
 

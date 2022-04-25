@@ -19,8 +19,7 @@
 #
 import pytest
 
-from sherpa.plot.backends import IndepOnlyBackend, get_keyword_defaults, translate_args
-from sherpa.utils.testing import requires_pylab
+from sherpa.plot.backends import IndepOnlyBackend
 
 
 def test_IndepOnlyBackend_raises_for_values():
@@ -31,7 +30,7 @@ def test_IndepOnlyBackend_raises_for_values():
     with pytest.raises(ValueError, match='but got xxx'):
         back.plot(1, 2, linestyle='xxx')
 
-    with pytest.raises(TypeError, 
+    with pytest.raises(TypeError,
         match='contour got keyword argument color, which is not part of the named keyword arguments'):
         back.contour(1, 2, 3, color='yyy')
 
@@ -44,54 +43,3 @@ def test_IndepOnlyBackend_raises_for_arguments():
     with pytest.raises(TypeError,
                        match='plot got keyword argument notthis'):
         back.plot(1, 2, notthis=5)
-
-
-class ExampleClass():
-    def __init__(self, translate_dict={}):
-        self.translate_dict = translate_dict
-
-    @translate_args
-    def func(self, a, b, c='qwer'):
-        return a, b, c
-
-
-def test_translate_dict():
-    """Test that a translatedict filled with dicts works"""
-    t = ExampleClass({'a': {'val1': 'val2'},
-                      'c': {None: 5, 5: 6}})
-    # No translation of value not in dict
-    assert (3, 4, 2.) == t.func(3, 4, c=2.)
-    # translate value for just one of the values 
-    assert ('val1', 4, 2.) == t.func('val1', 4, 2.)
-    # translate all
-    assert ('val2', 7, 6) == t.func(a='val1', b=7, c=5)
-    # translate does only translate keyword arguments
-    assert ('val1', 7, 6) == t.func('val1', 7, c=5)
-
-
-def test_translate_func():
-    """Test that a translatedict filled with functions works"""
-    t = ExampleClass({'a': {'val1': 'val2'},
-                      'c': lambda x: x * 2})
-    assert ('a', 'b', 16) == t.func('a', 'b', c=8)
-
-
-def test_keyword_defaults():
-    """Check that we get a dictonary of the default values defined in a function"""
-    def func(a, b=5, c=None):
-        pass
-    assert get_keyword_defaults(func) == {'b': 5, 'c': None}
-
-
-def test_keyword_defaults_method():
-    """Repeat the test above for a method"""
-    class MyClass():
-        def func(self, a, b=5, c=None):
-            pass
-
-        def keyword(self):
-            return get_keyword_defaults(self.func)
-
-    assert get_keyword_defaults(MyClass.func) == {'b': 5, 'c': None}
-    myinstance = MyClass()
-    assert MyClass.keyword(MyClass) == {'b': 5, 'c': None}
