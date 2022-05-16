@@ -32,7 +32,7 @@ Which backend is used?
 When this module is first imported, Sherpa tries to import the
 backends installed with Sherpa in the order listed in the
 ``options.plot_pkg`` setting from the ``sherpa.rc`` startup file.
-The first module that imports successfully is set as the active 
+The first module that imports successfully is set as the active
 backend. The following command prints the name and the location
 on disk of that module::
 
