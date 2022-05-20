@@ -362,6 +362,9 @@ class Session(NoNewAttributesAfterInit):
         self._regproj = sherpa.plot.RegionProjection()
         self._regunc = sherpa.plot.RegionUncertainty()
 
+        # The keys are used by the set_xlog/... calls to identify what
+        # plot objects are changed by a given set_xxx(label) call.
+        #
         self._plot_types = {
             'data': [self._dataplot, self._datahistplot],
             'model': [self._modelplot, self._modelhistplot],
@@ -377,23 +380,17 @@ class Session(NoNewAttributesAfterInit):
             'compmodel': [self._compmdlplot]
         }
 
-        self._plot_type_names = {
-            'data': 'data',
-            'model': 'model',
-            'source': 'source',
-            'fit': 'fit',
-            'resid': 'resid',
-            'ratio': 'ratio',
-            'delchi': 'delchi',
-            'chisqr': 'chisqr',
-            'psf': 'psf',
-            'kernel': 'kernel',
-            'source_component': 'source_component',
-            'model_component': 'model_component',
-            'compsource': 'source_component',
-            'compmodel': 'model_component',
-        }
+        # The keys define the labels that can be used in calls to
+        # plot(), and the values map to the get_<value>_plot call used
+        # to create the particular plot entry. The keys are also used
+        # to determine the set of forbidden identifiers.
+        #
+        self._plot_type_names = {k: k for k in self._plot_types.keys()}
+        self._plot_type_names['source_component'] = 'source_component'
+        self._plot_type_names['model_component'] = 'model_component'
 
+        # This isn't actually used at the moment.
+        #
         self._contour_types = {
             'data': self._datacontour,
             'model': self._modelcontour,
@@ -405,17 +402,19 @@ class Session(NoNewAttributesAfterInit):
             'kernel': self._kernelcontour
         }
 
-        self._contour_type_names = {
-            'data': 'data',
-            'model': 'model',
-            'source': 'source',
-            'fit': 'fit',
-            'resid': 'resid',
-            'ratio': 'ratio',
-            'psf': 'psf',
-            'kernel': 'kernel',
-        }
+        # The keys define the labels that can be used in calls to
+        # contour(), and the values map to the get_<value>_contour
+        # call used to create the particular contour entry. The keys
+        # are also used to determine the set of forbidden identifiers.
+        #
+        self._contour_type_names = {k: k for k in self._contour_types.keys()}
 
+        # This is used by the get_<key>_image calls to access the
+        # relevant image class. The keys are not included in any check
+        # of valid identifiers, unlike _plot_types and _contour_types,
+        # as there is no image() call that acts like plot() or
+        # contour().
+        #
         self._image_types = {
             'data': sherpa.image.DataImage(),
             'model': sherpa.image.ModelImage(),
