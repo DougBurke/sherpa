@@ -32,6 +32,8 @@ specific line numbers from this file can be directly included in the documentati
 from sherpa.plot.pylab_backend import PylabBackend
 from sherpa.plot.backends import translate_args
 
+__all__ = ('PylabErrorArea', )
+
 
 class PylabErrorArea(PylabBackend):
     '''A Matplotlib backend displaying data uncertainties as shaded regions
@@ -78,7 +80,8 @@ class PylabErrorArea(PylabBackend):
             self.setup_plot(axes, title, xlabel, ylabel, xlog=xlog, ylog=ylog)
 
         if yerrorbars:
-            axes.fill_between(x, y - yerr, y + yerr, alpha=.2, linewidth=0, color=ecolor)
+            axes.fill_between(x, y - yerr, y + yerr, alpha=.2,
+                              linewidth=0, color=ecolor)
 
         objs = axes.plot(x, y,
                          color=color,

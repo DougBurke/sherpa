@@ -1295,9 +1295,6 @@ def check_pha1_model_component_plot(mplot, mdl):
 @requires_data
 def test_pha1_get_model_component_plot_add_response(clean_astro_ui, basic_pha1):
     """Do we automatically add in the response? See issue #1020
-
-    Note that this test does not need requires_plotting since
-    we don't use anything that requires the plot backend.
     """
 
     # It's important to also test the "specify a string not
@@ -1315,9 +1312,6 @@ def test_pha1_get_model_component_plot_add_response(clean_astro_ui, basic_pha1):
 @requires_data
 def test_pha1_get_model_component_plot_with_response(clean_astro_ui, basic_pha1):
     """What happens if we explicitly include the response?
-
-    Note that this test does not need requires_plotting since
-    we don't use anything that requires the plot backend.
     """
 
     rsp = ui.get_response()
@@ -1926,7 +1920,6 @@ def test_pha1_reg_proj(clean_astro_ui, basic_pha1):
 DATA_PREFS = {'alpha': None,
               'capsize': None,
               'color': None,
-              'drawstyle': 'default',
               'ecolor': None,
               'linestyle': 'None',
               'marker': '.',
@@ -1943,7 +1936,6 @@ DATA_PREFS = {'alpha': None,
 MODEL_PREFS = {'alpha': None,
                'capsize': None,
                'color': None,
-               'drawstyle': 'default',
                'ecolor': None,
                'linestyle': '-',
                'marker': 'None',

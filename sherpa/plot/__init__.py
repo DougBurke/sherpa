@@ -40,7 +40,16 @@ from sherpa.estmethods import Covariance
 from sherpa.optmethods import LevMar, NelderMead
 from sherpa.stats import Likelihood, LeastSq, Chi2XspecVar
 from sherpa import get_config
-from sherpa.plot.backends import BasicBackend
+from sherpa.plot.backends import BaseBackend, BasicBackend, PLOT_BACKENDS
+# PLOT_BACKENDS only contains backends in modules that are imported successfully
+# but modules are not discovered by itself. Entrypoints would solve this problem
+# but the current implementation does not have this capability.
+# See docstring of sherpa.plot.backends.MetaBaseBackend for details.
+try:
+    import sherpa.plot.pylab_backend
+except ImportError:
+    pass
+
 config = ConfigParser()
 config.read(get_config())
 
@@ -49,14 +58,6 @@ warning = lgr.warning
 
 # TODO: why is this module globally changing the invalid mode of NumPy?
 _ = numpy.seterr(invalid='ignore')
-
-plot_opt = config.get('options', 'plot_pkg', fallback='dummy')
-plot_opt = [o.strip().lower() for o in plot_opt.split()]
-
-plot_backends = {'pylab': ['sherpa.plot.pylab_backend', 'PylabBackend'],
-                 'matplotlib': ['sherpa.plot.pylab_backend', 'PylabBackend'],
-                 'dummy': ['sherpa.plot.backends', 'BasicBackend'],
-                 }
 
 backend = None
 '''Currently active backend module for plotting.'''
@@ -76,17 +77,17 @@ Thus, we currently initialize them with the BasicBackend that has only the
 backend-indenpendent (i.e. those that works for any backend) defaults set.
 
 Note that this kind of indicates that the defaults don't have to be taken from a
-backend - they are statics to the class and could live just there, but that is
-a design change that needs to be discussed in more detail.
+backend - they are static to the class and could live just there, but that
+will be addressed at a later stage.
 '''
 
+plot_opt = config.get('options', 'plot_pkg', fallback='dummy')
+plot_opt = [o.strip().lower() for o in plot_opt.split()]
+
 for plottry in plot_opt:
-    try:
-        backend_module = importlib.import_module(plot_backends[plottry][0])
-        backend = getattr(backend_module, plot_backends[plottry][1])()
+    if plottry in PLOT_BACKENDS:
+        backend = PLOT_BACKENDS[plottry]()
         break
-    except ImportError:
-        pass
 else:
     # None of the options in the rc file work, e.g. because it's an old file
     # that does not have dummy listed
@@ -116,14 +117,57 @@ __all__ = ('Plot', 'Contour', 'Point', 'Histogram',
            'IntervalProjection', 'IntervalUncertainty',
            'RegionProjection', 'RegionUncertainty',
            'TemporaryPlottingBackend',
+           'set_backend',
            )
 
 _stats_noerr = ('cash', 'cstat', 'leastsq', 'wstat')
 
 
-# Could make it accept a string for simplicity
+def set_backend(name):
+    '''Set the Sherpa plotting backend.
+
+    Plotting backends are registered in Sherpa with a string name.
+    See the examples below for how to get a list of available backends.
+
+    Parameters
+    ----------
+    name : string
+        Name of the plotting backend.
+
+    Example
+    -------
+    Set the backend to use Pylab from matplotlib for plotting. This is
+    probably what most users need:
+
+        >>> from sherpa.plot import set_backend
+        >>> set_backend('pylab')
+
+    Get a list of registered backends:
+
+        >>> from sherpa.plot import PLOT_BACKENDS
+        >>> PLOT_BACKENDS
+        {'BaseBackend': sherpa.plot.backends.BaseBackend,
+         'BasicBackend': sherpa.plot.backends.BasicBackend,
+         'IndepOnlyBackend': sherpa.plot.backends.IndepOnlyBackend,
+         'pylab': sherpa.plot.pylab_backend.PylabBackend}
+
+    This list shows the names and the class for each backend.
+    Details for each backend can be found in the Sherpa documentation or by
+    inspecting the backend classes using normal Python functionality:
+
+        >>> from sherpa.plot.backends import BasicBackend
+        >>> help(BasicBackend)
+    '''
+    global backend
+    if name in PLOT_BACKENDS:
+        backend = PLOT_BACKENDS[name]()
+    else:
+        warning(f'Plotting backend not changed because {name} is not a known plotting backend.\n' +
+                f'List of available plotting backends: {list(PLOT_BACKENDS.keys())}',
+                )
+
+
 # TODO: make real example
-# TODO: Better name. No need to Temporary here?
 class TemporaryPlottingBackend(contextlib.AbstractContextManager):
     '''Set the Sherpa plotting backend as a context, e.g. for a single plot
 
@@ -139,18 +183,18 @@ class TemporaryPlottingBackend(contextlib.AbstractContextManager):
     -------
 
     >>> from sherpa.plot.backends import TemporaryPlottingBackend
-    >>> from sherpa.plot.pylab_backend import PylabBackend
-    >>> with TemporarypPlottingBackend(PylabBackend()):
+    >>> with TemporaryPlottingBackend('pylab'):
     ...     plotting code here...
 
     '''
+
     def __init__(self, backend):
         self.backend = backend
 
     def __enter__(self):
         global backend
         self.old = backend
-        backend = self.backend
+        set_backend(self.backend)
 
     def __exit__(self, *args):
         global backend
@@ -432,8 +476,8 @@ class Point(NoNewAttributesAfterInit):
         """
         opts = self._merge_settings(kwargs)
         backend.plot(x, y,
-                      overplot=overplot, clearwindow=clearwindow,
-                      **opts)
+                     overplot=overplot, clearwindow=clearwindow,
+                     **opts)
 
 
 class Histogram(NoNewAttributesAfterInit):
@@ -917,6 +961,7 @@ plot_prefs = {self.plot_prefs}"""
 
 class LRHistogram(HistogramPlot):
     "Derived class for creating 1D likelihood ratio distribution plots"
+
     def __init__(self):
         self.ratios = None
         self.lr = None
@@ -1836,6 +1881,7 @@ class PSFContour(DataContour):
 
 class SourceContour(ModelContour):
     "Derived class for creating 2D model contours"
+
     def __init__(self):
         ModelContour.__init__(self)
         self.title = 'Source'
@@ -2088,7 +2134,8 @@ class ChisqrPlot(ModelPlot):
 
         self.y = self._calc_chisqr(y, staterr)
         self.ylabel = backend.get_latex_for_string(r'\chi^2')
-        self.title = _make_title(backend.get_latex_for_string(r'\chi^2'), data.name)
+        self.title = _make_title(
+            backend.get_latex_for_string(r'\chi^2'), data.name)
 
     def plot(self, overplot=False, clearwindow=True, **kwargs):
         Plot.plot(self, self.x, self.y, title=self.title,
@@ -2577,13 +2624,15 @@ class Confidence2D(DataContour, Point):
             try:
                 self.min = list(self.min)
             except TypeError:
-                raise ConfidenceErr('badarg', 'Parameter limits', 'a list') from None
+                raise ConfidenceErr(
+                    'badarg', 'Parameter limits', 'a list') from None
 
         if self.max is not None:
             try:
                 self.max = list(self.max)
             except TypeError:
-                raise ConfidenceErr('badarg', 'Parameter limits', 'a list') from None
+                raise ConfidenceErr(
+                    'badarg', 'Parameter limits', 'a list') from None
 
         self.stat = fit.calc_stat()
         self.xlabel = par0.fullname

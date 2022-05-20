@@ -17,7 +17,10 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-'''This module has utility functions for backends to format doctrings or validate inputs.'''
+'''This module has utilities for backends.
+
+They are not useful on their own, but can help to define new plotting backends.
+'''
 
 import functools
 from inspect import signature
@@ -54,7 +57,7 @@ def translate_args(func):
     color specification that the backend allows.
 
     >>> class Plotter():
-    ...     translante_args = {'color': {'r': (1,0,0), 'b': (0,0,1)}}
+    ...     translate_args = {'color': {'r': (1,0,0), 'b': (0,0,1)}}
     ...
     ...     @translate_args
     ...     def plot(color=None):
@@ -128,14 +131,13 @@ def add_kwargs_to_doc(param_doc):
     ...     """
     ...     pass
     >>> help(test_func2)
-
     Help on function test_func2 in module __main__:
-
+    <BLANKLINE>
     test_func2(a, *, title=None, color='None')
         Func that does nothing
-
-        Paramters
-        ---------
+    <BLANKLINE>
+        Parameters
+        ----------
         a : int
             Our stuff
         title : string, default=None
@@ -173,6 +175,13 @@ def get_keyword_defaults(func, ignore_args=['title', 'xlabel', 'ylabel',
                                             'clearwindow', 'clearaxes',
                                             'xerr', 'yerr']):
     '''Get default values for keyword arguments
+
+    This method differs from `sherpa.utils.get_keyword_defaults`, which inspects all
+    arguments, while this function looks only at keyword arguments. Also,
+    in `sherpa.utils.get_keyword_defaults` arguments can be skipped by order,
+    while here they are skipped by name (using the `ignore_args`) parameter.
+    Thus, this function is better suited to the plotting backends, which use
+    several keyword-only arguments.
 
     Parameters
     ----------

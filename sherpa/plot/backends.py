@@ -28,13 +28,17 @@ from sherpa.plot.backend_utils import (translate_args,
 __all__ = ('BasicBackend',
            'backend_indep_kwargs',
            'IndepOnlyBackend',
+           'PLOT_BACKENDS',
            )
 
+PLOT_BACKENDS = {}
+'''global list of all successfully imported plotting backends'''
 
 lgr = logging.getLogger(__name__)
 warning = lgr.warning
 
 backend_indep_colors = list('rgbkwcymk') + [None]
+'''List of colors that are allowed in all backends'''
 
 backend_indep_kwargs = {
     'color': backend_indep_colors,
@@ -44,82 +48,140 @@ backend_indep_kwargs = {
                   '-.', '', "None"],
     'marker': [None, '', "None", ".", "o", "+", "s"]
 }
+'''List of kwyword argument ans possible values allowed in all backends'''
 
 
 kwargs_doc = {'xerr': ['float or array-like, shape(N,) or shape(2, N)',
-'''The errorbar sizes can be:
+                       '''The errorbar sizes can be:
   - scalar: Symmetric +/- values for all data points.
   - shape(N,): Symmetric +/-values for each data point.
   - shape(2, N): Separate - and + values for each bar. First row
     contains the lower errors, the second row contains the upper
     errors.
   - None: No errorbar.
+
 Note that all error arrays should have positive values.'''],
-'title': ['string',
-          'Plot title (can contain LaTeX formulas). Only used if a new plot is created.'],
-'xlabel': ['string',
-           'Axis label (can contain LaTeX formulas). Only used if a new plot is created.'],
-'ylabel': ['string',
-           'Axis label (can contain LaTeX formulas). Only used if a new plot is created.'],
-'xlog': ['bool',
-         'Should the x axis be logarithmic (default: linear)? Only used if a new plot is created.'],
-'ylog': ['bool',
-         'Should the y axis be logarithmic (default: linear)? Only used if a new plot is created.'],
-'overplot': ['bool',
-             'If `True`, the plot is added to an existing plot, if not a new plot is created.'],
-'clearwindow' : ['bool',
-                 'If `True` the entire figure area is cleared to make space for a new plot.'],
-'xerrorbars' : ['bool',
-'''Should x error bars be shown? If this is set to `True` errorbars
+              'yerr': ['float or array-like, shape(N,) or shape(2, N)',
+                       '''The errorbar sizes can be:
+  - scalar: Symmetric +/- values for all data points.
+  - shape(N,): Symmetric +/-values for each data point.
+  - shape(2, N): Separate - and + values for each bar. First row
+    contains the lower errors, the second row contains the upper
+    errors.
+  - None: No errorbar.
+
+Note that all error arrays should have positive values.'''],
+              'title': ['string',
+                        'Plot title (can contain LaTeX formulas). Only used if a new plot is created.'],
+              'xlabel': ['string',
+                         'Axis label (can contain LaTeX formulas). Only used if a new plot is created.'],
+              'ylabel': ['string',
+                         'Axis label (can contain LaTeX formulas). Only used if a new plot is created.'],
+              'xlog': ['bool',
+                       'Should the x axis be logarithmic (default: linear)? Only used if a new plot is created.'],
+              'ylog': ['bool',
+                       'Should the y axis be logarithmic (default: linear)? Only used if a new plot is created.'],
+              'overplot': ['bool',
+                           'If `True`, the plot is added to an existing plot, if not a new plot is created.'],
+              'clearwindow': ['bool',
+                              'If `True` the entire figure area is cleared to make space for a new plot.'],
+              'xerrorbars': ['bool',
+                             '''Should x error bars be shown? If this is set to `True` errorbars
 are shown, but only if the size of the errorbars is provided in the
-`xerr`parameters. The purpose of having a separate switch
+`xerr` parameters. The purpose of having a separate switch
 `xerrorbars` is that the prepare method of a plot can create the
 errors and pass them to this method, but the user can still decide
 to change the style of the plot and choose if error bars should be
 displayed.'''],
-'yerrorbars' : ['bool',
-'''Should y error bars be shown? If this is set to `True` errorbars
+              'yerrorbars': ['bool',
+                             '''Should y error bars be shown? If this is set to `True` errorbars
 are shown, but only if the size of the errorbars is provided in the
-`yerr`parameters. The purpose of having a separate switch
+`yerr` parameters. The purpose of having a separate switch
 `yerrorbars` is that the prepare method of a plot can create the
 errors and pass them to this method, but the user can still decide
 to change the style of the plot and choose if error bars should be
 displayed.'''],
-'color' : ['string',
-'''The following colors are accepted by all backends: ``'b'`` (blue),
+              'color': ['string',
+                        '''The following colors are accepted by all backends: ``'b'`` (blue),
 ``'r'`` (red), ``'g'`` (green), ``'k'`` (black), ``'w'`` (white),
 ``'c'`` (cyan), ``'y'`` (yellow), ``'m'`` (magenta) but they may not
 translate to the exact same RGB values in each backend, e.g. ``'b'``
 could be a different shade of blue depending on the backend.
-
-Some backend might accept additional values.'''],
-'linestyle' : ['string',
-'''The following values are accepted by all backends: ``'noline'``,
+Some backends might accept additional values.'''],
+              'linestyle': ['string',
+                            '''The following values are accepted by all backends: ``'noline'``,
 ``'None'`` (as string, same as ``'noline'``),
 ``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
 line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
 ``''`` (empty string, no line shown), `None` (default - usually
 solid line).
+Some backends may accept additional values.'''],
+              'linewidth': ['float', 'Thickness of the line.'],
+              'linecolor': ['string',
+                            '''The following colors are accepted by all backends: ``'b'`` (blue),
+``'r'`` (red), ``'g'`` (green), ``'k'`` (black), ``'w'`` (white),
+``'c'`` (cyan), ``'y'`` (yellow), ``'m'`` (magenta) but they may not
+translate to the exact same RGB values in each backend, e.g. ``'b'``
+could be a different shade of blue depending on the backend.
+Some backend might accept additional values.'''],
+              'marker': ['string',
+                         '''The following values are accepted by all backends: "None" (as a
+string, no marker shown), "." (dot), "o" (circle), "+", "s" (square), "" (empty string, no marker shown)
 
 Some backends may accept additional values.'''],
-'linewidth' : ['float', 'Thickness of the line.'],
-'drawstyle' : ['string', 'DO WE NEED THIS IN BACKEND-INDEPENDENT INTERFACE?'],
-'marker' : ['string',
-'''The following values are accepted by all backends: "None" (as a
-string, no marker shown), "." (dot), "o" (circle), "+", "s" (square),
- "" (empty string, no marker shown)
-
-Some backends may accept additional values.'''],
-'alpha' : ['float', 'Number between 0 and 1, setting the transparency.'],
-'markerfacecolor' : ['string', 'see `color`'],
-'markersize' : ['float',
-'''Size of a marker. The scale may also depend on the backend. `None`
+              'alpha': ['float', 'Number between 0 and 1, setting the transparency.'],
+              'markerfacecolor': ['string', 'see `color`'],
+              'markersize': ['float',
+                             '''Size of a marker. The scale may also depend on the backend. `None`
 uses the backend-specific default.'''],
-'ecolor' : ['string', 'Color of the errorbars.'],
-'capsize' : ['float', 'Size of the cap drawn at the end of the errorbars.']
-}
+              'ecolor': ['string', 'Color of the errorbars.'],
+              'capsize': ['float', 'Size of the cap drawn at the end of the errorbars.'],
+              'label': ['string', 'Lable this dataset for use in a legend'],
+              'levels': ['array-like', 'Levels at which to draw the contours']
+              }
+'''documentation for keyword arguments used by several functions
 
-class BaseBackend():
+These can be inserted into the docstrings automatically using the
+`sherpa.plot.backend_utils.add_kwargs_to_doc` decorator.
+'''
+
+
+class MetaBaseBackend(type):
+    '''Metaclass to operate a registry of backends
+
+    When any class that uses this metaclass is defined (i.e. the module is
+    imported) then the class is added to the global
+    `sherpa.plot.backends.PLOT_BACKENDS` dictionary using the class name or,
+    if defined the ``"name"`` attribute of that class as key.
+    If the key is already in use, a warning is issued.
+
+    This simple metaclass mimics the behaviour of entrypoints to some degree:
+    It is a registry of classes that provide a certain functionality.
+    However, classes are only added to this registry when they are imported,
+    so we need a manual import statement somewhere. `Entrypoints
+    <https://packaging.python.org/en/latest/specifications/entry-points/>`_
+    could do that for an *installed* package, even those outside of Sherpa.
+    However, the required `importlib.metadata` was added only in Python 3.10
+    to the standard library, so for now we prefer this home-grown solution that
+    can give Sherpa most of the functionality with no new dependencies.
+    '''
+    def __init__(cls, name, bases, dct):
+        super().__init__(name, bases, dct)
+
+        n = dct.get('name')
+        # Check if this is a manually set string
+        # If not, use class name.
+        if not isinstance(n, str):
+            n = name
+
+        if n not in PLOT_BACKENDS:
+            PLOT_BACKENDS[n] = cls
+        else:
+            warning(
+                f'{n} is already a registered name for {PLOT_BACKENDS[n]}: Not adding {cls}.')
+
+
+class BaseBackend(metaclass=MetaBaseBackend):
     '''A dummy backend for plotting.
 
     This backend implements only minimal functionality (some formatting of
@@ -137,11 +199,11 @@ class BaseBackend():
     '''
 
     translate_dict = {}
-    '''
-    Dict of keyword arguments that need to be translated for this backend.
+    '''Dict of keyword arguments that need to be translated for this backend.
 
     The keys in this dict are keyword arguments (e.g. ``'markerfacecolor'``)
     and the values are one of the following:
+
     - A dict where the keys are the backend-independent values and the values
       are the values expressed for this backend. For values not listed in the
       dict, no translation is done.
@@ -152,8 +214,8 @@ class BaseBackend():
 
     Example:
 
-       >>> translate_dict = {'markerfacecolor': {'k': (0., 0., 0.)},
-                             'alpha': lambda a: 256 * a}
+    >>> translate_dict = {'markerfacecolor': {'k': (0., 0., 0.)},
+                          'alpha': lambda a: 256 * a}
 
     This translates the color 'k' to tuple of RGB values and alpha values
     to a number between 0 and 256.
@@ -168,23 +230,6 @@ class BaseBackend():
            as a template only.
         '''
         return self.__class__.__name__
-
-    @add_kwargs_to_doc(kwargs_doc)
-    def setup_plot(self, axes, title=None, xlabel=None, ylabel=None,
-                   xlog=False, ylog=False):
-        """Basic plot setup.
-
-        .. warning::
-           This backend is a non-functional dummy. The documentation is provided
-           as a template only.
-
-        Parameters
-        ----------
-        axes
-            The plot axes (output of setup_axes).
-        {kwargs}
-        """
-        pass
 
     def set_subplot(self, row, col, nrows, ncols, clearaxes=True,
                     **kwargs):
@@ -339,13 +384,12 @@ class BaseBackend():
              color=None,
              linestyle='solid',
              linewidth=None,
-             drawstyle='default',  # HMG: Do we need this?
              marker='None',
              alpha=None,
              markerfacecolor=None,
              markersize=None,
              **kwargs):
-        """Draw x,y data.
+        """Draw x, y data.
 
         This method combines a number of different ways to draw x/y data:
             - a line connecting the points
@@ -385,14 +429,13 @@ class BaseBackend():
               color=None,
               linestyle='solid',
               linewidth=None,
-              drawstyle='default',
               marker='None',
               alpha=None,
               markerfacecolor=None,
               markersize=None,
               ecolor=None,
               capsize=None,
-              #barsabove=False,
+              # barsabove=False,
               **kwargs):
         """Draw histogram data.
 
@@ -772,7 +815,6 @@ class BasicBackend(BaseBackend):
              color=None,
              linestyle='solid',
              linewidth=None,
-             drawstyle='default',  # HMG: Do we need this?
              marker='None',
              alpha=None,
              markerfacecolor=None,
@@ -802,14 +844,13 @@ class BasicBackend(BaseBackend):
               color=None,
               linestyle='solid',
               linewidth=None,
-              drawstyle='default',
               marker='None',
               alpha=None,
               markerfacecolor=None,
               markersize=None,
               ecolor=None,
               capsize=None,
-              #barsabove=False,
+              # barsabove=False,
               **kwargs):
         '''Display 1D histrogram
 
@@ -897,13 +938,13 @@ class BasicBackend(BaseBackend):
                 'No line will be produced.')
 
 
-
 class IndepOnlyBackend(BasicBackend):
     '''A backend that accepts only backend-independent options and arguments
 
     This is meant for testing code and testing the documentation to ensure that
     examples only use backend independent options.
     '''
+
     def __init__(self, *args, **kwargs):
         super(*args, **kwargs)
 
@@ -914,7 +955,7 @@ class IndepOnlyBackend(BasicBackend):
             def check_in_list(v):
                 if v not in values:
                     raise ValueError('The following backend-independent ' +
-                        f'values are defined for {k}: {values}, but got {v}')
+                                     f'values are defined for {k}: {values}, but got {v}')
                 else:
                     return v
             return check_in_list

@@ -43,16 +43,27 @@ except ImportError:
     has_xspec = False
 
 
-from sherpa.plot.backends import BaseBackend, IndepOnlyBackend
+from sherpa.plot.backends import BaseBackend, IndepOnlyBackend, PLOT_BACKENDS
 from sherpa.plot import TemporaryPlottingBackend
 
-ALL_PLOT_BACKENDS = [BaseBackend(), IndepOnlyBackend()]
-PLOT_BACKENDS = []
+FUNCTIONAL_PLOT_BACKENDS = []
+'''Unfortunately, there is no metadata that tell us which plotting backends are
+dummys and which ones actually produce useful plots. That's because
+"one man's dummy might be another man's usecase", e.g. a backend might be a
+dummy for image, but not for histrogram.
+
+The goal of this list is to be able to run a large number of plottting tests
+with any installed, functional backend. These tests mostly execute
+`plot`, `histrogram`, `vline`, `hline`, etc, but not image, 3D plots etc.
+So, a better name might be BACKENDS_FUNCTIONAL_FOR_1D_PLOT, but this can be
+refined when we actually have more plotting backends and more multi-D plot tests.
+
+Thus, we can't just autogenerate this list, but need to make it by hand here.
+'''
 
 try:
     from sherpa.plot.pylab_backend import PylabBackend
-    ALL_PLOT_BACKENDS.append(PylabBackend())
-    PLOT_BACKENDS.append(PylabBackend())
+    FUNCTIONAL_PLOT_BACKENDS.append('pylab')
 except ImportError:
     pass
 
@@ -561,7 +572,7 @@ def old_numpy_printing():
         np.set_printoptions(legacy=oldopts['legacy'])
 
 
-@pytest.fixture(params=ALL_PLOT_BACKENDS)
+@pytest.fixture(params=PLOT_BACKENDS.keys())
 def all_plot_backends(request):
     """Override the plot backend for this test
 
@@ -573,9 +584,12 @@ def all_plot_backends(request):
     """
     with TemporaryPlottingBackend(request.param):
         yield
+        if request.param == 'pylab':
+            from matplotlib import pyplot as plt
+            plt.close(fig="all")
 
 
-@pytest.fixture(params=PLOT_BACKENDS)
+@pytest.fixture(params=FUNCTIONAL_PLOT_BACKENDS)
 def plot_backends(request):
     """Override the plot backend for this test (only for functional backends)
 

@@ -42,29 +42,30 @@ logger = logging.getLogger(__name__)
 # set of Sherpa backend-independent options.
 updated_kwarg_docs = {
     'color': ['string or tuple', 'Any matplotlib color'],
-    'marker' : ['string',
-'''"None" (as a string, no marker shown), "" (empty string, no marker shown),
+    'linecolor': ['string or tuple', 'Any matplotlib color'],
+    'marker': ['string',
+               '''"None" (as a string, no marker shown), "" (empty string, no marker shown),
 or any matplotlib marker, e.g. any of `os+v` or others
 (see matplotlib documentation).'''],
-    'linestyle' : ['string',
-'''``'noline'``,
+    'linestyle': ['string',
+                  '''``'noline'``,
 ``'None'`` (as string, same as ``'noline'``),
 ``'solid'``, ``'dot'``, ``'dash'``, ``'dotdash'``, ``'-'`` (solid
 line), ``':'`` (dotted), ``'--'`` (dashed), ``'-.'`` (dot-dashed),
 ``''`` (empty string, no line shown), `None` (default - usually
 solid line) or any other matplotlib linestyle.'''],
-    }
+    'drawstyle': ['string', 'matplolib drawstyle'],
+}
 
 kwargs_doc = ChainMap(updated_kwarg_docs, orig_kwargs_doc)
-
 
 
 class PylabBackend(BasicBackend):
 
     name = 'pylab'
     '''Alternative string names for plotting backend.
-    
-    This differs from the class name, beause external code such
+
+    This differs from the class name, because external code such
     as ciao_contrib scripts might depend on this name being present.
     '''
 
@@ -74,9 +75,29 @@ class PylabBackend(BasicBackend):
         'dot': ':',
         'dash': '--',
         'dotdash': '-.',
-        'None': ' ',
-    },
-    'label': {None: '_nolegend_'}}
+        'None': ' ', },
+        'label': {None: '_nolegend_'},
+    }
+    '''Dict of keyword arguments that need to be translated for this backend.
+
+    The keys in this dict are keyword arguments(e.g. ``'markerfacecolor'``)
+    and the values are one of the following:
+    - A dict where the keys are the backend-independent values and the values
+    are the values expressed for this backend. For values not listed in the
+    dict, no translation is done.
+    - A callable. The callable translation function is called with any argument
+    given and allows the backend arbitrary translations. It should, at the
+    very least, accept all backend independent values for this parameter
+    without error.
+
+    Example:
+
+       >> > translate_dict = {'markerfacecolor': {'k': (0., 0., 0.)},
+                              'alpha': lambda a: 256 * a}
+
+    This translates the color 'k' to tuple of RGB values and alpha values
+    to a number between 0 and 256.
+    '''
 
     def end(self):
         '''Called from the UI after an interactive plot is done.'''
@@ -200,7 +221,7 @@ class PylabBackend(BasicBackend):
 
     @add_kwargs_to_doc(kwargs_doc)
     @translate_args
-    def histo(self, xlo, xhi, y, * ,
+    def histo(self, xlo, xhi, y, *,
               yerr=None, title=None,
               xlabel=None, ylabel=None,
               overplot=False, clearwindow=True,
@@ -246,7 +267,8 @@ class PylabBackend(BasicBackend):
         {kwargs}
         """
         if linecolor is not None:
-            logger.warning("The linecolor attribute ({}) is unused.".format(linecolor))
+            logger.warning(
+                "The linecolor attribute ({}) is unused.".format(linecolor))
         x, y2 = histogram_line(xlo, xhi, y)
 
         # Note: this handles clearing the plot if needed.
@@ -255,9 +277,10 @@ class PylabBackend(BasicBackend):
                          title=title, xlabel=xlabel, ylabel=ylabel,
                          overplot=overplot, clearwindow=clearwindow,
                          xerrorbars=False, yerrorbars=False,
+                         label=label,
                          ecolor=ecolor, capsize=capsize, barsabove=barsabove,
                          xlog=xlog, ylog=ylog,
-                         linestyle=linestyle,
+                         linestyle=linestyle, linewidth=linewidth,
                          drawstyle=drawstyle,
                          color=color, marker=None, alpha=alpha,
                          )
@@ -293,9 +316,11 @@ class PylabBackend(BasicBackend):
                       ecolor=ecolor,
                       capsize=capsize,
                       barsabove=barsabove,
+                      linewidth=linewidth,
+                      label=label,
                       zorder=zorder)
 
-    # Note that this is an internal method that is not wrapped in 
+    # Note that this is an internal method that is not wrapped in
     # @ translate_args
     # This is called from methods like plot, histo, etc.
     # so the arguments passed to this method are already translated and we do
@@ -401,7 +426,7 @@ class PylabBackend(BasicBackend):
              linewidth=None,
              linecolor=None,
              ):
-        """Draw x,y data.
+        """Draw x, y data.
 
         This method combines a number of different ways to draw x/y data:
             - a line connecting the points
@@ -428,7 +453,8 @@ class PylabBackend(BasicBackend):
         axes = self.setup_axes(overplot, clearwindow)
 
         if linecolor is not None:
-            logger.warning("The linecolor attribute ({}) is unused.".format(linecolor))
+            logger.warning(
+                f"The linecolor attribute ({linecolor}) is unused.")
 
         # Set up the axes
         if not overplot:
@@ -453,8 +479,10 @@ class PylabBackend(BasicBackend):
             xerr = xerr if xerrorbars else None
             yerr = yerr if yerrorbars else None
             objs = axes.errorbar(x, y, yerr, xerr,
+                                 label=label,
                                  color=color,
                                  linestyle=linestyle,
+                                 linewidth=linewidth,
                                  marker=marker,
                                  markersize=markersize,
                                  markerfacecolor=markerfacecolor,
@@ -469,22 +497,13 @@ class PylabBackend(BasicBackend):
                              color=color,
                              alpha=alpha,
                              linestyle=linestyle,
+                             linewidth=linewidth,
+                             label=label,
                              drawstyle=drawstyle,
                              marker=marker,
                              markersize=markersize,
                              markerfacecolor=markerfacecolor,
                              zorder=zorder)
-        # Should the color for these lines be taken from the current axes?
-        #
-        # Using black (color='k') and the default line width (of 1) in
-        # matplotlib 2.0 produces a slightly-discrepant plot, since the
-        # axis (and tick labels) are drawn with a thickness of 0.8.
-        #
-        #
-        try:
-            lw = axes.spines['left'].get_linewidth()
-        except (AttributeError, KeyError):
-            lw = 1.0
 
         return objs
 
@@ -531,10 +550,14 @@ class PylabBackend(BasicBackend):
 
         if levels is None:
             axes.contour(x0, x1, y, alpha=alpha,
-                         colors=colors, linewidths=linewidths)
+                         colors=colors,
+                         linewidths=linewidths,
+                         linestyles=linestyles)
         else:
             axes.contour(x0, x1, y, levels, alpha=alpha,
-                         colors=colors, linewidths=linewidths)
+                         colors=colors,
+                         linewidths=linewidths,
+                         linestyles=linestyles)
 
     def set_subplot(self, row, col, nrows, ncols, clearaxes=True,
                     left=None,
@@ -572,6 +595,7 @@ class PylabBackend(BasicBackend):
     def set_jointplot(self, row, col, nrows, ncols, create=True,
                       top=0, ratio=2):
         """Move to the plot, creating them if necessary.
+
         Parameters
         ----------
         row : int

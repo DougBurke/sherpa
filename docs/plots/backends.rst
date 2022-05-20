@@ -5,8 +5,9 @@ Plotting backend details
 .. warning::
    The plotting backend API is currently re-designed and details might change in the near future.
 
-Plotting in Sherpa is done through *plotting backends*. A *backend* is an
-external package that performs the actual plotting function such as :term:`matplotlib`, i.e. it creates a
+Plotting in Sherpa is done through *plotting backends*.
+The term *backend* is used in two related ways in Sherpa. First, a *backend* is an
+external package that performs the plotting such as :term:`matplotlib`, i.e. it creates a
 canvas and puts color on paper or on the screen. The Sherpa plotting classes are
 written in a backend-independent way; they work with any plotting backend that
 is supported by Sherpa. We also use the term *backend* to refer to Sherpa
@@ -33,7 +34,7 @@ backend. The following command prints the name and the location
 on disk of that module::
 
    >>> from sherpa import plot
-   >>> print(plot.backend)
+   >>> print(plot.backend.name)
 
 Change the backend
 ------------------
@@ -46,7 +47,7 @@ Change the backend
    parameters.
 
    In particular, that chnging the backend might not work for plot functions
-   in Sherpa's UI layer such as `sherpa.astro.plot.plot_data` because those
+   in Sherpa's UI layer such as `sherpa.astro.ui.plot_data` because those
    work with objects underneath that are not updated when the plotting backend
    is changed.
 
@@ -54,16 +55,22 @@ After the initial import, the backend can be changed by loading one of
 the plotting backends shipped with sherpa (or any other module that
 provides the same interface)::
 
-  >>> import sherpa.plot.pylab_backend
-  >>> plot.backend = sherpa.plot.pylab_backend
+  >>> from sherpa.plot import set_backend
+  >>> set_backend('pylab')
 
 Sherpa also provides a decorator to change the backend for just one plot::
 
   >>> from sherpa.plot.backends import TemporaryPlottingBackend
-  >>> from sherpa.plot.pylab_backend import PylabBackend
-  >>> with TemporarypPlottingBackend(PylabBackend()):
+  >>> with TemporarypPlottingBackend('pylab'):
   ...     plotting code here...
 
+The list of available plotting backend names and the classes that implement them is::
+
+  >>> from sherpa.plot.backends import PLOT_BACKENDS
+  >>> print(PLOT_BACKENDS)
+
+Which backends are available depends on which packages are installed in your Python
+environment, e.g. the ``"pylab"`` backend requires :term:`matplotlib`.
 
 
 Backend-independent plotting options
@@ -87,9 +94,7 @@ The names of plotting options and values that all Sherpa plotting backends
 accept are chosen to match common :term:`matplotlib` settings which are familiar
 to many scientific Python users, and to maintain backwards compatibility with
 previous version of Sherpa. They offer limited choices, but those are sufficient
-for most plots. For example, only a few different line styles are specified, but
-in practice, most plots can be done with just solid, dashed, and maybe dotted
-lines.
+for most plots.
 
 The following settings are accepted for all Sherpa plotting backends:
 
@@ -106,7 +111,7 @@ Colors are used for the color of lines, symbols, errorbars etc.
 - ``'c'`` (cyan)
 - ``'y'`` (yellow)
 - ``'m``` (magenta)
-- ``None`` (plotting backend default)
+- `None` (plotting backend default)
 
 Line styles
 ------------
@@ -139,8 +144,7 @@ listed above. For example, :term:`matplotlib` allows `many different ways to
 specify colors to cover the entire RGB range
 <https://matplotlib.org/stable/tutorials/colors/colors.html>`_, such as
 ``color=(.3, .4, .5, .2)`` or ``color='xkcd:eggshell'``. The Sherpa plotting
-methods will pass any value to the underlying backend, but only the options in
-the backend independent list are guaranteed to work in every case. For example, 
+methods will pass any value to the underlying backend::
 
   >>> from sherpa.data import Data1D
   >>> from sherpa.plot import DataPlot
@@ -149,7 +153,8 @@ the backend independent list are guaranteed to work in every case. For example,
   >>> dplot.prepare(d)
   >>> dplot.plot(markerfacecolor='xkcd:eggshell')
 
-will succeed with the `~sherpa.plot.pylab_backend.PylabBackend`, but raise an
+will succeed with the `~sherpa.plot.pylab_backend.PylabBackend`
+(activated with ``sherpa.plot.set_backend("pylab")``), but raise an
 error if the active backend is `~sherpa.plot.bokeh_backend.BokehBackend`. In
 contrast, ``color='k'`` is also not understood by bokeh natively, but because it is on
 the backend-independent list, Sherpa will translate ``'k'`` to a form that bokeh
@@ -190,10 +195,10 @@ Backend interface
    Sherpa plot classes or new backends.
 
 This section describes the API that all Sherpa backends offer to explain how to
-use it and why it was designed this way. See `sherpa.plot.backend.BaseBackend`
+use it and why it was designed this way. See `sherpa.plot.backends.BaseBackend`
 for a complete listing of the calling signature for each function. 
-The `sherpa.plot.backend.BasicBackend` backend extends 
-`sherpa.plot.backend.BaseBackend` by raising a warning message for 
+The `~sherpa.plot.backends.BasicBackend` backend extends
+`~sherpa.plot.backends.BaseBackend` by raising a warning message for
 plotting functions (plot, image, histrogram etc.) that are not implemented.
 It is the base for any real functional backend, which will override those
 methods, but offer useful user feedback for any method not provided.
@@ -245,7 +250,7 @@ Other annotations (e.g. text labels) might be added to the API in the future.
 For this reason new backends should inherit from
 `~sherpa.plot.backend.BasicBackend`. Any function added to the API will be
 implemented in `~sherpa.plot.backend.BasicBackend` as a no-op with a
-warning to the user like "Feature XYZ is not available in your backend ". That
+warning to the user like "Feature XYZ is not available in your backend". That
 way, all Sherpa plots can immediately make use of newly added functions without
 breaking existing plotting backends; the worst that happens is that not all
 annotation will be visible in every backend.
@@ -255,29 +260,33 @@ Return values
 
 Sherpa does not expect a specific return argument from any plotting function,
 but they are allowed to have return values if that is helpful for their internal
-implementation, e.g. in the matplotlib backend, plotting a line might return a
+implementation, e.g. in the `~sherpa.plot.pylab_backend.PylabBackend` backend, plotting a line might return a
 line object so that error bars plotted later can use ``line.color`` to match the
 color of that line.
 
 Creating plots and panels, clearing and overplotting
 ----------------------------------------------------
-At this stage, we keep the existing API for creating plot and panels, for
-clearing and overplotting, i.e. each of the plotting functions above accepts
- the following arguments: title, xlabel, ylabel, xlog, ylog, overplot, clearwindow
+.. todo::
+   Add details
+
+Each of the plotting functions above accepts
+the following arguments: title, xlabel, ylabel, xlog, ylog, overplot, clearwindow
 
 Multi-panels plot can be set with clear_window, set_subplot, set_jointplot
-[copy documentation from CAIO 4.14 pylab_backend.clear_window etc. into here because that describes use and function]
 
 Interaction with interactive plots in the UI
 --------------------------------------------
+.. todo::
+   Add details
+
 Each backend has additional functions that are called before, during and after
 interactive plots (begin, exception, and end), and for the setup of 
-multi-panel plots [those are taken essentially unchanged from the 4.14 version, so can copy from code into specs]
+multi-panel plots.
 
 Other methods
 --------------
 
-Backends need to have a few methods
+Backends need to have a few more methods:
 
 - ``as_html_XXX`` (where XXX is a plot type) that are used for interactive
   display in the notebook with ``_repr_html_``.  These functions take a plot
@@ -301,7 +310,7 @@ x-errors are visualized in plots from simple error bars to a shaded area.
 
 .. literalinclude:: ../../sherpa/plot/pylab_backend_area.py
    :language: python
-   :lines: 36-87
+   :lines: 38-96
 
 .. todo:: 
   
@@ -318,8 +327,8 @@ reasons unrelated to Sherpa, such as minor changes in the default of
 Instead, the plotting tests in Sherpa fall into the following categories:
 
   - Tests that do not depend on the output of a plotting package. Those tests
-    could check e.g. the `prepare` stage of a plotting object.
-    They work with any backend (since Sherpa has `sherpa.plot.backends.DummyBackend`
+    could check e.g. the ``prepare`` stage of a plotting object.
+    They work with any backend (since Sherpa has `sherpa.plot.backends.BasicBackend`
     there is always a backend). For those tests, no special
     setup is needed and they will just be run with whatever backend is loaded 
     based on the installed packages and the `.sherpa.rc` file.
@@ -359,4 +368,4 @@ Instead, the plotting tests in Sherpa fall into the following categories:
           if plot.backend.name == 'pylab':
               assert f'<summary>{summary} Plot</summary>' in r
           else:
-                assert f'<summary>{summary} Data (' in r
+              assert f'<summary>{summary} Data (' in r

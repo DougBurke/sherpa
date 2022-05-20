@@ -17,9 +17,18 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+'''This module contains tests for the plotting backend infrastructure.
+
+Those tests don't create a plot, but check that backends can be selected (or not),
+that backends perform checks on inputs etc.
+'''
+import logging
+from tkinter import Place
 import pytest
 
-from sherpa.plot.backends import IndepOnlyBackend
+from sherpa.plot.backends import IndepOnlyBackend, BaseBackend, PLOT_BACKENDS
+from sherpa.plot import set_backend
+from sherpa import plot
 
 
 def test_IndepOnlyBackend_raises_for_values():
@@ -43,3 +52,47 @@ def test_IndepOnlyBackend_raises_for_arguments():
     with pytest.raises(TypeError,
                        match='plot got keyword argument notthis'):
         back.plot(1, 2, notthis=5)
+
+
+def test_warning_backend_unkown(caplog):
+    '''Check that a warning appears if a backend is not registered'''
+    with caplog.at_level(logging.WARNING):
+        set_backend('qweraef')
+    assert 'qweraef is not a known plotting backend' in caplog.text
+
+
+def test_backend_is_set():
+    '''check that set_backend sets backend instances'''
+    # We don't want this test to mess up the backends for other tests.
+    old_backend = plot.backend
+    try:
+        # Don't know what old_backend is, since that depends on how the tests
+        # are run, but if we set_backend twice, we know for sure it's beem
+        # changed.
+        set_backend('BaseBackend')
+        assert isinstance(plot.backend, BaseBackend)
+        set_backend('IndepOnlyBackend')
+        assert isinstance(plot.backend, IndepOnlyBackend)
+    finally:
+        plot.backend = old_backend
+
+
+def test_backend_registry(caplog):
+    '''Check that a warning is issued for dublicate plotting backend names'''
+
+    class StupidName(BaseBackend):
+        pass
+    assert 'StupidName' in PLOT_BACKENDS.keys()
+
+    class StupidName2(BaseBackend):
+        name = 'othername'
+    assert 'othername' in PLOT_BACKENDS.keys()
+
+    with caplog.at_level(logging.WARNING):
+        class OtherStupidName(BaseBackend):
+            name = "StupidName"
+    print(PLOT_BACKENDS)
+    assert 'StupidName is already a registered name' in caplog.text
+    assert PLOT_BACKENDS['StupidName'] == StupidName
+    del PLOT_BACKENDS['StupidName']
+    del PLOT_BACKENDS['othername']

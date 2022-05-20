@@ -262,6 +262,15 @@ line position (which corresponds to `mdl.pars[2]`):
 
 .. image:: ../_static/plots/intproj_histogram_pos.png
 
+
+Customizing plotting further
+============================
+
+.. toctree::
+   :maxdepth: 2
+
+   backends
+
 Reference/API
 =============
 
@@ -272,4 +281,7 @@ Reference/API
    astroplot
    image
    utils
-   backends
+   basebackends
+   backend_utils
+   pylab_backend
+   pylab_backend_area

@@ -112,8 +112,8 @@ def setup_confidence():
     return SetupConfidence(data, g1, f, ip, iu, rp, ru)
 
 
-# These tests don't need a backend as there is no "plot" call,
-# and so do not need a @requires_plotting decorator.
+# These tests don't need a specific backend as there is no "plot" call,
+# and so it's enough to run them with whatever backend is active.
 #
 def test_dataplot(setup_plot):
     dp = sherpa.DataPlot()

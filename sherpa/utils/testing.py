@@ -145,9 +145,8 @@ if HAS_PYTEST:
 
 
     def requires_pylab(test_function):
-        """
-        Set plotting backend to PylabBackend if available.
-        Used to skip tests requiring matplotlib
+        """Runs the test with the PylabBackend plotting backend if available,
+        otherwise skips the test.
         """
         pylab_backend = pytest.importorskip("sherpa.plot.pylab_backend")
 
