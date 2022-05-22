@@ -3777,15 +3777,16 @@ def test_set_opt_not_string(cls, name):
 @pytest.mark.parametrize("cls",
                          [sherpa.ui.utils.Session, sherpa.astro.ui.utils.Session])
 @pytest.mark.parametrize("name", ["notdata",  "fit-allthe-things", " fi", "fi",
-                                  "source_component", "model_component",
+                                  # "compsource", "compmodel"  these are currently support as an alias
                                   "astrodata", "astrosource", "astromodel",
                                   "flux",
-                                  "bkg_model", "bkg_source", "bkg_fit", "bkg_resid", "bkg_ratio", "bkg_chisqr", "bkg_delchi"])
+                                  # "bkgmodel", "bkgsource", "bkgfit", "bkgresid", "bkgratio", "bkgchisqr", "bkgdelchi"
+                                  ])
 def test_set_opt_invalid(cls, name):
     """Check we error out if called with an invalid option.
 
     The logic for what is and isn't supported in calls like set_xlog
-    has not really been documented, so just test smoe possible names
+    has not really been documented, so just test some possible names
     which do not work. This is a regression test, so values may be
     added or removed over time.
     """
@@ -3805,6 +3806,7 @@ def test_set_opt_invalid(cls, name):
                                   "source", "model",
                                   "resid", "ratio", "delchi", "chisqr",
                                   "fit",
+                                  "model_component", "source_component",
                                   "compmodel", "compsource"])
 def test_set_opt_valid(cls, name):
     """What names are accepted for set_xlog/ylog/...?
@@ -3820,7 +3822,9 @@ def test_set_opt_valid(cls, name):
     s.set_ylinear(name)
 
 
-@pytest.mark.parametrize("name", ["bkg", "bkgfit", "bkgresid", "bkgratio", "bkgdelchi",
+@pytest.mark.parametrize("name", ["bkg",
+                                  "bkg_fit", "bkg_model", "bkg_source", "bkg_resid", "bkg_ratio", "bkg_delchi", "bkg_chisqr",
+                                  "bkgfit", "bkgmodel", "bkgsource", "bkgresid", "bkgratio", "bkgdelchi", "bkgchisqr",  # temporary
                                   "order", "energy", "photon"])
 def test_set_opt_valid_astro(name):
     """What names are accepted for set_xlog/ylog/...? Astro Session only
@@ -4082,9 +4086,9 @@ def test_set_ylog_bkg(plot, yscale, clean_astro_ui):
 
 
 SET_CPT_ARGS = [("compsource", ui.get_source_component_plot),
-                # ("source_component", ui.get_source_component_plot),
+                ("source_component", ui.get_source_component_plot),
                 ("compmodel", ui.get_model_component_plot),
-                # ("model_component", ui.get_model_component_plot)
+                ("model_component", ui.get_model_component_plot)
                 ]
 
 @requires_plotting
