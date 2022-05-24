@@ -21,6 +21,7 @@
 import logging
 import os
 import sys
+from typing import Optional, Union
 import warnings
 
 import numpy
@@ -46,6 +47,9 @@ from sherpa.astro.data import DataPHA
 warning = logging.getLogger(__name__).warning
 info = logging.getLogger(__name__).info
 
+# How best to share these aliases?
+PlotObject = Union[sherpa.plot.Plot, sherpa.plot.Histogram]
+
 
 __all__ = ('Session',)
 
@@ -56,7 +60,7 @@ class Session(sherpa.ui.utils.Session):
     # Standard methods
     ###########################################################################
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.clean()
         super().__init__()
@@ -10308,7 +10312,8 @@ class Session(sherpa.ui.utils.Session):
     # Plotting
     ###########################################################################
 
-    def _get_plotobj(self, plottype, data=None):
+    def _get_plotobj(self, plottype: str,
+                     data: Optional[sherpa.data.Data] = None) -> PlotObject:
         """Select the plot object for the given plottype.
 
         The current mechanism to chose a specific type of object
