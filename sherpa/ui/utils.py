@@ -1379,6 +1379,16 @@ class Session(NoNewAttributesAfterInit):
 
         return plottype in self._contour_types
 
+    def _get_contourobj(self, plottype):
+        """Select the contour object for the given plottype."""
+
+        return self._contour_types[plottype]
+
+    def _get_imageobj(self, plottype):
+        """Select the image object for the given plottype."""
+
+        return self._image_types[plottype]
+
     def _get_item(self, id, itemdict, itemdesc, errdesc):
         id = self._fix_id(id)
         item = itemdict.get(id)
@@ -11614,7 +11624,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["data"]
+        plotobj = self._get_contourobj("data")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_stat())
         return plotobj
@@ -11712,7 +11722,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["model"]
+        plotobj = self._get_contourobj("model")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
         return plotobj
@@ -11760,7 +11770,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["source"]
+        plotobj = self._get_contourobj("source")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_source(id), self.get_stat())
         return plotobj
@@ -11862,7 +11872,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["fit"]
+        plotobj = self._get_contourobj("fit")
 
         if recalc:
             dataobj = self.get_data_contour(id, recalc=recalc)
@@ -11915,7 +11925,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["resid"]
+        plotobj = self._get_contourobj("resid")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
         return plotobj
@@ -11964,7 +11974,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["ratio"]
+        plotobj = self._get_contourobj("ratio")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
         return plotobj
@@ -12008,7 +12018,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["psf"]
+        plotobj = self._get_contourobj("psf")
         if recalc:
             plotobj.prepare(self.get_psf(id), self.get_data(id))
         return plotobj
@@ -12053,7 +12063,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._contour_types["kernel"]
+        plotobj = self._get_contourobj("kernel")
         if recalc:
             plotobj.prepare(self.get_psf(id), self.get_data(id))
         return plotobj
@@ -15640,7 +15650,7 @@ class Session(NoNewAttributesAfterInit):
         (150, 175)
 
         """
-        imageobj = self._image_types['data']
+        imageobj = self._get_imageobj("data")
         data = self.get_data(id)
         imageobj.prepare_image(data)
         return imageobj
@@ -15688,7 +15698,7 @@ class Session(NoNewAttributesAfterInit):
         >>> resid = dinfo.y - minfo.y
 
         """
-        imageobj = self._image_types['model']
+        imageobj = self._get_imageobj("model")
         data = self.get_data(id)
         model = self.get_model(id)
         imageobj.prepare_image(data, model)
@@ -15737,7 +15747,7 @@ class Session(NoNewAttributesAfterInit):
         (150, 175)
 
         """
-        imageobj = self._image_types['source']
+        imageobj = self._get_imageobj("source")
         data = self.get_data(id)
         source = self.get_source(id)
         imageobj.prepare_image(data, source)
@@ -15804,7 +15814,7 @@ class Session(NoNewAttributesAfterInit):
         model = self._add_convolution_models(id, self.get_data(id),
                                              model, is_source)
 
-        imageobj = self._image_types['model_component']
+        imageobj = self._get_imageobj("model_component")
         data = self.get_data(id)
         imageobj.prepare_image(data, model)
         return imageobj
@@ -15864,7 +15874,7 @@ class Session(NoNewAttributesAfterInit):
             id, model = model, id
         model = self._check_model(model)
 
-        imageobj = self._image_types['source_component']
+        imageobj = self._get_imageobj("source_component")
         data = self.get_data(id)
         imageobj.prepare_image(data, model)
         return imageobj
@@ -15906,7 +15916,7 @@ class Session(NoNewAttributesAfterInit):
         >>> rinfo = get_ratio_image()
 
         """
-        imageobj = self._image_types['ratio']
+        imageobj = self._get_imageobj("ratio")
         data = self.get_data(id)
         model = self.get_model(id)
         imageobj.prepare_image(data, model)
@@ -15949,7 +15959,7 @@ class Session(NoNewAttributesAfterInit):
         >>> rinfo = get_resid_image()
 
         """
-        imageobj = self._image_types['resid']
+        imageobj = self._get_imageobj("resid")
         data = self.get_data(id)
         model = self.get_model(id)
         imageobj.prepare_image(data, model)
@@ -15989,7 +15999,7 @@ class Session(NoNewAttributesAfterInit):
         (175, 200)
 
         """
-        imageobj = self._image_types['psf']
+        imageobj = self._get_imageobj("psf")
         psf = self.get_psf(id)
         data = self.get_data(id)
         imageobj.prepare_image(psf, data)
@@ -16029,7 +16039,7 @@ class Session(NoNewAttributesAfterInit):
         (51, 51)
 
         """
-        imageobj = self._image_types['kernel']
+        imageobj = self._get_imageobj("kernel")
         psf = self.get_psf(id)
         data = self.get_data(id)
         imageobj.prepare_image(psf, data)
