@@ -366,16 +366,16 @@ class Session(NoNewAttributesAfterInit):
         self._plot_types = {
             "data": [self._dataplot, self._datahistplot],
             "model": [self._modelplot, self._modelhistplot],
+            "model_component": [self._compmdlplot, self._compmdlhistplot],
             "source": [self._sourceplot, self._sourcehistplot],
+            "source_component": [self._compsrcplot, self._compsrchistplot],
             "fit": [self._fitplot],
             "resid": [self._residplot],
             "ratio": [self._ratioplot],
             "delchi": [self._delchiplot],
             "chisqr": [self._chisqrplot],
             "psf": [self._psfplot],
-            "kernel": [self._kernelplot],
-            "source_component": [self._compsrcplot],
-            "model_component": [self._compmdlplot]
+            "kernel": [self._kernelplot]
         }
 
         # Temporary aliases so that calls to set_xlog/.. will still succeed,
@@ -1378,6 +1378,24 @@ class Session(NoNewAttributesAfterInit):
         """
 
         return plottype in self._contour_types
+
+    def _get_plotobj(self, plottype, data=None):
+        """Select the plot object for the given plottype.
+
+        The current mechanism to chose a specific type of object
+        is not particularly extensible.
+        """
+
+        # The assumption is that only those plottype values which have
+        # separate support for Data1D and Data1DInt plots will have
+        # data set here.
+        #
+        pos = 0
+        if data is not None and isinstance(data, sherpa.data.Data1DInt):
+            assert len(self._plot_types[plottype]) > 1  # safety check
+            pos = 1
+
+        return self._plot_types[plottype][pos]
 
     def _get_contourobj(self, plottype):
         """Select the contour object for the given plottype."""
@@ -10790,20 +10808,16 @@ class Session(NoNewAttributesAfterInit):
         # changed type since get_data_plot was last called.
         #
         try:
-            is_int = isinstance(self.get_data(id), sherpa.data.Data1DInt)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
 
-            is_int = False
+            data = None
 
-        if is_int:
-            plotobj = self._datahistplot
-        else:
-            plotobj = self._dataplot
-
+        plotobj = self._get_plotobj("data", data=data)
         if recalc:
-            plotobj.prepare(self.get_data(id), self.get_stat())
+            plotobj.prepare(data, self.get_stat())
         return plotobj
 
     # DOC-TODO: discussion of preferences needs better handling
@@ -10958,19 +10972,16 @@ class Session(NoNewAttributesAfterInit):
         """
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
 
-        if isinstance(d, sherpa.data.Data1DInt):
-            plotobj = self._modelhistplot
-        else:
-            plotobj = self._modelplot
+            data = None
 
+        plotobj = self._get_plotobj("model", data=data)
         if recalc:
-            plotobj.prepare(d, self.get_model(id), self.get_stat())
+            plotobj.prepare(data, self.get_model(id), self.get_stat())
 
         return plotobj
 
@@ -11034,19 +11045,16 @@ class Session(NoNewAttributesAfterInit):
                                 " You should use get_model_plot instead.")
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
 
-        if isinstance(d, sherpa.data.Data1DInt):
-            plotobj = self._sourcehistplot
-        else:
-            plotobj = self._sourceplot
+            data = None
 
+        plotobj = self._get_plotobj("source", data=data)
         if recalc:
-            plotobj.prepare(d, self.get_source(id), self.get_stat())
+            plotobj.prepare(data, self.get_source(id), self.get_stat())
 
         return plotobj
 
@@ -11112,23 +11120,19 @@ class Session(NoNewAttributesAfterInit):
         model = self._check_model(model)
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
 
-        if isinstance(d, sherpa.data.Data1DInt):
-            plotobj = self._compmdlhistplot
-        else:
-            plotobj = self._compmdlplot
+            data = None
 
+        plotobj = self._get_plotobj("model_component", data=data)
         if recalc:
-            plotobj.prepare(d, model, self.get_stat())
+            plotobj.prepare(data, model, self.get_stat())
 
         return plotobj
 
-    # sherpa.astro.utils version copies this docstring
     def get_source_component_plot(self, id, model=None, recalc=True):
         """Return the data used by plot_source_component.
 
@@ -11191,21 +11195,21 @@ class Session(NoNewAttributesAfterInit):
         model = self._check_model(model)
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
 
+            data = None
+
+        # This does not match other plots
         if isinstance(model, sherpa.models.TemplateModel):
             plotobj = self._comptmplsrcplot
-        elif isinstance(d, sherpa.data.Data1DInt):
-            plotobj = self._compsrchistplot
         else:
-            plotobj = self._compsrcplot
+            plotobj = self._get_plotobj("source_component", data=data)
 
         if recalc:
-            plotobj.prepare(d, model, self.get_stat())
+            plotobj.prepare(data, model, self.get_stat())
 
         return plotobj
 
@@ -11324,7 +11328,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._fitplot
+        plotobj = self._get_plotobj("fit")
 
         dataobj = self.get_data_plot(id, recalc=recalc)
         modelobj = self.get_model_plot(id, recalc=recalc)
@@ -11389,7 +11393,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._residplot
+        plotobj = self._get_plotobj("resid")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -11451,7 +11455,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._delchiplot
+        plotobj = self._get_plotobj("delchi")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -11513,7 +11517,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._chisqrplot
+        plotobj = self._get_plotobj("chisqr")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -11575,7 +11579,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._ratioplot
+        plotobj = self._get_plotobj("ratio")
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -12106,7 +12110,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._psfplot
+        plotobj = self._get_plotobj("psf")
         if recalc:
             plotobj.prepare(self.get_psf(id), self.get_data(id))
 
@@ -12150,7 +12154,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._kernelplot
+        plotobj = self._get_plotobj("kernel")
         if recalc:
             plotobj.prepare(self.get_psf(id), self.get_data(id))
 
@@ -12664,7 +12668,7 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot, clearwindow=clearwindow,
                    **kwargs)
 
-    # DOC-NOTE: also in sherpa.astro.utils
+    # DOC-NOTE:
     #  - we include a description of the DataPHA handling here
     #    even though its only relevant to sherpa.astro.ui
     #
@@ -12748,8 +12752,8 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot, clearwindow=clearwindow,
                    **kwargs)
 
-    # DOC-NOTE: also in sherpa.astro.utils, for now copies this text
-    #           but does the astro version support a bkg_id parameter?
+    # DOC-NOTE: should the astro version support a bkg_id parameter?
+    #           (at the moment it re-uses this routine)
     def plot_source_component(self, id, model=None, replot=False,
                               overplot=False, clearwindow=True, **kwargs):
         """Plot a component of the source expression for a data set.
