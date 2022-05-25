@@ -88,6 +88,35 @@ def _is_subclass(t1, t2):
     return inspect.isclass(t1) and issubclass(t1, t2) and (t1 is not t2)
 
 
+def _find_subclasses(module, basetype):
+    """Identify all subclasses in a module.
+
+    Parameters
+    ----------
+    module
+        The module to inspect.
+    basetype
+        The base class used.
+
+    Returns
+    -------
+    store : dict
+        The selected subclasses stored by the lower-case name of the
+        class (so if there are multiple classes which differ only in
+        capitalisation there is no guarantee which one will be
+        selected).
+
+    """
+
+    store = {}
+    for name in module.__all__:
+        cls = getattr(module, name)
+        if not _is_subclass(cls, basetype):
+            continue
+
+        store[name.lower()] = cls()
+
+    return store
 
 
 def get_plot_prefs(plotobj):
@@ -128,8 +157,7 @@ def reduce_ufunc(func):
     modname = getattr(func, '__module__', 'numpy')
     funcname = func.__name__
     if func is not getattr(sys.modules[modname], funcname, None):
-        raise ValueError("module '%s' does not contain ufunc '%s'" %
-                         (modname, funcname))
+        raise ValueError(f"module '{modname}' does not contain ufunc '{funcname}'")
     return (construct_ufunc, (modname, funcname))
 
 
@@ -151,7 +179,7 @@ class ModelWrapper(NoNewAttributesAfterInit):
         self.modeltype = modeltype
         self.args = args
         self.kwargs = kwargs
-        NoNewAttributesAfterInit.__init__(self)
+        super().__init__()
 
     def __call__(self, name):
         _check_str_type(name, "name")
@@ -166,12 +194,11 @@ class ModelWrapper(NoNewAttributesAfterInit):
 
     def __getattr__(self, name):
         if name.startswith('_'):
-            raise AttributeError("'%s\' object has no attribute '%s'" %
-                                 (type(self).__name__, name))
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
         return self(name)
 
     def __repr__(self):
-        return '<%s model type>' % self.modeltype.__name__
+        return f"<{self.modeltype.__name__} model type>"
 
     def __str__(self):
         if self.modeltype.__doc__ is not None:
@@ -187,7 +214,7 @@ def _assign_obj_to_main(name, obj):
 def _assign_model_to_main(name, model):
     # Ask sys what the __main__ module is; packages such
     # as IPython can add their own __main__ module.
-    model.name = '%s.%s' % (type(model).__name__.lower(), name)
+    model.name = f"{type(model).__name__.lower()}.{name}"
     _assign_obj_to_main(name, model)
 
 
@@ -270,7 +297,6 @@ class Session(NoNewAttributesAfterInit):
         self._default_id = 1
         self._paramprompt = False
 
-        self._methods = {}
         self._itermethods = {'none': {'name': 'none'},
                              'sigmarej': {'name': 'sigmarej',
                                           'maxiters': 5,
@@ -278,19 +304,9 @@ class Session(NoNewAttributesAfterInit):
                                           'lrej': 3,
                                           'grow': 0}}
 
-        self._stats = {}
-        self._estmethods = {}
-
-        modules = (sherpa.optmethods, sherpa.stats, sherpa.estmethods)
-        basetypes = (sherpa.optmethods.OptMethod, sherpa.stats.Stat,
-                     sherpa.estmethods.EstMethod)
-        objdicts = (self._methods, self._stats, self._estmethods)
-
-        for mod, base, odict in zip(modules, basetypes, objdicts):
-            for name in mod.__all__:
-                cls = getattr(mod, name)
-                if _is_subclass(cls, base):
-                    odict[name.lower()] = cls()
+        self._stats = _find_subclasses(sherpa.stats, sherpa.stats.Stat)
+        self._methods = _find_subclasses(sherpa.optmethods, sherpa.optmethods.OptMethod)
+        self._estmethods = _find_subclasses(sherpa.estmethods, sherpa.estmethods.EstMethod)
 
         self._current_method = self._methods['levmar']
         self._current_itermethod = self._itermethods['none']
@@ -1264,9 +1280,9 @@ class Session(NoNewAttributesAfterInit):
 
         """
         funcs_list = self.get_functions()
-        funcs = ''
+        funcs = ""
         for func in funcs_list:
-            funcs += '%s\n' % func
+            funcs += f"{func}\n"
 
         send_to_pager(funcs, outfile, clobber)
 
@@ -5207,9 +5223,17 @@ class Session(NoNewAttributesAfterInit):
 
     def _add_model_types(self, module,
                          baselist=(sherpa.models.ArithmeticModel,)):
+        """Wrap all the models in the module.
+
+        Creates wrappers around all the models and adds them to the
+        "global" table for the session.
+
+        """
+
         if not isinstance(baselist, tuple):
             baselist = (baselist,)
 
+        added = False
         for name in module.__all__:
             cls = getattr(module, name)
 
@@ -5221,6 +5245,9 @@ class Session(NoNewAttributesAfterInit):
 
             name = name.lower()
             self._model_types[name] = ModelWrapper(self, cls)
+            added = True
+
+        if added:
             self._model_globals.update(self._model_types)
 
     def add_model(self, modelclass, args=(), kwargs={}):
@@ -5278,7 +5305,7 @@ class Session(NoNewAttributesAfterInit):
         name = modelclass.__name__.lower()
 
         if not _is_subclass(modelclass, sherpa.models.ArithmeticModel):
-            raise TypeError("model class '%s' is not a derived class" % name +
+            raise TypeError(f"model class '{name}' is not a derived class" +
                             " from sherpa.models.ArithmeticModel")
 
         self._model_types[name] = ModelWrapper(self, modelclass, args, kwargs)
@@ -5914,8 +5941,8 @@ class Session(NoNewAttributesAfterInit):
         id = self._fix_id(id)
         mdl = self._models.get(id, None)
         if mdl is not None:
-            raise IdentifierErr("Convolved model\n'%s'\n is set for dataset %s. You should use get_model instead." %
-                                (mdl.name, str(id)))
+            raise IdentifierErr(f"Convolved model\n'{mdl.name}'\n is set for dataset {id}. " +
+                                "You should use get_model instead.")
         return self._get_item(id, self._sources, 'source',
                               'has not been set, consider using set_source()' +
                               ' or set_model()')
@@ -6213,8 +6240,7 @@ class Session(NoNewAttributesAfterInit):
         id = self._fix_id(id)
         mdl = self._models.pop(id, None)
         if mdl is not None:
-            warning("Clearing convolved model\n'%s'\nfor dataset %s" %
-                    (mdl.name, str(id)))
+            warning(f"Clearing convolved model\n'{mdl.name}'\nfor dataset {id}")
 
     set_source = set_model
 
@@ -7942,7 +7968,7 @@ class Session(NoNewAttributesAfterInit):
                 f = sherpa.fit.Fit(d, m, self._current_stat)
 
                 statinfo = f.calc_stat_info()
-                statinfo.name = 'Dataset %s' % (str(id))
+                statinfo.name = f"Dataset {id}"
                 statinfo.ids = (id,)
 
                 output.append(statinfo)
@@ -7950,9 +7976,9 @@ class Session(NoNewAttributesAfterInit):
         f = self._get_fit_obj(datasets, models, None)
         statinfo = f.calc_stat_info()
         if len(ids) == 1:
-            statinfo.name = 'Dataset %s' % str(ids)
+            statinfo.name = f"Dataset {ids}"
         else:
-            statinfo.name = 'Datasets %s' % str(ids).strip("()")
+            statinfo.name = f"Datasets {str(ids).strip('()')}"
         statinfo.ids = ids
         output.append(statinfo)
 
@@ -11045,8 +11071,8 @@ class Session(NoNewAttributesAfterInit):
         id = self._fix_id(id)
         mdl = self._models.get(id, None)
         if mdl is not None:
-            raise IdentifierErr("Convolved model\n'{}'".format(mdl.name) +
-                                "\n is set for dataset {}.".format(id) +
+            raise IdentifierErr(f"Convolved model\n'{mdl.name}'" +
+                                f"\n is set for dataset {id}." +
                                 " You should use get_model_plot instead.")
 
         try:
@@ -12991,8 +13017,8 @@ class Session(NoNewAttributesAfterInit):
         id = self._fix_id(id)
         mdl = self._models.get(id, None)
         if mdl is not None:
-            raise IdentifierErr("Convolved model\n'{}'".format(mdl.name) +
-                                "\n is set for dataset {}.".format(id) +
+            raise IdentifierErr(f"Convolved model\n'{mdl.name}'" +
+                                f"\n is set for dataset {id}." +
                                 " You should use plot_model instead.")
 
         plotobj = self.get_source_plot(id, recalc=not replot)
