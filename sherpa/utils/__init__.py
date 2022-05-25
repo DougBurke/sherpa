@@ -79,7 +79,7 @@ try:
         _ncpus = multiprocessing.cpu_count()
 except Exception as e:
     warning("parallel processing is unavailable,\n" +
-            "multiprocessing module failed with \n'%s'" % str(e))
+            f"multiprocessing module failed with \n'{e}'")
     _ncpus = 1
     _multi = False
 
@@ -148,24 +148,24 @@ class NoNewAttributesAfterInit():
 
     def __delattr__(self, name):
         if self.__initialized and hasattr(self, name):
-            raise AttributeError(("'%s' object attribute '%s' cannot be " +
-                                  "deleted") % (type(self).__name__, name))
+            raise AttributeError(f"'{type(self).__name__}' object attribute " +
+                                 f"'{name}' cannot be deleted")
         object.__delattr__(self, name)
 
     def __setattr__(self, name, val):
         if self.__initialized and (not hasattr(self, name)):
-            raise AttributeError("'%s' object has no attribute '%s'" %
-                                 (type(self).__name__, name))
+            raise AttributeError(f"'type(self).__name__' object has no " +
+                                 f"attribute '{name}'")
 
         if self.__initialized and hasattr(self, name):
             if callable(getattr(self, name)) and not callable(val):
-                raise AttributeError(("'%s' object attribute '%s' cannot be " +
-                                      "replaced with a non-callable attribute")
-                                     % (type(self).__name__, name))
+                raise AttributeError(f"'{type(self).__name__}' object attribute " +
+                                     f"'{name}' cannot be replaced with a " +
+                                     "non-callable attribute")
             elif not callable(getattr(self, name)) and callable(val):
-                raise AttributeError(("'%s' object attribute '%s' cannot be " +
-                                      "replaced with a callable attribute") %
-                                     (type(self).__name__, name))
+                raise AttributeError(f"'{type(self).__name__}' object attribute " +
+                                     f"'{name}' cannot be replaced with a " +
+                                     "callable attribute")
 
         object.__setattr__(self, name, val)
 
@@ -1130,7 +1130,7 @@ def bool_cast(val):
         elif vlo in ('true', 'on', 'yes', '1', 't', 'y'):
             return True
 
-        raise TypeError("unknown boolean value: '%s'" % str(val))
+        raise TypeError(f"unknown boolean value: '{val}'")
 
     else:
         # use built in bool cast
@@ -1189,13 +1189,13 @@ def export_method(meth, name=None, modname=None):
             return p.name
 
     argspec = ",".join([tostr(p) for p in sig.parameters.values()])
-    argspec = "({})".format(argspec)
 
     # Create a wrapper function with no default arguments
     g = {old_name: meth}
     if modname is not None:
-        g['__name__'] = modname
-    fdef = 'def %s%s:  return %s%s' % (name, argspec, old_name, argspec)
+        g["__name__"] = modname
+
+    fdef = f"def {name}({argspec}):  return {old_name}({argspec})"
     exec(fdef, g)
 
     # Create another new function from the one we just made, this time
@@ -1362,13 +1362,13 @@ def print_fields(names, vals, converters=None):
             pass
 
     width = max(len(n) for n in names)
-    fmt = '%%-%ds = %%s' % width
+    fmt = f"%-{width}s = %s"
     lines = []
     for n in names:
         v = vals[n]
 
         if isinstance(v, numpy.ndarray):
-            v = '%s[%d]' % (converters[v.dtype.type], v.size)
+            v = f"{converters[v.dtype.type]}[{v.size}]"
         else:
             v = str(v)
         lines.append(fmt % (n, v))
@@ -1686,12 +1686,12 @@ def parse_expr(expr):
             try:
                 lo = float(lo)
             except ValueError:
-                raise TypeError("Invalid lower bound '%s'" % str(lo))
+                raise TypeError(f"Invalid lower bound '{lo}'")
         if hi is not None:
             try:
                 hi = float(hi)
             except ValueError:
-                raise TypeError("Invalid upper bound '%s'" % str(hi))
+                raise TypeError(f"Invalid upper bound '{hi}'")
 
         res.append((lo, hi))
 
@@ -1941,8 +1941,8 @@ def multit_pdf(x, mu, sigma, dof):
 
 def _convolve(a, b):
     if len(a) != len(b):
-        raise TypeError("Input arrays are not equal in length, a: %s b: %s" %
-                        (len(a), len(b)))
+        raise TypeError("Input arrays are not equal in length, " +
+                        f"a: {len(a)} b: {len(b)}")
 
     imag = numpy.fft.fft(a) * numpy.fft.fft(b)
     return numpy.asarray(numpy.fft.ifft(imag), dtype=SherpaFloat)
@@ -1998,24 +1998,25 @@ def dataspace1d(start, stop, step=1, numbins=None):
 
     """
     if start >= stop:
-        raise TypeError("input should be start < stop, found start=%s stop=%s" %
-                        (start, stop))
+        raise TypeError("input should be start < stop, found " +
+                        f"start={start} stop={stop}")
 
     if numbins is None:
         if step <= 0:
-            raise TypeError("input should be step > 0, found step=%s" % step)
+            raise TypeError("input should be step > 0, found " +
+                            f"step={step}")
 
         if step >= (stop - start):
-            raise TypeError(
-                "input has produced less than 2 bins, found start=%s stop=%s step=%s" % (start, stop, step))
+            raise TypeError("input has produced less than 2 bins, " +
+                            f"found start={start} stop={stop} step={step}")
 
     # xx = numpy.arange(start, stop, step, dtype=float)
     # xx = sao_arange(start, stop, step)
     xx = None
     if numbins is not None:
         if numbins <= 1:
-            raise TypeError(
-                "input should be numbins > 1, found numbins=%s" % numbins)
+            raise TypeError("input should be numbins > 1, found " +
+                            f"numbins={numbins}")
 
         xx = numpy.linspace(start, stop, numbins + 1)
     else:
@@ -2039,8 +2040,8 @@ def dataspace2d(dim):
         raise TypeError("dimensions for dataspace2d must be > 1")
 
     if dim[0] < 1 or dim[1] < 1:
-        raise TypeError("dimensions should be > 0, found dim0 %s dim1 %s"
-                        % (dim[0], dim[1]))
+        raise TypeError("dimensions should be > 0, found " +
+                        f"dim0 {dim[0]} dim1 {dim[1]}")
 
     x0 = numpy.arange(dim[0], dtype=float) + 1.0
     x1 = numpy.arange(dim[1], dtype=float) + 1.0
@@ -2248,6 +2249,24 @@ def nearest_interp(xout, xin, yin):
     return numpy.where((numpy.abs(xout - x0) < numpy.abs(xout - x1)), y0, y1)
 
 
+def _check_callable(function):
+    """Check the argument is callable, otherwise error out"""
+
+    if callable(function):
+        return
+
+    raise TypeError(f"input function '{repr(function)}' is not callable")
+
+
+def _check_iterable(label, value):
+    """Check the argument is iterable, otherwise error out"""
+
+    if numpy.iterable(value):
+        return
+
+    raise TypeError(f"input {label} '{repr(value)}' is not iterable")
+
+
 def interpolate(xout, xin, yin, function=linear_interp):
     """One-dimensional interpolation.
 
@@ -2291,10 +2310,7 @@ def interpolate(xout, xin, yin, function=linear_interp):
     >>> ygrid = interpolate(xgrid, x, y, neville)
     """
 
-    if not callable(function):
-        raise TypeError("input function '%s' is not callable" %
-                        repr(function))
-
+    _check_callable(function)
     return function(xout, xin, yin)
 
 
@@ -3045,13 +3061,9 @@ def parallel_map(function, sequence, numcores=None):
     >>> parallel_map(tcomp, [(23, 47), (2, 20), (5, 10)])
 
     """
-    if not callable(function):
-        raise TypeError("input function '%s' is not callable" %
-                        repr(function))
 
-    if not numpy.iterable(sequence):
-        raise TypeError("input '%s' is not iterable" %
-                        repr(sequence))
+    _check_callable(function)
+    _check_iterable("sequence", sequence)
 
     size = len(sequence)
 
@@ -3149,21 +3161,18 @@ def parallel_map_funcs(funcs, datasets, numcores=None):
     >>> parallel_map_funcs(funcs, datasets, numcores=2)
 
     """
-    if not numpy.iterable(funcs):
-        raise TypeError("input '%s' is not iterable" % repr(funcs))
 
-    if not numpy.iterable(datasets):
-        raise TypeError("input '%s' is not iterable" % repr(datasets))
+    _check_iterable("funcs", funcs)
+    _check_iterable("datasets", datasets)
 
     for func in funcs:
-        if not callable(func):
-            raise TypeError("input func '%s' is not callable" % repr(func))
+        _check_callable(func)
 
     funcs_size = len(funcs)
     datasets_size = len(datasets)
     if funcs_size != datasets_size:
-        msg = "input funcs (%d) and datsets (%d) size must be same" % \
-            (funcs_size, datasets_size)
+        msg = f"input funcs ({funcs_size}) and datsets ({datasets_size}) " + \
+            "size must be same"
         raise TypeError(msg)
 
     if not _multi or datasets_size == 1 or \
@@ -3631,8 +3640,8 @@ def Knuth_boost_close(x, y, tol, myop=operator.__or__):
 def list_to_open_interval(arg):
     if not numpy.iterable(arg):
         return arg
-    str = '(%e, %e)' % (arg[0], arg[1])
-    return str
+
+    return f"({arg[0]:e}, {arg[1]:e})"
 
 
 def mysgn(arg):
