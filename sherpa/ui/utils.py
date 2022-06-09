@@ -11273,10 +11273,9 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._fitplot
 
-        dataobj = self.get_data_plot(id, recalc=recalc)
-        modelobj = self.get_model_plot(id, recalc=recalc)
-
         if recalc:
+            dataobj = self.get_data_plot(id, recalc=recalc)
+            modelobj = self.get_model_plot(id, recalc=recalc)
             plotobj.prepare(dataobj, modelobj)
 
         return plotobj
@@ -11821,9 +11820,9 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._fitcontour
 
-        dataobj = self.get_data_contour(id, recalc=recalc)
-        modelobj = self.get_model_contour(id, recalc=recalc)
         if recalc:
+            dataobj = self.get_data_contour(id, recalc=recalc)
+            modelobj = self.get_model_contour(id, recalc=recalc)
             plotobj.prepare(dataobj, modelobj)
 
         return plotobj
