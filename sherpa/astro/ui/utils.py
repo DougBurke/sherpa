@@ -147,24 +147,9 @@ class Session(sherpa.ui.utils.Session):
         self._background_models = {}
         self._background_sources = {}
 
-        self._dataphaplot = sherpa.astro.plot.DataPHAPlot()
-        self._astrosourceplot = sherpa.astro.plot.SourcePlot()
-        self._astrocompsrcplot = sherpa.astro.plot.ComponentSourcePlot()
-        self._astrocompmdlplot = sherpa.astro.plot.ComponentModelPlot()
-        self._modelhisto = sherpa.astro.plot.ModelHistogram()
-        self._bkgmodelhisto = sherpa.astro.plot.BkgModelHistogram()
-
         # self._bkgdataplot = sherpa.astro.plot.DataPHAPlot()
-        self._bkgdataplot = sherpa.astro.plot.BkgDataPlot()
         self._bkgmodelplot = sherpa.astro.plot.BkgModelPHAHistogram()
-        self._bkgfitplot = sherpa.astro.plot.BkgFitPlot()
-        self._bkgchisqrplot = sherpa.astro.plot.BkgChisqrPlot()
-        self._bkgdelchiplot = sherpa.astro.plot.BkgDelchiPlot()
-        self._bkgresidplot = sherpa.astro.plot.BkgResidPlot()
-        self._bkgratioplot = sherpa.astro.plot.BkgRatioPlot()
-        self._bkgsourceplot = sherpa.astro.plot.BkgSourcePlot()
-        self._arfplot = sherpa.astro.plot.ARFPlot()
-        self._orderplot = sherpa.astro.plot.OrderPlot()
+
         self._energyfluxplot = sherpa.astro.plot.EnergyFluxHistogram()
         self._photonfluxplot = sherpa.astro.plot.PhotonFluxHistogram()
 
@@ -189,24 +174,26 @@ class Session(sherpa.ui.utils.Session):
         # The keys are used by the set_xlog/... calls to identify what
         # plot objects are changed by a given set_xxx(label) call.
         #
-        self._plot_types['order'] = [self._orderplot]
+        self._plot_types['order'] = [sherpa.astro.plot.OrderPlot()]
         self._plot_types['energy'] = [self._energyfluxplot]
         self._plot_types['photon'] = [self._photonfluxplot]
-        self._plot_types['compsource'].append(self._astrocompsrcplot)
-        self._plot_types['compmodel'].append(self._astrocompmdlplot)
+        self._plot_types['compsource'].append(sherpa.astro.plot.ComponentSourcePlot())
+        self._plot_types['compmodel'].append(sherpa.astro.plot.ComponentModelPlot())
 
-        self._plot_types['data'].append(self._dataphaplot)
-        self._plot_types['source'].append(self._astrosourceplot)
-        self._plot_types['model'].append(self._modelhisto)
-        self._plot_types['arf'] = [self._arfplot]
-        self._plot_types['bkg'] = [self._bkgdataplot]
-        self._plot_types['bkgmodel'] = [self._bkgmodelhisto]
-        self._plot_types['bkgfit'] = [self._bkgfitplot]
-        self._plot_types['bkgsource'] = [self._bkgsourceplot]
-        self._plot_types['bkgratio'] = [self._bkgratioplot]
-        self._plot_types['bkgresid'] = [self._bkgresidplot]
-        self._plot_types['bkgdelchi'] = [self._bkgdelchiplot]
-        self._plot_types['bkgchisqr'] = [self._bkgchisqrplot]
+        self._plot_types['data'].append(sherpa.astro.plot.DataPHAPlot())
+        self._plot_types['source'].append(sherpa.astro.plot.SourcePlot())
+        self._plot_types['model'].append(sherpa.astro.plot.ModelHistogram())
+
+        self._plot_types['arf'] = [sherpa.astro.plot.ARFPlot()]
+
+        self._plot_types['bkg'] = [sherpa.astro.plot.BkgDataPlot()]
+        self._plot_types['bkgmodel'] = [sherpa.astro.plot.BkgModelHistogram()]
+        self._plot_types['bkgfit'] = [sherpa.astro.plot.BkgFitPlot()]
+        self._plot_types['bkgsource'] = [sherpa.astro.plot.BkgSourcePlot()]
+        self._plot_types['bkgratio'] = [sherpa.astro.plot.BkgRatioPlot()]
+        self._plot_types['bkgresid'] = [sherpa.astro.plot.BkgResidPlot()]
+        self._plot_types['bkgdelchi'] = [sherpa.astro.plot.BkgDelchiPlot()]
+        self._plot_types['bkgchisqr'] = [sherpa.astro.plot.BkgChisqrPlot()]
 
         # The keys of _plot_type_names are used to define the
         # labels that can be used in plot() calls.
@@ -10327,9 +10314,10 @@ class Session(sherpa.ui.utils.Session):
             return super().get_data_plot(id, recalc=recalc)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
-            plotobj = self._dataphaplot
+            plotobj = self._plot_types["data"][2]
             if recalc:
                 plotobj.prepare(data, self.get_stat())
+
             return plotobj
 
         return super().get_data_plot(id, recalc=recalc)
@@ -10343,9 +10331,10 @@ class Session(sherpa.ui.utils.Session):
             return super().get_model_plot(id, recalc=recalc)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
-            plotobj = self._modelhisto
+            plotobj = self._plot_types["model"][2]
             if recalc:
                 plotobj.prepare(data, self.get_model(id), self.get_stat())
+
             return plotobj
 
         return super().get_model_plot(id, recalc=recalc)
@@ -10434,16 +10423,17 @@ class Session(sherpa.ui.utils.Session):
             data = self._get_data(id)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
-            plotobj = self._astrosourceplot
+            plotobj = self._plot_types["source"][2]
             if recalc:
                 plotobj.prepare(data, self.get_source(id), lo=lo, hi=hi)
+
             return plotobj
 
         return super().get_source_plot(id, recalc=recalc)
 
     def get_fit_plot(self, id=None, recalc=True):
 
-        plotobj = self._fitplot
+        plotobj = self._plot_types["fit"][0]
         if not recalc:
             return plotobj
 
@@ -10549,7 +10539,7 @@ class Session(sherpa.ui.utils.Session):
             data = self._get_data(id)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
-            plotobj = self._astrocompmdlplot
+            plotobj = self._plot_types["compmodel"][2]
             if recalc:
                 if not has_pha_response(model):
                     try:
@@ -10560,6 +10550,7 @@ class Session(sherpa.ui.utils.Session):
                         pass
 
                 plotobj.prepare(data, model, self.get_stat())
+
             return plotobj
 
         return super().get_model_component_plot(id, model=model, recalc=recalc)
@@ -10576,9 +10567,10 @@ class Session(sherpa.ui.utils.Session):
             data = self._get_data(id)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
-            plotobj = self._astrocompsrcplot
+            plotobj = self._plot_types["compsource"][2]
             if recalc:
                 plotobj.prepare(data, model, self.get_stat())
+
             return plotobj
 
         return super().get_source_component_plot(id, model=model, recalc=recalc)
@@ -10646,7 +10638,7 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._orderplot
+        plotobj = self._plot_types["order"][0]
         if recalc:
             plotobj.prepare(self._get_pha_data(id),
                             self.get_model(id), orders=orders)
@@ -10700,7 +10692,7 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._arfplot
+        plotobj = self._plot_types["arf"][0]
         if not recalc:
             return plotobj
 
@@ -10785,7 +10777,7 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgfitplot
+        plotobj = self._plot_types["bkgfit"][0]
         if not recalc:
             return plotobj
 
@@ -10851,7 +10843,7 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgmodelhisto
+        plotobj = self._plot_types["bkgmodel"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_bkg_model(id, bkg_id),
@@ -10916,10 +10908,11 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgdataplot
+        plotobj = self._plot_types["bkg"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_stat())
+
         return plotobj
 
     def get_bkg_source_plot(self, id=None, lo=None, hi=None,
@@ -11007,7 +11000,7 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgsourceplot
+        plotobj = self._plot_types["bkgsource"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_bkg_source(id, bkg_id),
@@ -11064,11 +11057,12 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgresidplot
+        plotobj = self._plot_types["bkgresid"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_bkg_model(id, bkg_id),
                             self.get_stat())
+
         return plotobj
 
     def get_bkg_ratio_plot(self, id=None, bkg_id=None, recalc=True):
@@ -11121,11 +11115,12 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgratioplot
+        plotobj = self._plot_types["bkgratio"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_bkg_model(id, bkg_id),
                             self.get_stat())
+
         return plotobj
 
     def get_bkg_delchi_plot(self, id=None, bkg_id=None, recalc=True):
@@ -11179,11 +11174,12 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgdelchiplot
+        plotobj = self._plot_types["bkgdelchi"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_bkg_model(id, bkg_id),
                             self.get_stat())
+
         return plotobj
 
     def get_bkg_chisqr_plot(self, id=None, bkg_id=None, recalc=True):
@@ -11237,11 +11233,12 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        plotobj = self._bkgchisqrplot
+        plotobj = self._plot_types["bkgchisqr"][0]
         if recalc:
             plotobj.prepare(self.get_bkg(id, bkg_id),
                             self.get_bkg_model(id, bkg_id),
                             self.get_stat())
+
         return plotobj
 
     def _prepare_energy_flux_plot(self, plot, lo, hi, id, num, bins,

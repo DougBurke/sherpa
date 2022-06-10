@@ -319,29 +319,10 @@ class Session(NoNewAttributesAfterInit):
 
         self._splitplot = sherpa.plot.SplitPlot()
         self._jointplot = sherpa.plot.JointPlot()
-        self._dataplot = sherpa.plot.DataPlot()
-        self._datahistplot = sherpa.plot.DataHistogramPlot()
-        self._modelplot = sherpa.plot.ModelPlot()
-        self._modelhistplot = sherpa.plot.ModelHistogramPlot()
-
-        self._compmdlplot = sherpa.plot.ComponentModelPlot()
-        self._compmdlhistplot = sherpa.plot.ComponentModelHistogramPlot()
-
-        self._compsrcplot = sherpa.plot.ComponentSourcePlot()
-        self._compsrchistplot = sherpa.plot.ComponentSourceHistogramPlot()
 
         # self._comptmplmdlplot = sherpa.plot.ComponentTemplateModelPlot()
         self._comptmplsrcplot = sherpa.plot.ComponentTemplateSourcePlot()
 
-        self._sourceplot = sherpa.plot.SourcePlot()
-        self._sourcehistplot = sherpa.plot.SourceHistogramPlot()
-        self._fitplot = sherpa.plot.FitPlot()
-        self._residplot = sherpa.plot.ResidPlot()
-        self._delchiplot = sherpa.plot.DelchiPlot()
-        self._chisqrplot = sherpa.plot.ChisqrPlot()
-        self._ratioplot = sherpa.plot.RatioPlot()
-        self._psfplot = sherpa.plot.PSFPlot()
-        self._kernelplot = sherpa.plot.PSFKernelPlot()
         self._lrplot = sherpa.plot.LRHistogram()
         self._pdfplot = sherpa.plot.PDFPlot()
         self._cdfplot = sherpa.plot.CDFPlot()
@@ -357,18 +338,18 @@ class Session(NoNewAttributesAfterInit):
         # plot objects are changed by a given set_xxx(label) call.
         #
         self._plot_types = {
-            'data': [self._dataplot, self._datahistplot],
-            'model': [self._modelplot, self._modelhistplot],
-            'source': [self._sourceplot, self._sourcehistplot],
-            'fit': [self._fitplot],
-            'resid': [self._residplot],
-            'ratio': [self._ratioplot],
-            'delchi': [self._delchiplot],
-            'chisqr': [self._chisqrplot],
-            'psf': [self._psfplot],
-            'kernel': [self._kernelplot],
-            'compsource': [self._compsrcplot, self._compsrchistplot],
-            'compmodel': [self._compmdlplot, self._compmdlhistplot]
+            'data': [sherpa.plot.DataPlot(), sherpa.plot.DataHistogramPlot()],
+            'model': [sherpa.plot.ModelPlot(), sherpa.plot.ModelHistogramPlot()],
+            'source': [sherpa.plot.SourcePlot(), sherpa.plot.SourceHistogramPlot()],
+            'fit': [sherpa.plot.FitPlot()],
+            'resid': [sherpa.plot.ResidPlot()],
+            'ratio': [sherpa.plot.RatioPlot()],
+            'delchi': [sherpa.plot.DelchiPlot()],
+            'chisqr': [sherpa.plot.ChisqrPlot()],
+            'psf': [sherpa.plot.PSFPlot()],
+            'kernel': [sherpa.plot.PSFKernelPlot()],
+            'compsource': [sherpa.plot.ComponentSourcePlot(), sherpa.plot.ComponentSourceHistogramPlot()],
+            'compmodel': [sherpa.plot.ComponentModelPlot(), sherpa.plot.ComponentModelHistogramPlot()]
         }
 
         # The keys define the labels that can be used in calls to
@@ -10756,13 +10737,13 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(id)
 
-        if isinstance(data, sherpa.data.Data1DInt):
-            plotobj = self._datahistplot
-        else:
-            plotobj = self._dataplot
-
+        # This uses the implicit conversion of bool to 0 or 1.
+        #
+        idx = isinstance(data, sherpa.data.Data1DInt)
+        plotobj = self._plot_types["data"][idx]
         if recalc:
             plotobj.prepare(data, self.get_stat())
+
         return plotobj
 
     # DOC-TODO: discussion of preferences needs better handling
@@ -10921,11 +10902,8 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(id)
 
-        if isinstance(data, sherpa.data.Data1DInt):
-            plotobj = self._modelhistplot
-        else:
-            plotobj = self._modelplot
-
+        idx = isinstance(data, sherpa.data.Data1DInt)
+        plotobj = self._plot_types["model"][idx]
         if recalc:
             plotobj.prepare(data, self.get_model(id), self.get_stat())
 
@@ -10995,11 +10973,8 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(id)
 
-        if isinstance(data, sherpa.data.Data1DInt):
-            plotobj = self._sourcehistplot
-        else:
-            plotobj = self._sourceplot
-
+        idx = isinstance(data, sherpa.data.Data1DInt)
+        plotobj = self._plot_types["source"][idx]
         if recalc:
             plotobj.prepare(data, self.get_source(id), self.get_stat())
 
@@ -11071,11 +11046,8 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(id)
 
-        if isinstance(data, sherpa.data.Data1DInt):
-            plotobj = self._compmdlhistplot
-        else:
-            plotobj = self._compmdlplot
-
+        idx = isinstance(data, sherpa.data.Data1DInt)
+        plotobj = self._plot_types["compmodel"][idx]
         if recalc:
             plotobj.prepare(data, model, self.get_stat())
 
@@ -11150,10 +11122,9 @@ class Session(NoNewAttributesAfterInit):
 
         if isinstance(model, sherpa.models.TemplateModel):
             plotobj = self._comptmplsrcplot
-        elif isinstance(data, sherpa.data.Data1DInt):
-            plotobj = self._compsrchistplot
         else:
-            plotobj = self._compsrcplot
+            idx = isinstance(data, sherpa.data.Data1DInt)
+            plotobj = self._plot_types["compsource"][idx]
 
         if recalc:
             plotobj.prepare(data, model, self.get_stat())
@@ -11275,8 +11246,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._fitplot
-
+        plotobj = self._plot_types["fit"][0]
         if recalc:
             dataobj = self.get_data_plot(id, recalc=recalc)
             modelobj = self.get_model_plot(id, recalc=recalc)
@@ -11339,7 +11309,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._residplot
+        plotobj = self._plot_types["resid"][0]
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -11401,7 +11371,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._delchiplot
+        plotobj = self._plot_types["delchi"][0]
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -11463,7 +11433,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._chisqrplot
+        plotobj = self._plot_types["chisqr"][0]
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -11525,7 +11495,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._ratioplot
+        plotobj = self._plot_types["ratio"][0]
         if recalc:
             plotobj.prepare(self.get_data(id), self.get_model(id), self.get_stat())
 
@@ -12055,7 +12025,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._psfplot
+        plotobj = self._plot_types["psf"][0]
         if recalc:
             plotobj.prepare(self.get_psf(id), self.get_data(id))
 
@@ -12099,7 +12069,7 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        plotobj = self._kernelplot
+        plotobj = self._plot_types["kernel"][0]
         if recalc:
             plotobj.prepare(self.get_psf(id), self.get_data(id))
 
