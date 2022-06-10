@@ -10322,14 +10322,14 @@ class Session(sherpa.ui.utils.Session):
 
     def get_data_plot(self, id=None, recalc=True):
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr:
             return super().get_data_plot(id, recalc=recalc)
 
-        if isinstance(d, sherpa.astro.data.DataPHA):
+        if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._dataphaplot
             if recalc:
-                plotobj.prepare(d, self.get_stat())
+                plotobj.prepare(data, self.get_stat())
             return plotobj
 
         return super().get_data_plot(id, recalc=recalc)
@@ -10338,14 +10338,14 @@ class Session(sherpa.ui.utils.Session):
 
     def get_model_plot(self, id=None, recalc=True):
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr:
             return super().get_model_plot(id, recalc=recalc)
 
-        if isinstance(d, sherpa.astro.data.DataPHA):
+        if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._modelhisto
             if recalc:
-                plotobj.prepare(d, self.get_model(id), self.get_stat())
+                plotobj.prepare(data, self.get_model(id), self.get_stat())
             return plotobj
 
         return super().get_model_plot(id, recalc=recalc)
@@ -10429,16 +10429,16 @@ class Session(sherpa.ui.utils.Session):
         """
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
+            data = None
 
-        if isinstance(d, sherpa.astro.data.DataPHA):
+        if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._astrosourceplot
             if recalc:
-                plotobj.prepare(d, self.get_source(id), lo=lo, hi=hi)
+                plotobj.prepare(data, self.get_source(id), lo=lo, hi=hi)
             return plotobj
 
         return super().get_source_plot(id, recalc=recalc)
@@ -10449,8 +10449,8 @@ class Session(sherpa.ui.utils.Session):
         if not recalc:
             return plotobj
 
-        d = self.get_data(id)
-        if isinstance(d, sherpa.astro.data.DataPHA):
+        data = self.get_data(id)
+        if isinstance(data, sherpa.astro.data.DataPHA):
 
             dataobj = self.get_data_plot(id, recalc=recalc)
 
@@ -10463,7 +10463,7 @@ class Session(sherpa.ui.utils.Session):
             # no way to get it by API (apart from get_fit_plot).
             #
             modelobj = sherpa.astro.plot.ModelPHAHistogram()
-            modelobj.prepare(d, self.get_model(id),
+            modelobj.prepare(data, self.get_model(id),
                              self.get_stat())
 
             plotobj.prepare(dataobj, modelobj)
@@ -10546,13 +10546,13 @@ class Session(sherpa.ui.utils.Session):
         model = self._check_model(model)
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
+            data = None
 
-        if isinstance(d, sherpa.astro.data.DataPHA):
+        if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._astrocompmdlplot
             if recalc:
                 if not has_pha_response(model):
@@ -10563,7 +10563,7 @@ class Session(sherpa.ui.utils.Session):
                         # no response
                         pass
 
-                plotobj.prepare(d, model, self.get_stat())
+                plotobj.prepare(data, model, self.get_stat())
             return plotobj
 
         return super().get_model_component_plot(id, model=model, recalc=recalc)
@@ -10575,16 +10575,16 @@ class Session(sherpa.ui.utils.Session):
         model = self._check_model(model)
 
         try:
-            d = self.get_data(id)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
-            d = None
+            data = None
 
-        if isinstance(d, sherpa.astro.data.DataPHA):
+        if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._astrocompsrcplot
             if recalc:
-                plotobj.prepare(d, model, self.get_stat())
+                plotobj.prepare(data, model, self.get_stat())
             return plotobj
 
         return super().get_source_component_plot(id, model=model, recalc=recalc)

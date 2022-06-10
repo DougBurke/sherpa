@@ -10729,20 +10729,20 @@ class Session(NoNewAttributesAfterInit):
         # changed type since get_data_plot was last called.
         #
         try:
-            is_int = isinstance(self.get_data(id), sherpa.data.Data1DInt)
+            data = self.get_data(id)
         except IdentifierErr as ie:
             if recalc:
                 raise ie
+            data = None
 
-            is_int = False
-
+        is_int = isinstance(data, sherpa.data.Data1DInt)
         if is_int:
             plotobj = self._datahistplot
         else:
             plotobj = self._dataplot
 
         if recalc:
-            plotobj.prepare(self.get_data(id), self.get_stat())
+            plotobj.prepare(data, self.get_stat())
         return plotobj
 
     # DOC-TODO: discussion of preferences needs better handling
@@ -11811,7 +11811,6 @@ class Session(NoNewAttributesAfterInit):
         """
 
         plotobj = self._contour_types["fit"]
-
         if recalc:
             dataobj = self.get_data_contour(id, recalc=recalc)
             modelobj = self.get_model_contour(id, recalc=recalc)
