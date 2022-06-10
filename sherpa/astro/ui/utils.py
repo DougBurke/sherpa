@@ -10428,12 +10428,10 @@ class Session(sherpa.ui.utils.Session):
 
         """
 
-        try:
+        if recalc:
             data = self.get_data(id)
-        except IdentifierErr as ie:
-            if recalc:
-                raise ie
-            data = None
+        else:
+            data = self._get_data(id)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._astrosourceplot
@@ -10545,12 +10543,10 @@ class Session(sherpa.ui.utils.Session):
             id, model = model, id
         model = self._check_model(model)
 
-        try:
+        if recalc:
             data = self.get_data(id)
-        except IdentifierErr as ie:
-            if recalc:
-                raise ie
-            data = None
+        else:
+            data = self._get_data(id)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._astrocompmdlplot
@@ -10574,12 +10570,10 @@ class Session(sherpa.ui.utils.Session):
             id, model = model, id
         model = self._check_model(model)
 
-        try:
+        if recalc:
             data = self.get_data(id)
-        except IdentifierErr as ie:
-            if recalc:
-                raise ie
-            data = None
+        else:
+            data = self._get_data(id)
 
         if isinstance(data, sherpa.astro.data.DataPHA):
             plotobj = self._astrocompsrcplot
