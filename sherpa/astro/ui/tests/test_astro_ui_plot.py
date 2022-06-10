@@ -4140,7 +4140,7 @@ def test_set_ylog_foo_component_data1dint(plot, get, clean_astro_ui):
     ui.set_ylog(plot)
 
     assert not plotobj.histo_prefs["xlog"]
-    assert not plotobj.histo_prefs["ylog"]  # Really this should be set
+    assert plotobj.histo_prefs["ylog"]
 
 
 @requires_plotting

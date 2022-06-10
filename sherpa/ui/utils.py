@@ -367,8 +367,8 @@ class Session(NoNewAttributesAfterInit):
             'chisqr': [self._chisqrplot],
             'psf': [self._psfplot],
             'kernel': [self._kernelplot],
-            'compsource': [self._compsrcplot],
-            'compmodel': [self._compmdlplot]
+            'compsource': [self._compsrcplot, self._compsrchistplot],
+            'compmodel': [self._compmdlplot, self._compmdlhistplot]
         }
 
         # The keys define the labels that can be used in calls to
