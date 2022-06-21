@@ -545,14 +545,7 @@ class OrderPlot(ModelHistogram):
             else:
                 self.colors = [colors]
         else:
-            self.colors = []
-            top_color = '0xffffff'
-            bot_color = '0x0000bf'
-            num = len(self.orders)
-            jump = (int(top_color, 16) - int(bot_color, 16)) // (num + 1)
-            for order in self.orders:
-                self.colors.append(top_color)
-                top_color = hex(int(top_color, 16) - jump)
+            self.colors = shplot.backend.colorlist(len(self.orders))
 
         if not self.use_default_colors and len(self.colors) != len(self.orders):
             raise PlotErr('ordercolors', len(self.orders), len(self.colors))

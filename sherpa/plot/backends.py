@@ -17,6 +17,7 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from copy import deepcopy
 from inspect import signature
 import logging
 
@@ -230,6 +231,31 @@ class BaseBackend(metaclass=MetaBaseBackend):
            as a template only.
         '''
         return self.__class__.__name__
+
+    def colorlist(self, n):
+        '''Generate the list of n colors for use in multi-line plots.
+
+        Generally, the color will be ordered in some way and do not repeat or
+        do so only after a large number of colors.
+        Different backends might generate different lists of colors.
+
+        Parameters
+        ----------
+        n : int
+            Number of colors requested
+
+        Returns
+        -------
+        colors : list
+            list of color specifiers
+        '''
+        clist = deepcopy(backend_indep_colors)
+        # White is typically the background and not a good color for a line
+        clist.remove('w')
+        # None is the background default.
+        clist.remove(None)
+        clist = clist * (n // len(clist) + 1)
+        return clist[:n]
 
     def set_subplot(self, row, col, nrows, ncols, clearaxes=True,
                     **kwargs):

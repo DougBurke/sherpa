@@ -46,10 +46,10 @@ Change the backend
    are initialized. A different backend might not understand all those
    parameters.
 
-   In particular, that chnging the backend might not work for plot functions
-   in Sherpa's UI layer such as `sherpa.astro.ui.plot_data` because those
-   work with objects underneath that are not updated when the plotting backend
-   is changed.
+   In particular, Sherpa's UI layer (which contains functions such as
+   `sherpa.astro.ui.plot_data`) keeps a reference to specific plot objects.
+   Changing the backend by itself will not change those references, and thus
+   those function might not work with a new backend.
 
 After the initial import, the backend can be changed by loading one of
 the plotting backends shipped with sherpa (or any other module that
@@ -60,7 +60,7 @@ provides the same interface)::
 
 Sherpa also provides a decorator to change the backend for just one plot::
 
-  >>> from sherpa.plot.backends import TemporaryPlottingBackend
+  >>> from sherpa.plot import TemporaryPlottingBackend
   >>> with TemporarypPlottingBackend('pylab'):
   ...     plotting code here...
 
@@ -294,6 +294,8 @@ Backends need to have a few more methods:
 - ``get_XXX_plot/hist_prefs`` (where XXX is a plot type) which returns a
   dictionary of preferences that is used for displaying this plot.
 - `~sherpa.plot.backend.BasicBackend.get_latex_for_string` to format latex in strings.
+- ``colorlist(n)`` generates a list of n distinct color. In backends that only have a
+  limited number of colors available, the list might repeat.
 
 
 How do I implement a new backend?

@@ -39,8 +39,7 @@ from sherpa.astro import ui
 from sherpa.astro.instrument import create_arf
 from sherpa.astro.data import DataRMF
 from sherpa.utils.err import PlotErr
-from sherpa.utils.testing import requires_data, requires_fits, \
-    requires_plotting
+from sherpa.utils.testing import requires_data, requires_fits
 
 
 def get_egrid():
@@ -459,6 +458,28 @@ def test_eval_multi_arfrmf_reorder(clean_astro_ui):
 
     check_eval_multi_arfrmf()
 
+def setup_order_plot(make_data_path):
+    """Set up a faked dataset with multiple orders."""
+
+    pha = make_data_path('3c273.pi')
+    ui.load_pha(pha)
+
+    # It has already loaded in one response
+    arf = ui.get_arf(resp_id=1)
+    arf.specresp *= 0.5
+
+    for order, scale in enumerate([0.4, 0.25], 2):
+        ui.load_arf(make_data_path('3c273.arf'), resp_id=order)
+        ui.load_rmf(make_data_path('3c273.rmf'), resp_id=order)
+
+        arf = ui.get_arf(resp_id=order)
+        arf.specresp *= scale
+
+    ui.set_source(ui.powlaw1d.pl)
+
+    ui.notice(0.5, 7)
+    ui.ignore(3, 4)
+
 
 @requires_data
 @requires_fits
@@ -559,7 +580,6 @@ def test_get_order_plot_multi(make_data_path, clean_astro_ui):
 
 @requires_data
 @requires_fits
-@requires_plotting
 def test_plot_order_multi(make_data_path, clean_astro_ui):
     """Rather than fake data, use a known dataset.
 

@@ -99,6 +99,25 @@ class PylabBackend(BasicBackend):
     to a number between 0 and 256.
     '''
 
+    def colorlist(self, n):
+        '''Generate the list of n colors for use in multi-line plots.
+
+        Generally, the color will be ordered in some way and do not repeat or
+        do so only after a large number of colors.
+        Different backends might generate different lists of colors.
+
+        Parameters
+        ----------
+        n : int
+            Number of colors requested
+
+        Returns
+        -------
+        colors : list
+            list of color specifiers
+        '''
+        return plt.cm.inferno(numpy.linspace(0, 1, n))
+
     def end(self):
         '''Called from the UI after an interactive plot is done.'''
         self.set_window_redraw(True)

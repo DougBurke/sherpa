@@ -3863,7 +3863,6 @@ def test_set_plot_opt_explicit(cls):
         assert ax.get_yscale() == 'linear', idx
 
 
-@requires_plotting
 @pytest.mark.parametrize("cls",
                          [sherpa.ui.utils.Session, sherpa.astro.ui.utils.Session])
 @pytest.mark.parametrize("name,extraargs",

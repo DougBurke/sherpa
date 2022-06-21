@@ -67,7 +67,6 @@ def test_set_log():
     assert not session.get_data_plot_prefs()['ylog']
 
 
-@requires_plotting
 def test_set_log_clean():
     """Cleaning the session resets the plot preferences."""
 
@@ -81,7 +80,6 @@ def test_set_log_clean():
     assert not session.get_data_plot_prefs()['ylog']
 
 
-@requires_plotting
 def test_set_log_does_not_change_other_sessions():
     """The plot preferences in different sessions are distinct.
     """

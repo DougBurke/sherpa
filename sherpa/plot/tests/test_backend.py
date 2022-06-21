@@ -26,7 +26,8 @@ import logging
 from tkinter import Place
 import pytest
 
-from sherpa.plot.backends import IndepOnlyBackend, BaseBackend, PLOT_BACKENDS
+from sherpa.plot.backends import (IndepOnlyBackend, BaseBackend, PLOT_BACKENDS,
+                                  backend_indep_colors)
 from sherpa.plot import set_backend
 from sherpa import plot
 
@@ -96,3 +97,11 @@ def test_backend_registry(caplog):
     assert PLOT_BACKENDS['StupidName'] == StupidName
     del PLOT_BACKENDS['StupidName']
     del PLOT_BACKENDS['othername']
+
+
+def test_colorlist():
+    '''Check that we can generate a list of n colors'''
+    back = BaseBackend()
+    clist = back.colorlist(25)
+    assert len(clist) == 25
+    assert all([c in backend_indep_colors for c in clist])
