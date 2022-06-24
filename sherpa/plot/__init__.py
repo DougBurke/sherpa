@@ -66,20 +66,18 @@ basicbackend = BasicBackend()
 '''This backend has all the defaults that are backend-independent.
 For all the plot classes in this module (e.g. FitPlot, JointPlot, ...)
 the default settings are set in code like `plot_prefs = xxx.get_plot_defaults()`
-where xxx is some backend. In the current design, this code is executed when this
-module imported and then the values are shared between all instances of a class.
-That allows one to change those default "globally" (i.e. for all instances of the class)
-but it means that the default values are based on the backend that is active when
-this module is imported. That depends on the sherpa.rc setting and thus `plot_prefs`
-might contain e.g. matplotlib specific defaults that are not applicable when other
-backends are used.
-Thus, we currently initialize them with the BasicBackend that has only the
-backend-indenpendent (i.e. those that works for any backend) defaults set.
-
-Note that this kind of indicates that the defaults don't have to be taken from a
-backend - they are static to the class and could live just there, but that
-will be addressed at a later stage.
+where xxx is some backend.
 '''
+# In the current design, this code is executed when this
+# module imported and then the values are shared between all instances of a class.
+# That allows one to change those default "globally" (i.e. for all instances of the class)
+# but it means that the default values are based on the backend that is active when
+# this module is imported. That depends on the sherpa.rc setting and thus `plot_prefs`
+# might contain e.g. matplotlib specific defaults that are not applicable when other
+# backends are used.
+# Thus, we currently initialize them with the BasicBackend that has only the
+# backend-indenpendent (i.e. those that works for any backend) defaults set.
+
 
 plot_opt = config.get('options', 'plot_pkg', fallback='dummy')
 plot_opt = [o.strip().lower() for o in plot_opt.split()]
@@ -175,7 +173,7 @@ class TemporaryPlottingBackend(contextlib.AbstractContextManager):
 
     Parameters
     ----------
-    backend : object
+    backend : string
         Set a sherpa plotting backend. The backend can be passed in as an
         object, or as a convenience, as a simple string
 
@@ -2092,8 +2090,8 @@ class DelchiPlot(ModelPlot):
         Plot.plot(self, self.x, self.y, yerr=self.yerr, xerr=self.xerr,
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
-        super().hline(y=1, xmin=0, xmax=1, linecolor='k',
-                      linewidth=kwargs.get('linewidth', 1), overplot=True)
+        super().hline(y=0, xmin=0, xmax=1, linecolor='k',
+                      linewidth=.8, overplot=True)
 
 
 class ChisqrPlot(ModelPlot):
@@ -2211,7 +2209,7 @@ class ResidPlot(ModelPlot):
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
         super().hline(y=0, xmin=0, xmax=1, linecolor='k',
-                      linewidth=kwargs.get('linewidth', 1), overplot=True)
+                      linewidth=.8, overplot=True)
 
 
 class ResidContour(ModelContour):
@@ -2304,7 +2302,7 @@ class RatioPlot(ModelPlot):
                   title=self.title, xlabel=self.xlabel, ylabel=self.ylabel,
                   overplot=overplot, clearwindow=clearwindow, **kwargs)
         super().hline(y=1, xmin=0, xmax=1, linecolor='k',
-                      linewidth=kwargs.get('linewidth', 1), overplot=True)
+                      linewidth=.8, overplot=True)
 
 
 class RatioContour(ModelContour):

@@ -229,11 +229,6 @@ by "what is the input data type":
 - `~sherpa.plot.backend.BaseBackend.histo` (similar to plot, but with
   "histogram-style" lines); accepts (xlo, xhi, y) data with optional xerr, yerr.
 - `~sherpa.plot.backend.BaseBackend.contour` for (x0, x1, z) data
-- `~sherpa.plot.backend.BaseBackend.image` for (x0, x1, z) data on a regular
-  grid. An image is different from a contour in the sense that an image is
-  pixelated on a regular grid, while a contour can in principle describe a
-  continuous quantity or an irregular grid, even if the current implementation
-  may not provide that flexibility.
 
 Annotations
 -----------

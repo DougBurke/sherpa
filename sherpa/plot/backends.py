@@ -521,34 +521,6 @@ class BaseBackend(metaclass=MetaBaseBackend):
         pass
 
     @translate_args
-    def image(self, x0, x1, y, *,
-              extent=None,
-              title=None, xlabel=None, ylabel=None,
-              overplot=False, clearwindow=True,
-              xlog=False, ylog=False,
-              label=None,
-              color=None,
-              alpha=None,
-              **kwargs):
-        """Draw 2D image data.
-
-        .. warning::
-           This backend is a non-functional dummy. The documentation is provided
-           as a template only.
-
-        Parameters
-        ----------
-        x0 : array-like
-            independent axis in the first dimenation (on regular grid, flattened)
-        x1 : array-like
-            independent axis in the second dimenation (on regular grid, flattened)
-        y : array-like
-            dependent axis (i.e. image values) (on regular grid, flattened)
-        {kwargs}
-        """
-        pass
-
-    @translate_args
     def vline(self, x, *,
               ymin=0, ymax=1,
               title=None, xlabel=None, ylabel=None,
@@ -854,6 +826,11 @@ class BasicBackend(BaseBackend):
            No output will be produced by this backend, since the implementation
            is incomplete.
         '''
+        if 'xaxis' in kwargs:
+            warning('Keyword "xaxis" is deprecated and has no effect. xaxis are always drawn for delta_xxx plots.')
+
+        if 'ratioline' in kwargs:
+            warning('Keyword "ratioline" is deprecated and has no effect. Ratio lines are always drawn for ratio plots.')
 
         warning(f'{self.__class__} does not implement line/symbol plotting. ' +
                 'No plot will be produced.')
@@ -907,25 +884,6 @@ class BasicBackend(BaseBackend):
         '''
         warning(f'{self.__class__} does not implement contour plotting. ' +
                 'No contour will be produced.')
-
-    @translate_args
-    def image(self, x0, x1, y, *,
-              extent=None,
-              title=None, xlabel=None, ylabel=None,
-              overplot=False, clearwindow=True,
-              xlog=False, ylog=False,
-              label=None,
-              color=None,
-              alpha=None,
-              **kwargs):
-        '''Draw 2D image.
-
-        .. warning::
-           No output will be produced by this backend, since the implementation
-           is incomplete.
-        '''
-        warning(f'{self.__class__} does not implement image plotting. ' +
-                'No image will be produced.')
 
     @translate_args
     def vline(self, x, *,
@@ -982,8 +940,7 @@ class IndepOnlyBackend(BasicBackend):
                 if v not in values:
                     raise ValueError('The following backend-independent ' +
                                      f'values are defined for {k}: {values}, but got {v}')
-                else:
-                    return v
+                return v
             return check_in_list
 
         for k, v in backend_indep_kwargs.items():

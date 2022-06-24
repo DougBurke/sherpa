@@ -1248,7 +1248,7 @@ def get_keyword_defaults(func, skip=0):
     """Return the keyword arguments and their default values.
 
     Note that a similar function `sherpa.plot.backend_utils.get_keyword_defaults`
-    exits, which differs form this one in that is deal with keyword-only
+    exits, which differs from this one in that it deals with keyword-only
     arguments, not all arguments.
 
     Parameters

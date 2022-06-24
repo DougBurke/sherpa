@@ -355,19 +355,15 @@ class PylabBackend(BasicBackend):
             The attribute value or None.
 
         """
-
         def set(label, newval):
+            if newval is None:
+                return
             func = getattr(line, 'set_' + label)
             func(newval)
 
-        if linecolor is not None:
-            set('color', linecolor)
-
-        if linestyle is not None:
-            set('linestyle', linestyle)
-
-        if linewidth is not None:
-            set('linewidth', linewidth)
+        set('color', linecolor)
+        set('linestyle', linestyle)
+        set('linewidth', linewidth)
 
     # There is no support for alpha in the Plot.vline class
     @add_kwargs_to_doc(kwargs_doc)
@@ -444,6 +440,7 @@ class PylabBackend(BasicBackend):
              label=None,
              linewidth=None,
              linecolor=None,
+             xaxis=None, ratioline=None,
              ):
         """Draw x, y data.
 
@@ -468,7 +465,15 @@ class PylabBackend(BasicBackend):
         y : array-like or scalar number
             y values, same dimension as `x`.
         {kwargs}
+        ratioline, xaxis : None
+            These parameters are deprecated and not used any longer.
         """
+        if xaxis is not None:
+            logger.warning('Keyword "xaxis" is deprecated and has no effect. xaxis are always drawn for delta_xxx plots.')
+
+        if ratioline is not None:
+            logger.warning('Keyword "ratioline" is deprecated and has no effect. Ratio lines are always drawn for ratio plots.')
+
         axes = self.setup_axes(overplot, clearwindow)
 
         if linecolor is not None:
