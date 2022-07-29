@@ -4002,11 +4002,21 @@ def test_set_plot_opt_alias(cls, caplog):
 
     assert len(caplog.record_tuples) == 0
     s.plot("compmodel", "m1", "compsource", 2, "m1")
-    assert len(caplog.record_tuples) == 2
 
-    for loc, lvl, _ in caplog.record_tuples:
-        assert loc == "sherpa.ui.utils"
-        assert lvl == logging.WARNING
+    # We only care that we have the deprecated messages.  There may be
+    # other warnings (e.g. that the BasicBackend does not implement
+    # plotting) that we want to skip.
+    #
+    assert len(caplog.record_tuples) >= 2
+
+    # The assumption is that the first two messages are the ones we
+    # are interested in.
+    #
+    assert caplog.record_tuples[0][0] == "sherpa.ui.utils"
+    assert caplog.record_tuples[1][0] == "sherpa.ui.utils"
+
+    assert caplog.record_tuples[0][1] == logging.WARNING
+    assert caplog.record_tuples[1][1] == logging.WARNING
 
     assert caplog.record_tuples[0][2] == "The argument 'compmodel' is deprecated and 'model_component' should be used instead"
     assert caplog.record_tuples[1][2] == "The argument 'compsource' is deprecated and 'source_component' should be used instead"
@@ -4015,8 +4025,12 @@ def test_set_plot_opt_alias(cls, caplog):
     # a deprecation warning which is only shown once.
     #
     s.plot("compmodel", "m1")
-    assert len(caplog.record_tuples) == 3
-    assert caplog.record_tuples[2][2] == "The argument 'compmodel' is deprecated and 'model_component' should be used instead"
+    assert len(caplog.record_tuples) >= 3
+    nfound = 0
+    for idx in range(2, len(caplog.record_tuples)):
+        nfound += caplog.record_tuples[idx][2] == "The argument 'compmodel' is deprecated and 'model_component' should be used instead"
+
+    assert nfound == 1
 
 
 def check_plot2_xscale(xscale):
