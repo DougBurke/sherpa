@@ -611,6 +611,30 @@ def plot_backends(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
+def horrible_hack():
+    """Why are some tests failing on GitHub CI with
+
+    XIO:  fatal IO error 0 (Success) on X server ":0"
+
+    messages (or, at least, that's the only in we have on any possible
+    failure).
+
+    This is only needed if there's some test that creates plots
+    but does not use one of: all_plot_backends plot_backends
+
+    """
+
+    yield
+
+    try:
+        from matplotlib import pyplot as plt
+    except ImportError:
+        return
+
+    plt.close(fig="all")
+
+
+@pytest.fixture(autouse=True, scope="session")
 def cleanup_ds9_backend():
     """Ensure that the DS9 window has closed down.
 
