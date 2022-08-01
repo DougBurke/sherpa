@@ -593,7 +593,7 @@ def all_plot_backends(request):
 def plot_backends(request):
     """Override the plot backend for this test (only for functional backends)
 
-    This fixtures runs tests for all backens that actually produce plots, i.e.
+    This fixtures runs tests for all backends that actually produce plots, i.e.
     not for any type of dummy.
 
     Runs the test with the given plot backend and then restores the
@@ -603,18 +603,11 @@ def plot_backends(request):
     retain a reference to the original backend throughout.
     """
 
-    yield
-
-    # Technically the system could have matplotlib installed but not
-    # selected. However, this is not easily checked, so just check
-    # if we can import matplotlib and, if so, close down any windows.
-    #
-    try:
-        from matplotlib import pyplot as plt
-    except ImportError:
-        return
-
-    plt.close(fig="all")
+    with TemporaryPlottingBackend(request.param):
+        yield
+        if request.param == 'pylab':
+            from matplotlib import pyplot as plt
+            plt.close(fig="all")
 
 
 @pytest.fixture(autouse=True, scope="session")
