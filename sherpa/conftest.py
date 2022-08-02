@@ -611,27 +611,26 @@ def plot_backends(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def horrible_hack():
-    """Why are some tests failing on GitHub CI with
+def cleanup_pylab_backend():
+     """Ensure that the pylab backend has closed down all windows.
 
-    XIO:  fatal IO error 0 (Success) on X server ":0"
+     This is related to https://github.com/The-Compiler/pytest-xvfb/issues/11
+     and the idea is to ensure that all matplotlib windows are closed at the
+     end of the tests.
+     """
 
-    messages (or, at least, that's the only in we have on any possible
-    failure).
+     yield
 
-    This is only needed if there's some test that creates plots
-    but does not use one of: all_plot_backends plot_backends
+     # Technically the system could have matplotlib installed but not
+     # selected. However, this is not easily checked, so just check
+     # if we can install matplotlib and, if so, close down any windows.
+     #
+     try:
+         from matplotlib import pyplot as plt
+     except ImportError:
+         return
 
-    """
-
-    yield
-
-    try:
-        from matplotlib import pyplot as plt
-    except ImportError:
-        return
-
-    plt.close(fig="all")
+     plt.close(fig="all")
 
 
 @pytest.fixture(autouse=True, scope="session")
