@@ -1548,8 +1548,7 @@ def test_pha_grouping_changed_filter_1160(make_test_pha):
     d3 = pha.get_dep(filter=True)
     assert d3 == pytest.approx([2, 0, 3])
 
-    # This currently raises a DataErr due to
-    # 'size mismatch between mask and data array'
+    # This errors out with 'ValueError: More mask elements than groups'
     pha.grouping = [1, 1, -1, 1]
     d4 = pha.get_dep(filter=True)
     assert d4 == pytest.approx([2, 3])
@@ -1608,12 +1607,11 @@ def test_pha_grouping_changed_1160_data_with_filter(make_data_path):
     assert pha.get_dep(filter=True).shape == (41, )
 
     # Change the grouping
+    # This errors out with 'ValueError: More mask elements than groups'
     pha.grouping = [1] * 1024
 
     assert pha.get_dep(filter=False).shape == (1024, )
-    # This currently raises a DataErr due to
-    # 'size mismatch between mask and data array'
-    assert pha.get_dep(filter=True).shape == (622, )  # TODO: is this the correct value
+    assert pha.get_dep(filter=True).shape == (418, )  # TODO: is this the correct value?
 
     assert pha.get_filter(format="%.2f") == ofilter
 

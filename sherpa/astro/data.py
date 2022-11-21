@@ -1780,6 +1780,10 @@ must be an integer.""")
 
         counts = _check(counts)
 
+        # This is messy, we have too many fields that depend on each other.
+        #
+        ## self._grouped = False
+
         self.bin_lo = bin_lo
         self.bin_hi = bin_hi
         self.quality = quality
@@ -1944,7 +1948,18 @@ must be an integer.""")
             except TypeError:
                 raise DataErr("notanintarray") from None
 
+        hack = hasattr(self, "_data_space")
         self._set_related("grouping", val)
+
+        # We want to regenerate the internal settings for grouping,
+        # but we do not have an internal routine to do this, which is
+        # something we should probably address!
+        #
+        # As well as being hacky, it does not work. So, what is the
+        # logic that group_counts does??? BUT DOES IT ACTUALLY NOT WORK?
+
+        if hack:
+            self._set_grouped(self._grouped)
 
     @property
     def quality(self):
@@ -1978,7 +1993,15 @@ must be an integer.""")
             except TypeError:
                 raise DataErr("notanintarray") from None
 
+        hack = hasattr(self, "_data_space")
         self._set_related("quality", val)
+
+        # We want to regenerate the internal settings for grouping,
+        # but we do not have an internal routine to do this, which is
+        # something we should probably address!
+        #
+        if hack:
+            self._set_grouped(self._grouped)
 
     @property
     def areascal(self):
