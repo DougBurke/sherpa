@@ -3367,7 +3367,8 @@ must be an integer.""")
 
         # Change the grouping with ungrouped data as that simplifies
         # identifying the filter in the group call below. Is this
-        # still needed now that #1219 has landed?
+        # still needed now that #1219 has landed? Well, if it is
+        # removed then tests fail miserably, so it is stil needed!
         #
         if self.grouped:
             self.ungroup()
