@@ -2428,19 +2428,23 @@ def test_pha_change_quality_values(caplog):
     # With no tabStops set it uses ~pha.get_mask() which in this case
     # is [False] * 5 + [True] * 2,
     #
-    pha.group_counts(4)
-    assert len(caplog.records) == 0
+    assert len(caplog.record_tuples) == 0
+    with caplog.at_level(logging.INFO, logger='sherpa'):
+        pha.group_counts(4)
 
     assert pha.quality == pytest.approx([0, 0, 0, 2, 2, 0, 0])
 
     # Should quality filter be reset?
-    assert pha.quality_filter == pytest.approx(qfilt)
-    assert pha.get_dep(filter=True) == pytest.approx([4, 2])
+    assert pha.quality_filter is None
+    assert pha.get_dep(filter=True) == pytest.approx([4, 2, 2, 1])
     assert pha.get_filter() == '1:7'
 
-    # Do we provide any logging information?
+    # check captured log
     #
-    assert len(caplog.record_tuples) == 0
+    emsg = "The ignore_bad() call has been removed as quality has changed"
+    assert caplog.record_tuples == [
+        ("sherpa.astro.data", logging.WARNING, emsg)
+        ]
 
 
 def test_pha_group_adapt_check(caplog):
@@ -2509,9 +2513,9 @@ def test_pha_ignore_bad_then_group(caplog):
     pha.group_counts(4)
 
     assert pha.mask is True
-    assert pha.get_mask() == pytest.approx([1, 1, 0, 1, 1, 1, 0])
-    assert pha.quality_filter == pytest.approx([1, 1, 0, 1, 1, 1, 0])
-    assert pha.get_dep(filter=True) == pytest.approx([4, 2, 6, 6])
+    assert pha.get_mask() == pytest.approx([True] * 7)
+    assert pha.quality_filter is None
+    assert pha.get_dep(filter=True) == pytest.approx([4, 2, 3, 6, 6, 4])
     assert pha.quality == pytest.approx([0, 2, 0, 0, 0, 0, 0])
     assert pha.get_filter() == '1:7'  # TODO: should this have changed?
 
@@ -2525,7 +2529,12 @@ def test_pha_ignore_bad_then_group(caplog):
     assert pha.quality == pytest.approx([0, 2, 0, 0, 0, 0, 0])
     assert pha.get_filter() == '1:7'  # TODO: should this have changed?
 
-    assert len(caplog.record_tuples) == 0
+    # check captured log
+    #
+    emsg = "The ignore_bad() call has been removed as quality has changed"
+    assert caplog.record_tuples == [
+        ("sherpa.astro.data", logging.WARNING, emsg)
+        ]
 
 
 def test_pha_filter_ignore_bad_filter(caplog):
@@ -2659,22 +2668,28 @@ def test_pha_group_ignore_bad_then_group(caplog):
     # quality" data?
     #
     pha.group_counts(4)
-    assert len(caplog.records) == 0
+
+    # check captured log
+    #
+    emsg = "The ignore_bad() call has been removed as quality has changed"
+    assert caplog.record_tuples == [
+        ("sherpa.astro.data", logging.WARNING, emsg)
+        ]
 
     assert pha.mask is True
-    assert pha.get_mask() == pytest.approx(qual_mask)
+    assert pha.get_mask() == pytest.approx([True] * 7)
     assert pha.get_filter() == '1:7'
-    assert pha.quality_filter == pytest.approx(qual_mask)
+    assert pha.quality_filter is None
     assert pha.quality == pytest.approx([0, 2, 0, 0, 0, 0, 0])
     assert pha.get_dep(filter=False) == pytest.approx(counts)
-    assert pha.get_dep(filter=True) == pytest.approx([4, 2, 6, 6])
+    assert pha.get_dep(filter=True) == pytest.approx([4, 2, 3, 6, 6, 7])
 
     # Shouldn't this be a no-op. It isn't because the group call
     # didn't change the quality_filter array, so it now changes what
     # are the good/bad channels.
     #
     pha.ignore_bad()
-    assert len(caplog.records) == 0
+    assert len(caplog.records) == 1  # should not have changed
 
     qual_mask = np.asarray([True] + [False] + [True] * 5)
     assert pha.mask is True
