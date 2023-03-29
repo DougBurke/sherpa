@@ -973,6 +973,47 @@ class Session(NoNewAttributesAfterInit):
             'source_component': sherpa.image.ComponentSourceImage()
         }
 
+        # Reset the generator.
+        #
+        self.set_rng(None)
+
+    def get_rng(self):
+        """Return the RNG generator in use.
+
+        The return can be None, which means the legacy NumPy
+        RandomState generator is in use: see
+        https://numpy.org/doc/stable/reference/random/legacy.html
+
+        See Also
+        --------
+        set_rng
+
+        """
+
+        return self._rng
+
+    def set_rng(self, rng):
+        """Set the RNG generator.
+
+        Parameters
+        ----------
+        rng : numpy.random.Generator or None
+            The random-number generator. If None then the
+            legacy NumPy RandomState generator is used.
+
+        See Also
+        --------
+        get_rng
+
+        """
+
+        if rng is not None and not isinstance(rng,
+                                              (numpy.random.Generator,
+                                               numpy.random.RandomState)):
+            raise ArgumentTypeErr("badarg", "rng", "a Generator or None")
+
+        self._rng = rng
+
     def save(self, filename='sherpa.save', clobber=False):
         """Save the current Sherpa session to a file.
 

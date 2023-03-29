@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2016, 2017, 2018, 2019, 2020, 2021, 2022
+#  Copyright (C) 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -520,6 +520,10 @@ def reset_seed(request):
     seed to an explicit value. Ideally we would use the
     new NumPy RNG but we still need to support older NumPy
     versions.
+
+    With the move towargs using the NumPy 1.17 generator interface
+    it's not yet clear what this should do, as there's no way to get
+    access to the Session object here.
 
     """
 

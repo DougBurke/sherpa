@@ -4084,3 +4084,40 @@ def test_fit_datapha_mix_data_with_bkg_sensible():
     s.fit()
     check_fit_results(s, (1, 2, 3), ("smdl.c0", "bmdl.c0"),
                       [2.5, 2/3], 17, 8 + 1/6, 12, 10)
+
+
+@pytest.mark.parametrize("session", [Session, AstroSession])
+def test_get_fit_works(session):
+    """Check the default output.
+
+    This will need updating when the behavior changes.
+    """
+
+    s = session()
+    assert s.get_rng() is None
+
+
+@pytest.mark.parametrize("session", [Session, AstroSession])
+def test_set_fit_works(session):
+    """Basic check."""
+
+    s = session()
+
+    rng = numpy.random.RandomState()
+    s.set_rng(rng)
+    got = s.get_rng()
+    assert isinstance(got, numpy.random.RandomState)
+
+    s.set_rng(None)
+    got = s.get_rng()
+    assert got is None
+
+
+@pytest.mark.parametrize("session", [Session, AstroSession])
+def test_set_fit_checks_arg(session):
+    """Basic check."""
+
+    s = session()
+    with pytest.raises(ArgumentTypeErr,
+                       match="^'rng' must be a Generator or None$"):
+        s.set_rng(1234)
