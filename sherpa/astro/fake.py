@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2021 MIT
+#  Copyright (C) 2021, 2023 MIT
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,9 @@
 The ``fake_pha`` routine is used to create simulated
 `sherpa.astro.data.DataPHA` data objects.
 '''
+
 import numpy as np
-import sherpa
+from sherpa.utils.random import poisson_noise
 from sherpa.utils.err import DataErr
 from sherpa.astro.background import get_response_for_pha
 
@@ -31,7 +32,8 @@ __all__ = ('fake_pha', )
 
 def fake_pha(data, model,
              is_source=True, pileup_model=None,
-             add_bkgs=False, bkg_models={}, id=None):
+             add_bkgs=False, bkg_models={}, id=None,
+             rng=None):
     """Simulate a PHA data set from a model.
 
     This function replaces the counts in a PHA dataset with simulated counts
@@ -52,6 +54,9 @@ def fake_pha(data, model,
     The backgrounds itself are not changed by this function. To simulate
     backgrounds as well as the source spectrum, call this function on the
     source PHA dataset and the background PHA dataset(s) independently.
+
+    .. versionchanged:: 4.15.1
+       The rng parameter was added.
 
     Parameters
     ----------
@@ -84,6 +89,9 @@ def fake_pha(data, model,
     id : str
         String with id number if called from UI layer. This is only used for
         certain error messages.
+    rng : numpy.random.Generator or None, optional
+        If set, the generator is used to create the random numbers. If
+        not set then the legacy numpy RandomState instance is used.
 
     Examples
     --------
@@ -132,7 +140,7 @@ def fake_pha(data, model,
 
     # Calculate the source model, and take a Poisson draw based on
     # the source model.  That becomes the simulated data.
-    data.counts = sherpa.utils.poisson_noise(data.eval_model(model))
+    data.counts = poisson_noise(data.eval_model(model), rng=rng)
 
     # Add in background counts:
     #  -- Scale each background properly given data's
@@ -175,5 +183,5 @@ def fake_pha(data, model,
 
         if nbkg > 0:
             b = b / nbkg
-            b_poisson = sherpa.utils.poisson_noise(b)
+            b_poisson = poisson_noise(b, rng=rng)
             data.counts = data.counts + b_poisson

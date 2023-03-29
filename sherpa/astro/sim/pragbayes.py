@@ -25,6 +25,7 @@ import numpy as np
 from sherpa.fit import Fit
 from sherpa.estmethods import Covariance
 from sherpa.sim.mh import MetropolisMH, rmvt, CovarError, Walk, LimitError
+from sherpa.utils import random
 
 read_table_blocks = None
 try:
@@ -75,7 +76,8 @@ class ARFSIMFactory():
 
 class PCA1DAdd():
 
-    def __init__(self, bias, component, fvariance, eigenval, eigenvec):
+    def __init__(self, bias, component, fvariance, eigenval, eigenvec,
+                 rng=None):
         self.bias = bias
         self.component = component
         self.fvariance = fvariance
@@ -83,12 +85,14 @@ class PCA1DAdd():
         self.eigenvec = eigenvec
         self.ncomp = len(self.component)
         self.rrout = None
+        self.rng = rng
 
     def add_deviations(self, specresp, rrin=None, rrsig=None):
         # copy the old ARF (use new memory for deviations)
         new_arf = np.add(specresp, self.bias)
 
-        rrout = np.random.standard_normal(self.ncomp)
+        rrout = random.standard_normal(self.rng, self.ncomp)
+
         if rrin is not None and rrsig is not None:
             rrout = rrin + rrsig * rrout
         self.rrout = rrout
@@ -101,17 +105,20 @@ class PCA1DAdd():
 
 class SIM1DAdd():
 
-    def __init__(self, bias, component, simcomp):
+    def __init__(self, bias, component, simcomp, rng=None):
         self.bias = bias
         self.component = component
         self.simcomp = simcomp
         self.ncomp = len(self.component)
+        self.rng = rng
 
     def add_deviations(self, specresp):
         # copy the old ARF (use new memory for deviations)
         new_arf = np.add(specresp, self.bias)
+
         # Include the perturbed effective area in each iteration.
-        rr = np.random.randint(self.ncomp)
+        rr = random.integers(self.rng, self.ncomp)
+
         return np.add(new_arf, self.simcomp[rr], new_arf)
 
 
@@ -292,8 +299,8 @@ class WalkWithSubIters(Walk):
 
 class PragBayes(MetropolisMH):
 
-    def __init__(self, fcn, sigma, mu, dof, fit, *args):
-        MetropolisMH.__init__(self, fcn, sigma, mu, dof, *args)
+    def __init__(self, fcn, sigma, mu, dof, fit, *args, rng=None):
+        MetropolisMH.__init__(self, fcn, sigma, mu, dof, *args, rng=rng)
 
         self._fit = fit
         if hasattr(fit.model, 'teardown'):

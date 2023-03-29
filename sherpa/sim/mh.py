@@ -63,6 +63,9 @@ import math
 
 import numpy as np
 
+from sherpa.utils import random
+
+
 logger = logging.getLogger("sherpa")
 info = logger.info
 debug = logger.debug
@@ -80,18 +83,29 @@ class CovarError(Exception):
     pass
 
 
-def rmvt(mu, sigma, dof):
-    """
-    Sampling the non-central multivariate Student's t distribution
+def rmvt(mu, sigma, dof, rng=None):
+    """Sampling the non-central multivariate Student's t distribution
     using deviates from multivariate normal and chi-squared distributions
     Source: Kshirsagar method taken from function `rmvt` in R package `mvtnorm`.
     http://cran.r-project.org/web/packages/mvtnorm/index.html
 
-    `mu`     the current sample
-    `sigma`  covariance matrix
-    `dof`    degrees of freedom
+    Parameters
+    ----------
+    mu
+       The current sample.
+    sigma : 2-D array_like, of shape (N, N)
+       The covariance matrix.
+    dof : int
+       The degrees of freedom.
+    rng : numpy.random.Generator, numpy.random.RandomState, or None, optional
+        If set, the generator is used to create the random numbers. If
+        not set then the legacy numpy RandomState instance is used.
 
-    returns a sample from the multivariate t distribution in the shape of `mu`
+    Returns
+    -------
+    proposal
+        A sample from the multivariate t distribution with the shape
+        of the `mu` argument.
 
     """
 
@@ -99,16 +113,17 @@ def rmvt(mu, sigma, dof):
         raise ValueError("The degrees of freedom must be > 0")
 
     zero_vec = np.zeros_like(mu)
-    q = np.random.chisquare(dof, 1)[0]
-    nsample = np.random.multivariate_normal(zero_vec, sigma)
+
+    q = random.chisquare(rng, dof)
+    nsample = random.multivariate_normal(rng, zero_vec, sigma)
+
     proposal = mu + nsample / np.sqrt(q / dof)
     return proposal
 
 
 def dmvt(x, mu, sigma, dof, log=True, norm=False):
-    """
+    """Probability Density of a multi-variate Student's t distribution
 
-    Probability Density of a multi-variate Student's t distribution
     """
 
     # if np.min( np.linalg.eigvalsh(sigma))<=0 :
@@ -317,7 +332,7 @@ class Sampler():
 class MH(Sampler):
     """ The Metropolis Hastings Sampler """
 
-    def __init__(self, fcn, sigma, mu, dof, *args):
+    def __init__(self, fcn, sigma, mu, dof, *args, rng=None):
         self.fcn = fcn
         self._dof = dof
         self._mu = np.array(mu)
@@ -336,6 +351,10 @@ class MH(Sampler):
         self.scale = 1
         self.prior_funcs = ()
         self.sigma_m = False
+
+        # How are RNGs generated?
+        self.rng = rng
+
         Sampler.__init__(self)
 
     def calc_fit_stat(self, proposed_params):
@@ -494,7 +513,7 @@ class MH(Sampler):
         t distribution)?
         """
         alpha = self.accept_func(current, current_stat, proposal, proposal_stat)
-        u = np.random.uniform(0, 1, 1)
+        u = random.uniform(self.rng, 0, 1)
         return u <= alpha
 
     def reject(self):
@@ -529,8 +548,8 @@ class MH(Sampler):
 class MetropolisMH(MH):
     """ The Metropolis Metropolis-Hastings Sampler """
 
-    def __init__(self, fcn, sigma, mu, dof, *args):
-        MH.__init__(self, fcn, sigma, mu, dof, *args)
+    def __init__(self, fcn, sigma, mu, dof, *args, rng=None):
+        MH.__init__(self, fcn, sigma, mu, dof, *args, rng=rng)
 
         # count the p_M
         self.num_mh = 0
@@ -556,8 +575,8 @@ class MetropolisMH(MH):
         parameters, along with the covariance matrix (sigma),
         return a new set of parameters.
         """
-        u = np.random.uniform(0, 1, 1)
-        proposal = None
+
+        u = random.uniform(self.rng, 0, 1)
         if u <= self.p_M:
             proposal = self.metropolis(current)
             self.accept_func = self.accept_metropolis

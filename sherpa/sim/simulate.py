@@ -31,9 +31,12 @@ import numpy
 from sherpa.stats import Cash, CStat
 from sherpa.optmethods import NelderMead
 from sherpa.estmethods import Covariance
-from sherpa.utils import parallel_map, poisson_noise, NoNewAttributesAfterInit
 from sherpa.fit import Fit
 from sherpa.sim.sample import NormalParameterSampleFromScaleMatrix
+from sherpa.utils import NoNewAttributesAfterInit
+from sherpa.utils.parallel import parallel_map_rng
+from sherpa.utils.random import poisson_noise
+
 
 logger = logging.getLogger("sherpa")
 debug = logger.debug
@@ -142,10 +145,10 @@ class LikelihoodRatioTestWorker():
         self.null_vals = null_vals
         self.alt_vals = alt_vals
 
-    def __call__(self, proposal):
+    def __call__(self, proposal, rng=None):
         return LikelihoodRatioTest.calculate(self.null_fit, self.alt_fit,
                                              proposal, self.null_vals,
-                                             self.alt_vals)
+                                             self.alt_vals, rng=rng)
 
 
 class LikelihoodRatioTest(NoNewAttributesAfterInit):
@@ -174,13 +177,13 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
     """
 
     @staticmethod
-    def calculate(nullfit, altfit, proposal, null_vals, alt_vals):
+    def calculate(nullfit, altfit, proposal, null_vals, alt_vals, rng=None):
 
         # FIXME: only null perturbed?
         nullfit.model.thawedpars = proposal
 
         # Fake using poisson_noise with null
-        fake = poisson_noise(nullfit.data.eval_model(nullfit.model))
+        fake = poisson_noise(nullfit.data.eval_model(nullfit.model), rng=rng)
 
         # Set faked data for both nullfit and altfit
         nullfit.data.set_dep(fake)
@@ -223,7 +226,7 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
     @staticmethod
     def run(fit, null_comp, alt_comp, conv_mdl=None,
             stat=None, method=None,
-            niter=500, numcores=None):
+            niter=500, numcores=None, rng=None):
         if stat is None:
             stat = CStat()
         if method is None:
@@ -267,7 +270,7 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
 
         # Calculate niter samples using null best-fit and covariance
         sampler = NormalParameterSampleFromScaleMatrix()
-        samples = sampler.get_sample(nullfit, mycov=None, num=niter)
+        samples = sampler.get_sample(nullfit, mycov=None, num=niter, rng=rng)
 
         # Fit with alt model, null component starts at null's best fit params.
         altfit = Fit(data, alt, stat, method, Covariance())
@@ -281,10 +284,10 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
 
         olddep = data.get_dep(filter=False)
         try:
-            statistics = parallel_map(
+            statistics = parallel_map_rng(
                 LikelihoodRatioTestWorker(nullfit, altfit, null_vals, alt_vals),
                 samples,
-                numcores
+                numcores=numcores, rng=rng
             )
         finally:
             data.set_dep(olddep)

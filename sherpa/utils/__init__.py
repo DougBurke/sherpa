@@ -2005,8 +2005,9 @@ def histogram1d(x, x_lo, x_hi):
     A simple example, calculating the histogram of 1000 values
     randomly distributed over [0, 1).
 
-    >>> x = np.random.random(1000)
-    >>> edges = np.arange(0, 1.1, 0.1)
+    >>> rng = numpy.random.default_rng()
+    >>> x = rng.random(1000)
+    >>> edges = np.linspace(0, 1, 11)
     >>> xlo = edges[:-1]
     >>> xhi = edges[1:]
     >>> y = histogram1d(x, xlo, xhi)
