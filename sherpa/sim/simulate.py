@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2010, 2016, 2019, 2020, 2021
+#  Copyright (C) 2010, 2016, 2019, 2020, 2021, 2023
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -101,13 +101,13 @@ class LikelihoodRatioResults(NoNewAttributesAfterInit):
                                         precision=4, suppress_small=False)
 
         output = '\n'.join([
-                'samples = %s' % samples,
-                'stats   = %s' % stats,
-                'ratios  = %s' % ratios,
-                'null    = %s' % repr(self.null),
-                'alt     = %s' % repr(self.alt),
-                'lr      = %s' % repr(self.lr),
-                'ppp     = %s' % repr(self.ppp)
+                f'samples = {samples}',
+                f'stats   = {stats}',
+                f'ratios  = {ratios}',
+                f'null    = {repr(self.null)}',
+                f'alt     = {repr(self.alt)}',
+                f'lr      = {repr(self.lr)}',
+                f'ppp     = {repr(self.ppp)}'
                 ])
 
         return output
@@ -122,13 +122,13 @@ class LikelihoodRatioResults(NoNewAttributesAfterInit):
 
         """
         s = 'Likelihood Ratio Test\n'
-        s += 'null statistic   =  %s\n' % str(self.null)
-        s += 'alt statistic    =  %s\n' % str(self.alt)
-        s += 'likelihood ratio =  %s\n' % str(self.lr)
+        s += f'null statistic   =  {self.null}\n'
+        s += f'alt statistic    =  {self.alt}\n'
+        s += f'likelihood ratio =  {self.lr}\n'
         if self.ppp == 0.0:
-            s += 'p-value          <  %s' % str(1./len(self.samples))
+            s += f'p-value          <  {1./len(self.samples)}'
         else:
-            s += 'p-value          =  %s' % str(self.ppp)
+            s += f'p-value          =  {self.ppp}'
         return s
 
 
@@ -193,7 +193,7 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
         debug(nullfr.format())
 
         null_stat = nullfr.statval
-        debug("statistic null = " + repr(null_stat))
+        debug("statistic null = %s", repr(null_stat))
 
         # nullfit and altfit BOTH point to same faked dataset
         assert id(nullfit.data) == id(altfit.data)
@@ -202,7 +202,7 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
         # Start the faked fit at the initial alt best-fit values
         # altfit.model.thawedpars = alt_vals
 
-        debug("proposal: " + repr(proposal))
+        debug("proposal: %s", repr(proposal))
         debug("alt model")
         debug(str(altfit.model))
 
@@ -213,10 +213,10 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
         debug(str(altfit.model))
 
         alt_stat = altfr.statval
-        debug("statistic alt = " + repr(alt_stat))
+        debug("statistic alt = %s", repr(alt_stat))
 
         LR = -(alt_stat - null_stat)
-        debug("LR = " + repr(LR))
+        debug("LR = %s", repr(LR))
 
         return [null_stat, alt_stat, LR]
 
@@ -291,15 +291,15 @@ class LikelihoodRatioTest(NoNewAttributesAfterInit):
             alt.thawedpars = list(oldaltvals)
             null.thawedpars = list(oldnullvals)
 
-        debug("statistic null = " + repr(null_stat))
-        debug("statistic alt = " + repr(alt_stat))
-        debug("LR = " + repr(LR))
+        debug("statistic null = %s", repr(null_stat))
+        debug("statistic alt = %s", repr(alt_stat))
+        debug("LR = %s", repr(LR))
 
         statistics = numpy.asarray(statistics)
 
         pppvalue = numpy.sum(statistics[:, 2] > LR) / (1.0 * niter)
 
-        debug('ppp value = ' + str(pppvalue))
+        debug('ppp value = %s', str(pppvalue))
 
         return LikelihoodRatioResults(statistics[:, 2], statistics[:, 0:2],
                                       samples, LR, pppvalue, null_stat,
