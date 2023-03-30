@@ -1,5 +1,6 @@
 #
-#  Copyright (C) 2011, 2016, 2018, 2020, 2021  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2011, 2016, 2018, 2020, 2021, 2023
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -164,7 +165,7 @@ def test_normal_parameter_sample_matrix(setup):
 
 def test_t_parameter_sample_matrix(setup):
     np = sim.StudentTParameterSampleFromScaleMatrix()
-    np.get_sample(setup.fit, setup.dof, num=setup.num)
+    np.get_sample(setup.fit, dof=setup.dof, num=setup.num)
 
 
 def test_uniform_sample(setup):
@@ -192,7 +193,7 @@ def test_normal_sample_matrix(setup):
 
 def test_t_sample_matrix(setup):
     np = sim.StudentTSampleFromScaleMatrix()
-    np.get_sample(setup.fit, setup.num, setup.dof)
+    np.get_sample(setup.fit, num=setup.num, dof=setup.dof)
 
 
 def test_normal_sample(setup):
