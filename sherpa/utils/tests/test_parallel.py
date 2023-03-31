@@ -27,7 +27,8 @@ from sherpa.models.basic import Gauss1D
 from sherpa.optmethods import LevMar
 from sherpa.stats import LeastSq
 from sherpa.fit import Fit, DataSimulFit, SimulFitModel
-from sherpa.utils.parallel import parallel_map, parallel_map_funcs
+from sherpa.utils.parallel import parallel_map, parallel_map_rng, \
+    parallel_map_funcs
 
 
 @pytest.mark.parametrize("num_tasks, num_segments",
@@ -40,13 +41,47 @@ from sherpa.utils.parallel import parallel_map, parallel_map_funcs
                             (5, 5)
                          ])
 def test_parallel_map(num_tasks, num_segments):
-    f = np.sum
+    """Simple tests of test_parallel_map"""
+
     iterable = [np.arange(1, 2 + 2 * i) for i in range(num_segments)]
 
-    result = list(map(f, iterable))
+    result = list(map(np.sum, iterable))
     result = np.asarray(result)
 
-    pararesult = parallel_map(f, iterable, num_tasks)
+    pararesult = parallel_map(np.sum, iterable, num_tasks)
+
+    assert np.asarray(pararesult) == pytest.approx(result)
+
+
+@pytest.mark.parametrize("num_tasks, num_segments",
+                         [
+                            (1, 1),
+                            (8, 1),
+                            (1, 8),
+                            (10, 5),
+                            (5, 10),
+                            (5, 5)
+                         ])
+def test_parallel_map_rng(num_tasks, num_segments):
+    """Check test_parallel_map_rng works.
+
+    The test does not actually use the RNG, just checks we are sent
+    a generator.
+    """
+
+    def sumvals(x, rng=None):
+        # Check we are sent a generator (or it may be None, depending
+        # on whether this is run in parallel or not).
+        #
+        assert rng is None or isinstance(rng, np.random.Generator)
+        return np.sum(x)
+
+    iterable = [np.arange(1, 2 + 2 * i) for i in range(num_segments)]
+
+    result = list(map(np.sum, iterable))
+    result = np.asarray(result)
+
+    pararesult = parallel_map_rng(sumvals, iterable, numcores=num_tasks, rng=None)
 
     assert np.asarray(pararesult) == pytest.approx(result)
 

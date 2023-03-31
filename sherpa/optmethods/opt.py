@@ -56,21 +56,18 @@ class MyNcores:
             if not callable(func):
                 raise TypeError(f"input func '{repr(func)}' is not callable")
 
-        if numcores is None:
-            numcores = _ncpus
-        num_funcs = len(funcs)
-        numcores = min(numcores, num_funcs)
+        # TODO: the numcores argument is currently unused.
+        #
 
         # See sherpa.utils.parallel for the logic used here.
         manager = multiprocessing.Manager()
         out_q = manager.Queue()
         err_q = manager.Queue()
-
         procs = [multiprocessing.Process(target=self.my_worker,
                                          args=(func, ii, out_q, err_q) + args)
                  for ii, func in enumerate(funcs)]
 
-        return run_tasks(procs, err_q, out_q, num_funcs)
+        return run_tasks(procs, err_q, out_q)
 
     def my_worker(self, opt, idval, out_q, err_q, *args):
         raise NotImplementedError("my_worker has not been implemented")
