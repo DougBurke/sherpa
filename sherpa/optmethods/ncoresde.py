@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-#  Copyright (C) 2019, 2020, 2021
+#  Copyright (C) 2019, 2020, 2021, 2023
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -20,8 +20,9 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-import numpy
 import random
+
+import numpy
 
 from sherpa.optmethods.ncoresnm import ncoresNelderMead
 from sherpa.optmethods.opt import Opt, SimplexRandom
@@ -35,12 +36,11 @@ class Key2:
     def __init__(self, n=12):
         self.nbit = n
         self.max_arg2 = 2**n - 1
-        return
 
     def calc(self, arg1, arg2):
         if arg2 > self.max_arg2:
-            str = "arg2 ({}) must be < {}".format(arg2, self.max_arg2)
-            raise ValueError(str)
+            raise ValueError(f"arg2 ({arg2}) must be < {self.max_arg2}")
+
         key = arg1 + 1
         key <<= self.nbit
         key += arg2
@@ -63,7 +63,6 @@ class Strategy:
         self.npop = npop
         self.sfactor = sfactor
         self.xprob = xprob
-        return
 
     def calc(self, arg, pop):
         arg[-1] = self.func(arg[:-1])
@@ -81,10 +80,6 @@ class Strategy:
 
 class Strategy0(Strategy):
 
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
-
     def __call__(self, pop, icurrent):
         r1, r2, r3 = self.init(3)
         trial = numpy.array(pop[icurrent][:])
@@ -94,14 +89,11 @@ class Strategy0(Strategy):
             n = (n + 1) % self.npar
             if random.uniform(0, 1) > self.xprob:
                 break
+
         return self.calc(trial, pop)
 
 
 class Strategy1(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3 = self.init(3)
@@ -112,14 +104,11 @@ class Strategy1(Strategy):
             n = (n + 1) % self.npar
             if random.uniform(0, 1) > self.xprob:
                 break
+
         return self.calc(trial, pop)
 
 
 class Strategy2(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2 = self.init(2)
@@ -131,14 +120,11 @@ class Strategy2(Strategy):
             n = (n + 1) % self.npar
             if random.uniform(0, 1) > self.xprob:
                 break
+
         return self.calc(trial, pop)
 
 
 class Strategy3(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3, r4 = self.init(4)
@@ -151,14 +137,11 @@ class Strategy3(Strategy):
             n = (n + 1) % self.npar
             if random.uniform(0, 1) > self.xprob:
                 break
+
         return self.calc(trial, pop)
 
 
 class Strategy4(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3, r4, r5 = self.init(5)
@@ -171,14 +154,11 @@ class Strategy4(Strategy):
             n = (n + 1) % self.npar
             if random.uniform(0, 1) > self.xprob:
                 break
+
         return self.calc(trial, pop)
 
 
 class Strategy5(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3 = self.init(3)
@@ -190,14 +170,11 @@ class Strategy5(Strategy):
                 trial[n] = pop[0][n] + \
                     self.sfactor * (pop[r2][n] - pop[r3][n])
                 n = (n + 1) % self.npar
+
         return self.calc(trial, pop)
 
 
 class Strategy6(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3 = self.init(3)
@@ -209,14 +186,11 @@ class Strategy6(Strategy):
                 trial[n] = pop[r1][n] + self.sfactor * \
                     (pop[r2][n] - pop[r3][n])
                 n = (n + 1) % self.npar
+
         return self.calc(trial, pop)
 
 
 class Strategy7(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2 = self.init(2)
@@ -228,14 +202,11 @@ class Strategy7(Strategy):
                 trial[n] += self.sfactor * ((pop[0][n] - trial[n]) +
                                             (pop[r1][n] - pop[r2][n]))
                 n = (n + 1) % self.npar
+
         return self.calc(trial, pop)
 
 
 class Strategy8(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3, r4 = self.init(4)
@@ -247,14 +218,11 @@ class Strategy8(Strategy):
                 trial[n] = pop[0][n] + \
                     self.sfactor * (pop[r2][n] - pop[r3][n] - pop[r4][n])
                 n = (n + 1) % self.npar
+
         return self.calc(trial, pop)
 
 
 class Strategy9(Strategy):
-
-    def __init__(self, func, npar, npop, sfactor, xprob):
-        Strategy.__init__(self, func, npar, npop, sfactor, xprob)
-        return
 
     def __call__(self, pop, icurrent):
         r1, r2, r3, r4, r5 = self.init(5)
@@ -267,6 +235,7 @@ class Strategy9(Strategy):
                     self.sfactor * (pop[r1][n] + pop[r2][n] - pop[r3][n] -
                                     pop[r4][n])
                 n = (n + 1) % self.npar
+
         return self.calc(trial, pop)
 
 
@@ -298,7 +267,6 @@ class MyDifEvo(Opt):
         self.polytope = \
             SimplexRandom(func, npop, xpar, xmin, xmax, step, seed, factor)
         self.local_opt = self.ncores_nm.algo
-        return
 
     def __call__(self, maxnfev, ftol):
 
@@ -358,12 +326,6 @@ class MyDifEvo(Opt):
 
 class ncoresMyDifEvo(MyDifEvo):
 
-    def __init__(self, func, xpar, xmin, xmax, npop, sfactor, xprob, step,
-                 seed):
-        MyDifEvo.__init__(self, func, xpar, xmin, xmax, npop, sfactor, xprob,
-                          step, seed)
-        return
-
     def __call__(self, tol, maxnfev, numcores=_ncpus):
         nfev = 0
         random.seed(self.seed)
@@ -408,9 +370,6 @@ class ncoresMyDifEvo(MyDifEvo):
 
 class DifEvo:
 
-    def __init__(self):
-        pass
-
     def __call__(self, fcn, x, xmin, xmax, step=None, maxnfev=None, tol=1.0e-6,
                  npop=None, seed=45, sfactor=0.85, xprob=0.7, verbose=0):
 
@@ -427,9 +386,6 @@ class DifEvo:
 
 
 class ncoresDifEvo:
-
-    def __init__(self):
-        pass
 
     def __call__(self, fcn, x, xmin, xmax, tol=1.0e-6, maxnfev=None, step=None,
                  numcores=None, npop=None, seed=23, sfactor=0.85, xprob=0.7,
@@ -451,7 +407,6 @@ class ncoresDifEvoNelderMead:
 
     def __init__(self):
         self.ncores_nm = ncoresNelderMead()
-        return
 
     def __call__(self, fcn, x, xmin, xmax, tol=1.0e-6, maxnfev=None, step=None,
                  numcores=None, npop=None, seed=23, sfactor=0.85, xprob=0.7,
@@ -466,6 +421,8 @@ class ncoresDifEvoNelderMead:
         npop = max(npop, npar * 32)
         if maxnfev is None:
             maxnfev = 8192 * npar
+
+        # TODO: the seed argument is not sent in
         mydifevo = \
             ncoresMyDifEvo(fcn, nm_par, xmin, xmax, npop, sfactor, xprob, step)
         de_nfev, de_fmin, de_par = \
@@ -507,26 +464,24 @@ if '__main__' == __name__:
     parser.add_argument('-N', action="store", dest="num", default=4, type=int)
 
     options = parser.parse_args()
-    # print('options =', options)
-    npar = options.num
-    if npar % 2 != 0:
+    if options.num % 2 != 0:
         raise ValueError("-N option must be an even number")
 
     if options.difevo:
         algo = [DifEvo()]
         if options.unc_opt:
-            tst_unc_opt(algo, npar)
+            tst_unc_opt(algo, options.num)
         if options.global_func:
-            tst_opt(algo, npar)
+            tst_opt(algo, options.num)
     elif options.combine:
         algo = [ncoresDifEvoNelderMead()]
         if options.unc_opt:
-            tst_unc_opt(algo, npar)
+            tst_unc_opt(algo, options.num)
         if options.global_func:
-            tst_opt(algo, npar)
+            tst_opt(algo, options.num)
     else:
         algo = [ncoresDifEvo()]
         if options.unc_opt:
-            tst_unc_opt(algo, npar)
+            tst_unc_opt(algo, options.num)
         if options.global_func:
-            tst_opt(algo, npar)
+            tst_opt(algo, options.num)
