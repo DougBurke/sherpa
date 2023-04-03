@@ -22,7 +22,8 @@
 
 # import autograd.numpy as np
 import numpy as np
-from sherpa.utils import _ncpus
+
+from sherpa.utils.parallel import _ncpus
 from sherpa.optmethods import _saoopt
 from sherpa.optmethods.opt import MyNcores, Opt, SimplexNoStep, SimplexStep, \
     SimplexRandom
@@ -314,7 +315,7 @@ class NelderMead7(NelderMeadBase):
 
 class nmNcores(MyNcores):
 
-    def my_worker(self, opt, idval, out_q, err_q, lock,
+    def my_worker(self, opt, idval, out_q, err_q,
                   fcn, x, xmin, xmax, tol, maxnfev):
         try:
             vals = opt(fcn, x, xmin, xmax, tol, maxnfev)
