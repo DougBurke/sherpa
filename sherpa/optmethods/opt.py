@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-#  Copyright (C) 2019, 2020, 2021
+#  Copyright (C) 2019, 2020, 2021, 2023
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -53,7 +53,7 @@ class MyNcores:
 
         for func in funcs:
             if not callable(func):
-                raise TypeError("input func '%s' is not callable" % repr(func))
+                raise TypeError(f"input func '{repr(func)}' is not callable")
 
         if numcores is None:
             numcores = _ncpus
@@ -74,8 +74,8 @@ class MyNcores:
         lock = manager.Lock()
         procs = []
 
-        for id, func in enumerate(funcs):
-            myargs = (func, id, out_q, err_q, lock) + args
+        for idx, func in enumerate(funcs):
+            myargs = (func, idx, out_q, err_q, lock) + args
             try:
                 procs.append(multiprocessing.Process(target=self.my_worker,
                                                      args=myargs))
@@ -95,7 +95,6 @@ class Opt:
             self.func_counter_bounds_wrappers(func, self.npar, xmin, xmax)
         self.xmin = np.asarray(xmin)
         self.xmax = np.asarray(xmax)
-        return
 
     def _outside_limits(self, x, xmin, xmax):
         return (np.any(x < xmin) or np.any(x > xmax))
@@ -147,7 +146,6 @@ class SimplexBase:
         self.xmax = xmax
         self.npar = len(xpar)
         self.simplex = self.init(npop, xpar, step, seed, factor)
-        return
 
     def __getitem__(self, index):
         return self.simplex[index]
@@ -207,13 +205,16 @@ class SimplexBase:
             return stddev or fctval
         return False
 
+        # TODO: what is this code meant to be doing as it is unreachable?
         num = 2.0 * abs(self.simplex[0, -1] - self.simplex[-1, -1])
         denom = abs(self.simplex[0, -1]) + abs(self.simplex[-1, -1]) + 1.0
-        if (num / denom > ftol):
+        if num / denom > ftol:
             return False
+
         func_vals = [col[-1] for col in self.simplex]
         if np.std(func_vals) > ftol:
             return False
+
         return True
 
     def eval_simplex(self, npop, simplex):
@@ -260,10 +261,6 @@ class SimplexBase:
 
 class SimplexNoStep(SimplexBase):
 
-    def __init__(self, func, npop, xpar, xmin, xmax, step, seed, factor):
-        SimplexBase.__init__(self, func, npop, xpar, xmin, xmax, step, seed,
-                             factor)
-
     def init(self, npop, xpar, step, seed, factor):
         npar1 = self.npar + 1
         simplex = np.empty((npop, npar1))
@@ -277,14 +274,11 @@ class SimplexNoStep(SimplexBase):
             simplex[ii+1][:-1] = tmp[:]
         simplex = \
             self.init_random_simplex(xpar, simplex, npar1, npop, seed, factor)
+
         return self.eval_simplex(npop, simplex)
 
 
 class SimplexStep(SimplexBase):
-
-    def __init__(self, func, npop, xpar, xmin, xmax, step, seed, factor):
-        SimplexBase.__init__(self, func, npop, xpar, xmin, xmax, step, seed,
-                             factor)
 
     def init(self, npop, xpar, step, seed, factor):
         npar1 = self.npar + 1
@@ -295,14 +289,11 @@ class SimplexStep(SimplexBase):
             simplex[ii + 1][:-1] = tmp
         simplex = \
             self.init_random_simplex(xpar, simplex, npar1, npop, seed, factor)
+
         return self.eval_simplex(npop, simplex)
 
 
 class SimplexRandom(SimplexBase):
-
-    def __init__(self, func, npop, xpar, xmin, xmax, step, seed, factor):
-        SimplexBase.__init__(self, func, npop, xpar, xmin, xmax, step, seed,
-                             factor)
 
     def init(self, npop, xpar, step, seed, factor):
         npar1 = self.npar + 1
@@ -310,6 +301,7 @@ class SimplexRandom(SimplexBase):
         simplex[0][:-1] = np.copy(xpar)
         simplex = self.init_random_simplex(xpar, simplex, 1, npop, seed,
                                            factor)
+
         return self.eval_simplex(npop, simplex)
 
 
@@ -889,7 +881,6 @@ def tst_opt(algorithms, npar):
         for algo in algorithms:
             result = algo(func, x0, xmin, xmax)
             myprint(algo.__class__.__name__, func, result)
-        return
 
     xmin = npar * [-32.768]
     xmax = npar * [32.768]
@@ -1023,7 +1014,7 @@ def tst_opt(algorithms, npar):
     x0 = npar * [-2.0]
     tst_algos(SumSquares, x0, xmin, xmax)
 
-    if npar == 6 or npar == 10:
+    if npar in (6, 10):
         xmin = npar * [- npar * npar]
         xmax = npar * [npar * npar]
         x0 = npar * [10]
@@ -1037,16 +1028,15 @@ def tst_opt(algorithms, npar):
 
 if '__main__' == __name__:
 
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.add_option("-N", "--npar", dest="npar", default=10,
-                      type=int, help="set npar")
-    (options, args) = parser.parse_args()
-    npar = options.npar
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("-N", "--npar", dest="npar", default=10,
+                        type=int, help="set npar")
+    args = parser.parse_args()
 
-    x0 = np.array(npar * [-1.2, 1.0])
-    xmin = npar * [-1000, -1000]
-    xmax = npar * [1000, 1000]
+    x0 = np.array(args.npar * [-1.2, 1.0])
+    xmin = args.npar * [-1000, -1000]
+    xmax = args.npar * [1000, 1000]
     factor = 10
     seed = 234
     simp = SimplexNoStep(Rosenbrock, len(x0) + 1, x0, xmin, xmax, None,
