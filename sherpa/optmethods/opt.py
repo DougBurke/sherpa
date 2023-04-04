@@ -21,7 +21,6 @@
 #
 
 import multiprocessing
-import random
 
 import numpy as np
 
