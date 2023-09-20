@@ -201,7 +201,7 @@ def test_export_method_names():
                          [(f1, (3, 3, 0)),
                           (f2, (5, 1, 4)),
                           (f3, (5, 0, 5)),
-                          pytest.param(f4, (6, 2, 4), marks=pytest.mark.xfail),  # is this sensible?
+                          (f4, (6, 2, 4))
                           ])
 def test_get_num_args(func, expected):
     assert utils.get_num_args(func) == expected
@@ -225,7 +225,6 @@ def test_get_keyword_names_f3():
     assert utils.get_keyword_names(f3, 7) == []
 
 
-@pytest.mark.xfail
 def test_get_keyword_names_f4():
     l = ['c', 'd', 'extra1', 'extra2']
     assert utils.get_keyword_names(f4) == l
@@ -256,7 +255,6 @@ def test_get_keyword_defaults_f3():
     assert utils.get_keyword_defaults(f3, 7) == {}
 
 
-@pytest.mark.xfail
 def test_get_keyword_defaults_f4():
     d = {'c': 2, 'd': 'foo', 'extra1': False, 'extra2': None}
     assert utils.get_keyword_defaults(f4) == d

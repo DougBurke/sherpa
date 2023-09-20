@@ -30,6 +30,7 @@ import pydoc
 import string
 import sys
 from types import FunctionType, MethodType
+from typing import Any, Callable
 
 import numpy
 import numpy.random
@@ -37,8 +38,8 @@ import numpy.fft
 
 # Note: _utils.gsl_fcmp and _utils.ndtri are not exported from
 #       this module; is this intentional?
-from sherpa.utils._utils import hist1d, hist2d
-from sherpa.utils import _utils, _psf
+from sherpa.utils._utils import hist1d, hist2d  # type: ignore
+from sherpa.utils import _utils, _psf  # type: ignore
 from sherpa.utils.err import IOErr
 
 # We re-export the symbols from parallel but this will be removed at
@@ -1138,20 +1139,29 @@ def export_method(meth, name=None, modname=None):
     defaults = meth.__defaults__
     doc = meth.__doc__
 
-    # Make an argument list string, removing 'self'
-    #
-    # This code originaly used inspect.getargspec but was
-    # converted to use inspect.signature.
+    # Make an argument list string, removing 'self'. It would
+    # be nice to just use str(sig) below but that doesn't help
+    # because
+    # a) when defining the arguments we can have cases like
+    #      dstype=<class 'sherpa.data.Data1DInt'>
+    #    which is not helpful
+    # b) when calling old_name we do not want the defaults
+    # c) we haven't needed it so far so it obviously doesn't
+    #    matter here.
     #
     sig = inspect.signature(meth)
 
     def tostr(p):
+        # Do we need to label the argument as "remaining
+        # keywords" or "remaining positional"?
+        #
         if p.kind == p.VAR_KEYWORD:
             return f"**{p.name}"
 
         if p.kind == p.VAR_POSITIONAL:
             return f"*{p.name}"
 
+        # If not we just need the name
         return p.name
 
     argspec = ",".join([tostr(p) for p in sig.parameters.values()])
@@ -1176,7 +1186,8 @@ def export_method(meth, name=None, modname=None):
     return new_meth
 
 
-def get_keyword_names(func, skip=0):
+def get_keyword_names(func: Callable,
+                      skip: int = 0) -> list[str]:
     """Return the names of the keyword arguments.
 
     Parameters
@@ -1197,19 +1208,28 @@ def get_keyword_names(func, skip=0):
 
     """
 
-    # This used to use getargspec but was changed to use inspect
-    # since the former was removed briefly (circa Python 3.6).
+    # Support for keyword-only settings complicate this, since
+    # what should we return for
     #
+    #    def foo(a, b, *, c, d=False)
+    #
+    def is_keyword(p: inspect.Parameter) -> bool:
+        if p.kind == p.KEYWORD_ONLY:
+            return True
+        if p.kind != p.POSITIONAL_OR_KEYWORD:
+            return False
+        return p.default != p.empty
+
     sig = inspect.signature(func)
     kwargs = [p.name
               for p in sig.parameters.values()
-              if p.kind == p.POSITIONAL_OR_KEYWORD and
-              p.default != p.empty]
+              if is_keyword(p)]
 
     return kwargs[skip:]
 
 
-def get_keyword_defaults(func, skip=0):
+def get_keyword_defaults(func: Callable,
+                         skip: int = 0) -> dict[str, Any]:
     """Return the keyword arguments and their default values.
 
     Note that a similar function `sherpa.plot.backend_utils.get_keyword_defaults`
@@ -1236,19 +1256,27 @@ def get_keyword_defaults(func, skip=0):
 
     """
 
-    # This used to use getargspec but was changed to use inspect
-    # since the former was removed briefly (circa Python 3.6).
-    #
     sig = inspect.signature(func)
+
+    # Support for keyword-only settings complicate this, since
+    # what should we return for
+    #
+    #    def foo(a, b, *, c, d=False)
+    #
+    def is_keyword(p: inspect.Parameter) -> bool:
+        if p.kind not in [p.KEYWORD_ONLY,
+                          p.POSITIONAL_OR_KEYWORD]:
+            return False
+        return p.default != p.empty
+
     kwargs = [(p.name, p.default)
               for p in sig.parameters.values()
-              if p.kind == p.POSITIONAL_OR_KEYWORD and
-              p.default != p.empty]
+              if is_keyword(p)]
 
     return dict(kwargs[skip:])
 
 
-def get_num_args(func):
+def get_num_args(func: Callable) -> tuple[int, int, int]:
     """Return the number of arguments for a function.
 
     Parameters
@@ -1268,21 +1296,21 @@ def get_num_args(func):
 
     """
 
-    # This used to use getargspec but was changed to use inspect
-    # since the former was removed briefly (circa Python 3.6).
-    #
     sig = inspect.signature(func)
-    posargs = [True
-               for p in sig.parameters.values()
-               if p.kind == p.POSITIONAL_OR_KEYWORD and
-               p.default == p.empty]
-    kwargs = [True
-              for p in sig.parameters.values()
-              if p.kind == p.POSITIONAL_OR_KEYWORD and
-              p.default != p.empty]
+    npos = 0
+    nkw = 0
+    for p in sig.parameters.values():
+        # Can we just check on p.default not being p.empty?  No, since
+        # we don't want to include *args or **kwargs elements.
+        #
+        if p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]:
+            continue
 
-    npos = len(posargs)
-    nkw = len(kwargs)
+        if p.default == p.empty:
+            npos += 1
+        else:
+            nkw += 1
+
     return (npos + nkw, npos, nkw)
 
 
