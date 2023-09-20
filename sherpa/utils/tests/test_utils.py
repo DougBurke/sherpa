@@ -41,6 +41,10 @@ def f3(a=None, b=1, c=2, d=3, e=4):
     pass
 
 
+def f4(a, b, c=2, d="foo", *, extra1=False, extra2=None):
+    pass
+
+
 def test_NoNewAttributesAfterInit():
     class C(NoNewAttributesAfterInit):
         def __init__(self):
@@ -196,7 +200,9 @@ def test_export_method_names():
 @pytest.mark.parametrize("func,expected",
                          [(f1, (3, 3, 0)),
                           (f2, (5, 1, 4)),
-                          (f3, (5, 0, 5))])
+                          (f3, (5, 0, 5)),
+                          pytest.param(f4, (6, 2, 4), marks=pytest.mark.xfail),  # is this sensible?
+                          ])
 def test_get_num_args(func, expected):
     assert utils.get_num_args(func) == expected
 
@@ -217,6 +223,14 @@ def test_get_keyword_names_f3():
     assert utils.get_keyword_names(f3) == l
     assert utils.get_keyword_names(f3, 1) == l[1:]
     assert utils.get_keyword_names(f3, 7) == []
+
+
+@pytest.mark.xfail
+def test_get_keyword_names_f4():
+    l = ['c', 'd', 'extra1', 'extra2']
+    assert utils.get_keyword_names(f4) == l
+    assert utils.get_keyword_names(f4, 2) == l[2:]
+    assert utils.get_keyword_names(f4, 7) == []
 
 
 def test_get_keyword_defaults_f1():
@@ -240,6 +254,16 @@ def test_get_keyword_defaults_f3():
     del d['a']
     assert utils.get_keyword_defaults(f3, 1) == d
     assert utils.get_keyword_defaults(f3, 7) == {}
+
+
+@pytest.mark.xfail
+def test_get_keyword_defaults_f4():
+    d = {'c': 2, 'd': 'foo', 'extra1': False, 'extra2': None}
+    assert utils.get_keyword_defaults(f4) == d
+
+    del d['c']
+    assert utils.get_keyword_defaults(f4, 1) == d
+    assert utils.get_keyword_defaults(f4, 7) == {}
 
 
 def test_print_fields():
