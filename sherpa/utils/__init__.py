@@ -30,7 +30,7 @@ import pydoc
 import string
 import sys
 from types import FunctionType, MethodType
-from typing import Any, Callable
+from typing import Any, Callable, Optional, Union
 
 import numpy
 import numpy.random
@@ -1103,7 +1103,9 @@ def bool_cast(val):
     return bool(val)
 
 
-def export_method(meth, name=None, modname=None):
+def export_method(meth: Union[FunctionType, MethodType],
+                  name: Optional[str] = None,
+                  modname: Optional[str] = None) -> FunctionType:
     """
     Given a bound instance method, return a simple function that wraps
     it.  The only difference between the interface of the original
@@ -1136,9 +1138,6 @@ def export_method(meth, name=None, modname=None):
     else:
         old_name = meth.__name__
 
-    defaults = meth.__defaults__
-    doc = meth.__doc__
-
     # Make an argument list string, removing 'self'. It would
     # be nice to just use str(sig) below but that doesn't help
     # because
@@ -1164,26 +1163,50 @@ def export_method(meth, name=None, modname=None):
         # If not we just need the name
         return p.name
 
-    argspec = ",".join([tostr(p) for p in sig.parameters.values()])
+    args = []
+    keyword_only = False
+    for p in sig.parameters.values():
+
+        # Mark the location of the first keyword-only argument (note,
+        # before the parameter).
+        #
+        if not keyword_only and p.kind == p.KEYWORD_ONLY:
+            args.append("*")
+            keyword_only = True
+
+        args.append(tostr(p))
+
+    # We want to include the keyword-only marker when defining the
+    # routine, but not when calling it.
+    #
+    defspec = ",".join(args)
+    usespec = ",".join([arg for arg in args if arg != "*"])
 
     # Create a wrapper function with no default arguments
+    g: dict[str, Any]
     g = {old_name: meth}
     if modname is not None:
         g['__name__'] = modname
 
-    fdef = f'def {name}({argspec}):  return {old_name}({argspec})'
+    fdef = f'def {name}({defspec}):  return {old_name}({usespec})'
     exec(fdef, g)
 
     # Create another new function from the one we just made, this time
-    # adding the default arguments and doc string from the original method
+    # adding the default arguments and doc string from the original method.
+    #
+    # TODO: Why is this deep magic needed? I am sure it is, but
+    #       why?
+    #
     new_meth = g[name]
-
-    new_meth = FunctionType(new_meth.__code__, new_meth.__globals__,
-                            new_meth.__name__, defaults,
-                            new_meth.__closure__)
-    new_meth.__doc__ = doc
-
-    return new_meth
+    out_meth = FunctionType(new_meth.__code__, new_meth.__globals__,
+                            name=new_meth.__name__,
+                            argdefs=meth.__defaults__,
+                            closure=new_meth.__closure__)
+    # mypy doesn't like the following line, claiming MethodType does not
+    # have __kwdefaults__
+    out_meth.__kwdefaults__ = meth.__kwdefaults__
+    out_meth.__doc__ = meth.__doc__
+    return out_meth
 
 
 def get_keyword_names(func: Callable,

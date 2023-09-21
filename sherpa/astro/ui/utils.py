@@ -592,7 +592,7 @@ class Session(sherpa.ui.utils.Session):
 
         return model_str
 
-    def show_bkg(self, id=None, bkg_id=None, outfile=None, clobber=False):
+    def show_bkg(self, id=None, bkg_id=None, *, outfile=None, clobber=False):
         """Show the details of the PHA background data sets.
 
         This displays information about the background, or
