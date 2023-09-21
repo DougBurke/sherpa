@@ -35,6 +35,14 @@ def _is_subclass(t1, t2):
     return isinstance(t1, type) and issubclass(t1, t2) and (t1 is not t2)
 
 
+# We should just initialize the dstype object and catch the error.
+# It would be nice to still report some sort of "missing n values"
+# as this is used in a way that the dstype object may not have been
+# explicitly selected by the user, so seeing information about that
+# rather than the calling function could be confusing.
+#
+# The aim of the above is to allow get_num_args to be removed.
+#
 def _check_args(size, dstype):
     # Find the number of required args minus self, filename
     req_args = get_num_args(dstype.__init__)[1] - 2
