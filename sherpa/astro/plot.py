@@ -347,7 +347,7 @@ class SourcePlot(shplot.HistogramPlot):
                 post += pterm
 
         scale = (self.xhi + self.xlo) / 2
-        for ii in range(data.plot_fac):
+        for _ in range(data.plot_fac):
             self.y *= scale
 
         sqr = shplot.backend.get_latex_for_string('^2')
@@ -382,7 +382,7 @@ class ComponentModelPlot(shplot.ComponentSourcePlot, ModelHistogram):
 
     def prepare(self, data, model, stat=None):
         ModelHistogram.prepare(self, data, model, stat)
-        self.title = 'Model component: %s' % model.name
+        self.title = f'Model component: {model.name}'
 
     def _merge_settings(self, kwargs):
         return {**self.histo_prefs, **kwargs}
@@ -404,7 +404,7 @@ class ComponentSourcePlot(shplot.ComponentSourcePlot, SourcePlot):
 
     def prepare(self, data, model, stat=None):
         SourcePlot.prepare(self, data, model)
-        self.title = 'Source model component: %s' % model.name
+        self.title = f'Source model component: {model.name}'
 
     def _merge_settings(self, kwargs):
         return {**self.histo_prefs, **kwargs}
@@ -638,7 +638,7 @@ class BkgResidPlot(shplot.ResidPlot):
 
     def prepare(self, data, model, stat):
         super().prepare(data, model, stat)
-        self.title = 'Residuals of %s - Bkg Model' % data.name
+        self.title = f'Residuals of {data.name} - Bkg Model'
 
 
 class BkgRatioPlot(shplot.RatioPlot):
@@ -646,7 +646,7 @@ class BkgRatioPlot(shplot.RatioPlot):
 
     def prepare(self, data, model, stat):
         super().prepare(data, model, stat)
-        self.title = 'Ratio of %s : Bkg Model' % data.name
+        self.title = f'Ratio of {data.name} : Bkg Model'
 
 
 class BkgChisqrPlot(shplot.ChisqrPlot):
@@ -738,7 +738,7 @@ class OrderPlot(ModelHistogram):
                 for interval in old_filter:
                     data.notice(*interval)
 
-        self.title = 'Model Orders %s' % str(self.orders)
+        self.title = f'Model Orders {self.orders}'
 
         if len(self.xlo) != len(self.y):
             raise PlotErr("orderarrfail")
