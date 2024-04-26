@@ -117,8 +117,7 @@ jobs:
       env:
         XSPECVER: ${{ matrix.xspec-version }}
       run: |
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         if [ "$RUNNER_OS" != "macOS" ]; then
           source .github/scripts/setup_ds9.sh
         fi
@@ -129,8 +128,7 @@ jobs:
       env:
         PYTHON_LDFLAGS: " "
       run: |
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         pip install . --verbose
 
     - name: Build Sherpa (develop)
@@ -138,15 +136,13 @@ jobs:
       env:
         PYTHON_LDFLAGS: " "
       run: |
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         pip install -e . --verbose
 
     - name: Install the test data?
       if: matrix.test-data == 'package'
       run: |
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         pip install ./sherpa-test-data
         pip install pytest-xvfb
 
@@ -173,8 +169,7 @@ jobs:
         fi
 
         echo "** smoke test: ${smokevars}"
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         cd /home
         sherpa_smoke ${smokevars}
 
@@ -201,16 +196,14 @@ jobs:
           # make sure pytext-xvfb can find Xvfb
           export PATH="${PATH}:/opt/X11/bin"
         fi
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         conda install -yq pytest-cov
         python setup.py -q test -a "--cov sherpa --cov-report xml:${{ github.workspace }}/coverage.xml"
 
     - name: sherpa_test Tests
       if: matrix.test-data == 'package' || matrix.test-data == 'none'
       run: |
-        source ${CONDA}/etc/profile.d/conda.sh
-        conda activate build
+        source .github/scripts/activate_conda.sh
         conda install -yq pytest-cov
         cd $HOME
         sherpa_test --cov sherpa --cov-report xml:${{ github.workspace }}/coverage.xml
