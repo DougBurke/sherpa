@@ -123,7 +123,6 @@ from sherpa.utils.types import ArrayType, OptReturn, StatFunc
 
 from .optfcts import grid_search, lmdif, montecarlo, neldermead
 
-
 warning = logging.getLogger(__name__).warning
 
 
@@ -310,7 +309,7 @@ class OptMethod(NoNewAttributesAfterInit):
         cb = Callback(statfunc, statargs, statkwargs)
 
         output = self._optfunc(cb, pars, parmins, parmaxes, **self.config)
-        (success, pars, fval, msg, imsg) = output
+        (success, x, fval, msg, imsg) = output
         if not success:
             warning('fit failed: %s', msg)
 
@@ -318,7 +317,7 @@ class OptMethod(NoNewAttributesAfterInit):
         # there's only one, it might be returned as a bare float. This
         # should be reviewed to check if it still happens).
         #
-        npars = np.asarray(pars).ravel()
+        npars = np.asarray(x).ravel()
         return (success, npars, fval, msg, imsg)
 
 
@@ -360,7 +359,7 @@ class GridSearch(OptMethod):
 
     """
 
-    def __init__(self, name='gridsearch') -> None:
+    def __init__(self, name: str = 'gridsearch') -> None:
         super().__init__(name=name, optfunc=grid_search)
 
 
@@ -614,7 +613,7 @@ class LevMar(OptMethod):
            Springer-Verlag: Berlin, 1978, pp.105-116.
 
         """
-    def __init__(self, name='levmar') -> None:
+    def __init__(self, name: str = 'levmar') -> None:
         super().__init__(name=name, optfunc=lmdif)
 
 
@@ -679,7 +678,7 @@ class MonCar(OptMethod):
 
     """
 
-    def __init__(self, name='moncar') -> None:
+    def __init__(self, name: str = 'moncar') -> None:
         super().__init__(name=name, optfunc=montecarlo)
 
 
@@ -883,7 +882,7 @@ class NelderMead(OptMethod):
            http://citeseer.ist.psu.edu/155516.html
 
     """
-    def __init__(self, name='simplex') -> None:
+    def __init__(self, name: str = 'simplex') -> None:
         super().__init__(name=name, optfunc=neldermead)
 
 
