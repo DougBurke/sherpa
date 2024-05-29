@@ -108,14 +108,18 @@ const1d
 
 """
 
+from typing import Any, Optional
+
 import logging
 
 import numpy as np
 
 from sherpa.utils import NoNewAttributesAfterInit, \
     get_keyword_names, get_keyword_defaults, print_fields
-from sherpa.optmethods.optfcts import grid_search, lmdif, montecarlo, \
-    neldermead
+from sherpa.utils.types import ArrayType, OptResults, OptFunc, StatFunc
+
+from .optfcts import grid_search, lmdif, montecarlo, neldermead
+
 
 warning = logging.getLogger(__name__).warning
 
@@ -137,7 +141,10 @@ class OptMethod(NoNewAttributesAfterInit):
        by keyword arguments matching the configuration data.
     """
 
-    def __init__(self, name, optfunc):
+    def __init__(self,
+                 name: str,
+                 optfunc: OptFunc
+                 ) -> None:
         self.name = name
         self._optfunc = optfunc
         self.config = self.default_config
@@ -154,7 +161,7 @@ class OptMethod(NoNewAttributesAfterInit):
         else:
             NoNewAttributesAfterInit.__setattr__(self, name, val)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{type(self).__name__} optimization method instance '{self.name}'>"
 
     # Need to support users who have pickled sessions < CIAO 4.2
@@ -174,7 +181,7 @@ class OptMethod(NoNewAttributesAfterInit):
 
         self.__dict__.update(state)
 
-    def __str__(self):
+    def __str__(self) -> str:
         names = ['name']
         names.extend(get_keyword_names(self._optfunc))
         # names.remove('full_output')
@@ -186,14 +193,20 @@ class OptMethod(NoNewAttributesAfterInit):
         add_name_config.update(self.config)
         return print_fields(names, add_name_config)
 
-    def _get_default_config(self):
+    def _get_default_config(self) -> dict[str, Any]:
         args = get_keyword_defaults(self._optfunc)
         return args
     default_config = property(_get_default_config,
                               doc='The default settings for the optimiser.')
 
-    def fit(self, statfunc, pars, parmins, parmaxes, statargs=(),
-            statkwargs=None):
+    def fit(self,
+            statfunc: StatFunc,
+            pars: ArrayType,
+            parmins: ArrayType,
+            parmaxes: ArrayType,
+            statargs=(),
+            statkwargs: Optional[dict[str, Any]] = None
+            ) -> OptResults:
         """Run the optimiser.
 
         .. versionchanged:: 4.16.0

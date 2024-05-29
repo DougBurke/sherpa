@@ -26,7 +26,7 @@ in Python matures.
 
 """
 
-from typing import Callable, Sequence, Union
+from typing import Any, Callable, Protocol, Sequence, Union
 
 import numpy as np
 
@@ -41,9 +41,11 @@ import numpy as np
 #
 ArrayType = Union[Sequence[float], np.ndarray]
 
-# Represent statistic evaluation, per-bin.
+# Represent statistic evaluation.
 #
 StatErrFunc = Callable[..., ArrayType]
+StatResults = tuple[float, np.ndarray]
+StatFunc = Callable[..., StatResults]
 
 # Represent model evaluation. Using a Protocol may be better, but
 # for now keep with a Callable. Ideally the model would just
@@ -53,3 +55,32 @@ StatErrFunc = Callable[..., ArrayType]
 # - models could return a sequence rather than a ndarray
 #
 ModelFunc = Callable[..., ArrayType]
+
+# The return value of an optimization routine. It would be better
+# to have this typed, but leave as is for now.
+#
+OptResults = tuple[bool,           # success flag
+                   np.ndarray,     # best-fit parameter values
+                   float,          # statistic vaule
+                   str,            # status message
+                   dict[str, Any]  # return extra information
+                   ]
+
+# Use a Protocol rather than a Callable since each optimizer
+# can have their own keyword values.
+#
+class OptFunc(Protocol):
+    """Represent the optimization function.
+
+    This only lists the required arguments. The optimization-specific
+    keyword arguments are not included here.
+
+    """
+
+    def __call__(self,
+                 fcn: StatFunc,
+                 x0: ArrayType,
+                 xmin: ArrayType,
+                 xmax: ArrayType
+                 ) -> OptResults:
+        ...
