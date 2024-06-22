@@ -238,19 +238,18 @@ class OptMethod(NoNewAttributesAfterInit):
             return statfunc(pars, *statargs, **statkwargs)
 
         output = self._optfunc(cb, pars, parmins, parmaxes, **self.config)
-
-        success = output[0]
-        msg = output[3]
+        (success, newpars, statval, msg, imap) = output
         if not success:
             warning('fit failed: %s', msg)
 
         # Ensure that the best-fit parameters are in an array.  (If there's
         # only one, it might be returned as a bare float.)
-        output = list(output)
-        output[1] = np.asarray(output[1]).ravel()
-        output = tuple(output)
-
-        return output
+        #
+        # Is this still possible, or can we assume we always get an
+        # iterable ndarray?
+        #
+        newpars2 = np.asarray(newpars).ravel()
+        return (success, newpars2, statval, msg, imap)
 
 
 # ## DOC-TODO: better description of the sequence argument; what happens
