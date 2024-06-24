@@ -68,7 +68,8 @@ Best-fit value: 4.0
 
 """
 
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, Optional
 
 import numpy as np
 
@@ -234,6 +235,50 @@ def _set_limits(x, xmin, xmax):
     return 0
 
 
+def _optval(x: np.ndarray,
+            fval: float,
+            ierr: int,
+            nfev: int,
+            maxfev: int,
+            msgdict: Optional[Mapping[int, tuple[bool, str]]] = None
+            ) -> OptResults:
+    """Create the standard return value for an optimizer.
+
+    Parameters
+    ----------
+    x : array
+       The best-fit values
+    fval : float
+       The statistic for the best-fit vaules
+    ierr : int
+       Status flag: 0 means success, otherwise see msgdict
+    nfec : int
+       The number of function evaluations
+    maxfev : int
+       The maximum number of function evaluations (only used when
+       msgdict is None).
+    msgdict : dict or None, Optional
+       If set, then the keys are the ierr value and the return value
+       is (bool, str), giving the success flag and a message. When
+       left at None _get_saofit_msg is sent (maxfev, ierr) to
+       calculate these values.
+
+    Notes
+    -----
+    This could migrate to some form of a structured type, but leave as
+    is for now.
+
+    """
+
+    if msgdict is None:
+        status, msg = _get_saofit_msg(maxfev, ierr)
+    else:
+        missing = (False, f"unknown status flag ({ierr})")
+        status, msg = msgdict.get(ierr, missing)
+
+    return (status, x, fval, msg, {'info': ierr, 'nfev': nfev})
+
+
 def _modify_nfev(result: OptResults,
                  nfev: int
                  ) -> OptResults:
@@ -280,8 +325,7 @@ def difevo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     if verbose:
         print(f'difevo: f{x}={fval:e} in {nfev} nfev')
 
-    status, msg = _get_saofit_msg(maxfev, ierr)
-    return (status, x, fval, msg, {'info': ierr, 'nfev': nfev})
+    return _optval(x, fval, ierr, nfev, maxfev)
 
 
 def difevo_lm(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
@@ -311,8 +355,7 @@ def difevo_lm(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     nfev = de[2]
     ierr = de[3]
 
-    status, msg = _get_saofit_msg(maxfev, ierr)
-    return (status, x, fval, msg, {'info': ierr, 'nfev': nfev})
+    return _optval(x, fval, ierr, nfev, maxfev)
 
 
 def difevo_nm(fcn, x0, xmin, xmax, ftol, maxfev, verbose, seed,
@@ -347,8 +390,7 @@ def difevo_nm(fcn, x0, xmin, xmax, ftol, maxfev, verbose, seed,
     if verbose:
         print('difevo_nm: f{x}={fval:e} in {nfev} nfev')
 
-    status, msg = _get_saofit_msg(maxfev, ierr)
-    return (status, x, fval, msg, {'info': ierr, 'nfev': nfev})
+    return _optval(x, fval, ierr, nfev, maxfev)
 
 
 def grid_search(fcn, x0, xmin, xmax, num=16, sequence=None, numcores=1,
@@ -466,9 +508,7 @@ def grid_search(fcn, x0, xmin, xmax, num=16, sequence=None, numcores=1,
                               gtol=ftol, maxfev=maxfev, verbose=verbose)
         return _modify_nfev(levmar_result, nfev)
 
-    ierr = 0
-    status, msg = _get_saofit_msg(ierr, ierr)
-    return (status, x, fval, msg, {'info': ierr, 'nfev': nfev})
+    return _optval(x, fval, 0, nfev, 0)
 
 
 #
@@ -512,9 +552,8 @@ def minim(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, step=None,
         3: (False, 'number of parameters is less than 1'),
         4: (False, f'nloop={nloop} is less than 1')
         }
-    status, msg = key.get(ifault, (False, f'unknown status flag ({ifault})'))
 
-    return (status, x, fval, msg, {'info': ifault, 'nfev': neval})
+    return _optval(x, fval, ifault, neval, maxfev=0, msgdict=key)
 
 
 #
@@ -748,8 +787,8 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     ierr = 0
     if nfev >= maxfev:
         ierr = 3
-    status, msg = _get_saofit_msg(maxfev, ierr)
-    return (status, x, fval, msg, {'info': status, 'nfev': nfev})
+
+    return _optval(x, fval, ierr, nfev, maxfev)
 
 
 #
@@ -1082,6 +1121,7 @@ def neldermead(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None,
 
     if nfev >= maxfev:
         ier = 3
+
     key = {
         0: (True, 'Optimization terminated successfully'),
         1: (False, 'improper input parameters'),
@@ -1089,15 +1129,14 @@ def neldermead(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None,
         3: (False,
             f'number of function evaluations has exceeded {maxfev}')
         }
-    status, msg = key.get(ier,
-                          (False, f'unknown status flag ({ier})'))
 
-    imap = {'info': status, 'nfev': nfev}
+    rv = _optval(x, fval, ier, nfev, maxfev, msgdict=key)
+
     print_covar_err = False
     if print_covar_err and covarerr is not None:
-        imap['covarerr'] = covarerr
+        rv[4]['covarerr'] = covarerr
 
-    return (status, x, fval, msg, imap)
+    return rv
 
 
 def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
@@ -1262,11 +1301,11 @@ def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
         info = 0
     else:
         info = 3
-    status, msg = _get_saofit_msg(maxfev, info)
 
-    imap = {'info': info, 'nfev': nfev,
-            'num_parallel_map': fcn_parallel_counter.nfev}
+    rv = _optval(x, fval, info, nfev, maxfev)
+    imap = rv[4]
+    imap['num_parallel_map'] = fcn_parallel_counter.nfev
     if info == 0:
         imap['covar'] = covar
 
-    return (status, x, fval, msg, imap)
+    return rv
