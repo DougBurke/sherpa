@@ -495,18 +495,21 @@ def grid_search(fcn, x0, xmin, xmax, num=16, sequence=None, numcores=1,
     x = answer[1:]
     nfev = len(sequence_results) + 1
 
-    # TODO: should we just use case-insensitive comparison?
-    if method in ['NelderMead', 'neldermead', 'Neldermead', 'nelderMead']:
-        # re.search( '^[Nn]elder[Mm]ead', method ):
-        nm_result = neldermead(fcn, x, xmin, xmax, ftol=ftol, maxfev=maxfev,
-                               verbose=verbose)
-        return _modify_nfev(nm_result, nfev)
+    # Do we special case the behaviour based on the method setting?
+    #
+    if method is not None:
 
-    if method in ['LevMar', 'levmar', 'Levmar', 'levMar']:
-        # re.search( '^[Ll]ev[Mm]ar', method ):
-        levmar_result = lmdif(fcn, x, xmin, xmax, ftol=ftol, xtol=ftol,
-                              gtol=ftol, maxfev=maxfev, verbose=verbose)
-        return _modify_nfev(levmar_result, nfev)
+        if method.lower() == "neldermead":
+            nm_result = neldermead(fcn, x, xmin, xmax, ftol=ftol, maxfev=maxfev,
+                                   verbose=verbose)
+            return _modify_nfev(nm_result, nfev)
+
+        if method.lower() == "levmar":
+            levmar_result = lmdif(fcn, x, xmin, xmax, ftol=ftol, xtol=ftol,
+                                  gtol=ftol, maxfev=maxfev, verbose=verbose)
+            return _modify_nfev(levmar_result, nfev)
+
+        # Should this at least warn that the setting is ignored?
 
     return _optval(x, fval, 0, nfev, 0)
 
