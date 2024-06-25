@@ -141,7 +141,7 @@ def _my_is_nan(x):
     return len(fubar) > 0
 
 
-def _narrow_limits(myrange, xxx):
+def _narrow_limits(myrange, x, xmin, xmax):
 
     def double_check_limits(myx, myxmin, myxmax):
         for my_l, my_x, my_h in zip(myxmin, myx, myxmax):
@@ -166,9 +166,6 @@ def _narrow_limits(myrange, xxx):
 
         return myxmax
 
-    x = xxx[0]
-    xmin = xxx[1]
-    xmax = xxx[2]
     myxmin = raise_min_limit(myrange, xmin, x)
     myxmax = lower_max_limit(myrange, x, xmax)
     double_check_limits(x, myxmin, myxmax)
@@ -605,12 +602,8 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     if maxfev is None:
         maxfev = 8192 * population_size
 
-    def myopt(myfcn, xxx, ftol, maxfev, seed, pop, xprob, weight,
-              factor=4.0):
+    def myopt(x, xmin, xmax, ftol, maxfev, factor=4.0):
 
-        x = xxx[0]
-        xmin = xxx[1]
-        xmax = xxx[2]
         maxfev_per_iter = 512 * x.size
 
         def random_start(xmin, xmax):
@@ -626,7 +619,7 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
         else:
             mystep = list(map(lambda fubar: 1.2 * fubar, x))
         if 1 == numcores:
-            result = neldermead(myfcn, x, xmin, xmax, maxfev=mymaxfev,
+            result = neldermead(fcn, x, xmin, xmax, maxfev=mymaxfev,
                                 ftol=ftol, finalsimplex=9, step=mystep)
             x = np.asarray(result[1], np.float64)
             nfval = result[2]
@@ -642,11 +635,12 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
         ############################# NelderMead #############################
 
         ############################## nmDifEvo #############################
-        xmin, xmax = _narrow_limits(4 * factor, [x, xmin, xmax])
+        xmin, xmax = _narrow_limits(4 * factor, x, xmin, xmax)
         mymaxfev = min(maxfev_per_iter, maxfev - nfev)
         if 1 == numcores:
-            result = difevo_nm(myfcn, x, xmin, xmax, ftol, mymaxfev, verbose,
-                               seed, pop, xprob, weight)
+            result = difevo_nm(fcn, x, xmin, xmax, ftol, mymaxfev,
+                               verbose, seed, population_size, xprob,
+                               weighting_factor)
             nfev += result[4].get('nfev')
             x = np.asarray(result[1], np.float64)
             nfval = result[2]
@@ -654,8 +648,9 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
             ncores_de = ncoresDifEvo()
             mystep = None
             tmp_nfev, tmp_fmin, tmp_par = \
-                ncores_de(stat_cb0, x, xmin, xmax, ftol, mymaxfev, mystep,
-                          numcores, pop, seed, weight, xprob, verbose)
+                ncores_de(stat_cb0, x, xmin, xmax, ftol, mymaxfev,
+                          mystep, numcores, population_size, seed,
+                          weighting_factor, xprob, verbose)
             nfev += tmp_nfev
             if tmp_fmin < nfval:
                 nfval = tmp_fmin
@@ -669,7 +664,7 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
         ofval = FUNC_MAX
         while nfev < maxfev:
 
-            xmin, xmax = _narrow_limits(factor, [x, xmin, xmax])
+            xmin, xmax = _narrow_limits(factor, x, xmin, xmax)
 
             ############################ nmDifEvo #############################
             y = random_start(xmin, xmax)
@@ -677,8 +672,9 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
 
             if numcores == 1:
                 # TODO: should this update the seed somehow?
-                result = difevo_nm(myfcn, y, xmin, xmax, ftol, mymaxfev,
-                                   verbose, seed, pop, xprob, weight)
+                result = difevo_nm(fcn, y, xmin, xmax, ftol, mymaxfev,
+                                   verbose, seed, population_size, xprob,
+                                   weighting_factor)
                 nfev += result[4].get('nfev')
                 if result[2] < nfval:
                     nfval = result[2]
@@ -696,9 +692,8 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
 
         return x, nfval, nfev
 
-    x, fval, nfev = myopt(fcn, [x, xmin, xmax], np.sqrt(ftol), maxfev,
-                          seed, population_size, xprob, weighting_factor,
-                          factor=2.0)
+    x, fval, nfev = myopt(x, xmin, xmax, ftol=np.sqrt(ftol),
+                          maxfev=maxfev, factor=2.0)
 
     if nfev < maxfev:
         if all(x == 0.0):
@@ -1002,28 +997,26 @@ def neldermead(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None,
     if maxfev is None:
         maxfev = 1024 * nx
 
-    def simplex(verbose, maxfev, init, final, tol, step, xmin, xmax, x,
-                myfcn, ofval=FUNC_MAX):
+    def simplex(maxfev, final, x, ofval=FUNC_MAX):
 
         tmpfinal = final[:]
         if len(final) >= 3:
             # get rid of the last entry in the list
             tmpfinal = final[0:-1]
 
-        xx, ff, nf, er = _saoopt.neldermead(verbose, maxfev, init, tmpfinal,
-                                            tol, step, xmin, xmax, x, myfcn)
+        xx, ff, nf, er = _saoopt.neldermead(verbose, maxfev, initsimplex,
+                                            tmpfinal, ftol, step, xmin,
+                                            xmax, x, stat_cb0)
 
         if len(final) >= 3 and ff < 0.995 * ofval and nf < maxfev:
             myfinal = [final[-1]]
-            x, fval, nfev, err = simplex(verbose, maxfev-nf, init,
-                                         myfinal, tol, step, xmin,
-                                         xmax, x, myfcn, ofval=ff)
+            x, fval, nfev, err = simplex(maxfev - nf, myfinal, x,
+                                         ofval=ff)
             return x, fval, nfev + nf, err
 
         return xx, ff, nf, er
 
-    x, fval, nfev, ier = simplex(verbose, maxfev, initsimplex, finalsimplex,
-                                 ftol, step, xmin, xmax, x, stat_cb0)
+    x, fval, nfev, ier = simplex(maxfev, finalsimplex, x)
 
     info = 1
     covarerr = None
