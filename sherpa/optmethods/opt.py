@@ -29,6 +29,9 @@ __all__ = ('Opt', 'MyNcores', 'SimplexRandom', 'SimplexNoStep',
            'SimplexStep')
 
 
+FUNC_MAX = np.finfo(np.float64).max
+
+
 # import autograd.numpy as np
 # from autograd import hessian
 # from numpy.linalg.linalg import LinAlgError
@@ -74,58 +77,36 @@ class Opt:
 
     .. versionchanged:: 4.17.0
        The class structure has been changed (e.g. `nfev` is now a
-       scalar and not a single-element list).
+       scalar and not a single-element list), and the xmin and xmax
+       fields are now required.
 
     """
 
-    # QUS: we support xmin or xmax being None, but do we ever use
-    # this capability?
-    #
     def __init__(self, func, xmin, xmax):
         self.npar = len(xmin)
         self.xmin = np.asarray(xmin)
         self.xmax = np.asarray(xmax)
         self.func_count = FuncCounter(func)
-        self.func = self.func_bounds(self.func_count, self.npar, xmin, xmax)
+        self.func = self.func_bounds(self.func_count)
 
     @property
     def nfev(self):
         return self.func_count.nfev
 
-    def _outside_limits(self, x, xmin, xmax):
-        return (np.any(x < xmin) or np.any(x > xmax))
+    def _outside_limits(self, x):
+        return (np.any(x < self.xmin) or np.any(x > self.xmax))
 
-    # We should be able to take these parameters from the class, or
-    # re-write this logic.
-    #
-    def func_bounds(self, func, npar, xmin=None, xmax=None):
-        """In order to keep the current number of function evaluations:
-        func_counter should be called before func_bounds. For example,
-        the following code
-          x0 = [-1.2, 1.0]
-          xmin = [-10.0, -10.0]
-          xmax = [10.0, 10.0]
-          nfev, rosen = func_counter(Rosenbrock)
-          rosenbrock = func_bounds(rosen, xmin, xmax)
-          print rosenbrock([-15.0, 1.0]), nfev[0]
-        should output:
-        inf 0"""
-        if xmin is not None and xmax is not None:
-            xmin = np.asarray(xmin)
-            xmax = np.asarray(xmax)
-        elif xmin is not None:
-            xmin = np.asarray(xmin)
-            xmax = np.asarray([np.inf for ii in xmin])
-        elif xmax is not None:
-            xmax = np.asarray(xmax)
-            xmin = np.asarray([- np.inf for ii in xmax])
-        else:
-            xmin = np.asarray([- np.inf for ii in range(npar)])
-            xmax = np.asarray([np.inf for ii in range(npar)])
+    def func_bounds(self, func):
+        """An infinite-well potential.
+
+        Ensure that the parameter values are bounded by the xmin,xmax
+        values by returning a very-large value if they fall outside.
+        """
 
         def func_bounds_wrapper(x, *args):
-            if self._outside_limits(x, xmin, xmax):
-                return np.finfo(np.float64).max
+            if self._outside_limits(x):
+                return FUNC_MAX
+
             return func(x, *args)
 
         return func_bounds_wrapper
