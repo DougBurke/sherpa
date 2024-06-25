@@ -283,12 +283,10 @@ def difevo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     x, xmin, xmax = _check_args(x0, xmin, xmax)
 
     # make sure that the cross over prob is within [0.1,1.0]
-    xprob = max(0.1, xprob)
-    xprob = min(xprob, 1.0)
+    xprob = np.clip(xprob, 0.1, 1.0)
 
     # make sure that weighting_factor is within [0.1,1.0]
-    weighting_factor = max(0.1, weighting_factor)
-    weighting_factor = min(weighting_factor, 1.0)
+    weighting_factor = np.clip(weighting_factor, 0.1, 1.0)
 
     if population_size is None:
         population_size = 16 * x.size
@@ -315,12 +313,10 @@ def difevo_lm(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     x, xmin, xmax = _check_args(x0, xmin, xmax)
 
     # make sure that the cross over prob is within [0.1,1.0]
-    xprob = max(0.1, xprob)
-    xprob = min(xprob, 1.0)
+    xprob = np.clip(xprob, 0.1, 1.0)
 
     # make sure that weighting_factor is within [0.1,1.0]
-    weighting_factor = max(0.1, weighting_factor)
-    weighting_factor = min(weighting_factor, 1.0)
+    weighting_factor = np.clip(weighting_factor, 0.1, 1.0)
 
     if population_size is None:
         population_size = 16 * x.size
@@ -347,15 +343,13 @@ def difevo_nm(fcn, x0, xmin, xmax, ftol, maxfev, verbose, seed,
     x, xmin, xmax = _check_args(x0, xmin, xmax)
 
     # make sure that the cross over prob is within [0.1,1.0]
-    xprob = max(0.1, xprob)
-    xprob = min(xprob, 1.0)
+    xprob = np.clip(xprob, 0.1, 1.0)
 
     # make sure that weighting_factor is within [0.1,1.0]
-    weighting_factor = max(0.1, weighting_factor)
-    weighting_factor = min(weighting_factor, 1.0)
+    weighting_factor = np.clip(weighting_factor, 0.1, 1.0)
 
     if population_size is None:
-        population_size = max(population_size, 16 * x.size)
+        population_size = 16 * x.size
 
     if maxfev is None:
         maxfev = 1024 * population_size
@@ -618,12 +612,10 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
     x, xmin, xmax = _check_args(x0, xmin, xmax)
 
     # make sure that the cross over prob is within [0.1,1.0]
-    xprob = max(0.1, xprob)
-    xprob = min(xprob, 1.0)
+    xprob = np.clip(xprob, 0.1, 1.0)
 
     # make sure that weighting_factor is within [0.1,1.0]
-    weighting_factor = max(0.1, weighting_factor)
-    weighting_factor = min(weighting_factor, 1.0)
+    weighting_factor = np.clip(weighting_factor, 0.1, 1.0)
 
     # Do we need to create a seed?
     #
