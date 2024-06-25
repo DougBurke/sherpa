@@ -136,35 +136,31 @@ def _move_within_limits(x, xmin, xmax):
         x[above] = xmax[above]
 
 
-def _my_is_nan(x):
-    fubar = list(filter(lambda xx: xx != xx or xx is np.nan or np.isnan(xx) and np.isfinite(xx), x))
-    return len(fubar) > 0
+def double_check_limits(myx, myxmin, myxmax):
+    for my_l, my_x, my_h in zip(myxmin, myx, myxmax):
+        if my_x < my_l:
+            print('x = ', my_x, ' is < lower limit = ', my_l)
+        if my_x > my_h:
+            print('x = ', my_x, ' is > upper limit = ', my_h)
+
+def raise_min_limit(xrange, xmin, x):
+    myxmin = x - xrange * np.abs(x)
+    below = np.flatnonzero(myxmin < xmin)
+    if below.size > 0:
+        myxmin[below] = xmin[below]
+
+    return myxmin
+
+def lower_max_limit(xrange, x, xmax):
+    myxmax = x + xrange * np.abs(x)
+    above = np.flatnonzero(myxmax > xmax)
+    if above.size > 0:
+        myxmax[above] = xmax[above]
+
+    return myxmax
 
 
 def _narrow_limits(myrange, x, xmin, xmax):
-
-    def double_check_limits(myx, myxmin, myxmax):
-        for my_l, my_x, my_h in zip(myxmin, myx, myxmax):
-            if my_x < my_l:
-                print('x = ', my_x, ' is < lower limit = ', my_l)
-            if my_x > my_h:
-                print('x = ', my_x, ' is > upper limit = ', my_h)
-
-    def raise_min_limit(xrange, xmin, x):
-        myxmin = np.asarray(list(map(lambda xx: xx - xrange * np.abs(xx), x)), np.float64)
-        below = np.flatnonzero(myxmin < xmin)
-        if below.size > 0:
-            myxmin[below] = xmin[below]
-
-        return myxmin
-
-    def lower_max_limit(xrange, x, xmax):
-        myxmax = np.asarray(list(map(lambda xx: xx + xrange * np.abs(xx), x)), np.float64)
-        above = np.flatnonzero(myxmax > xmax)
-        if above.size > 0:
-            myxmax[above] = xmax[above]
-
-        return myxmax
 
     myxmin = raise_min_limit(myrange, xmin, x)
     myxmax = lower_max_limit(myrange, x, xmax)
@@ -476,7 +472,7 @@ def minim(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, step=None,
         maxfev = 512 * len(x)
 
     def stat_cb0(x_new):
-        if _my_is_nan(x_new) or _outside_limits(x_new, xmin, xmax):
+        if np.isnan(x_new).any() or _outside_limits(x_new, xmin, xmax):
             return FUNC_MAX
         return fcn(x_new)[0]
 
@@ -615,9 +611,10 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
         ############################# NelderMead #############################
         mymaxfev = min(maxfev_per_iter, maxfev)
         if all(x == 0.0):
-            mystep = list(map(lambda fubar: 1.2 + fubar, x))
+            mystep = np.full(len(x), 1.2)
         else:
-            mystep = list(map(lambda fubar: 1.2 * fubar, x))
+            mystep = 1.2 * x
+
         if 1 == numcores:
             result = neldermead(fcn, x, xmin, xmax, maxfev=mymaxfev,
                                 ftol=ftol, finalsimplex=9, step=mystep)
@@ -697,9 +694,10 @@ def montecarlo(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, verbose=0,
 
     if nfev < maxfev:
         if all(x == 0.0):
-            mystep = list(map(lambda fubar: 1.2 + fubar, x))
+            mystep = np.full(len(x), 1.2)
         else:
-            mystep = list(map(lambda fubar: 1.2 * fubar, x))
+            mystep = 1.2 * x
+
         if 1 == numcores:
             result = neldermead(fcn, x, xmin, xmax,
                                 maxfev=min(512*len(x), maxfev - nfev),
@@ -950,7 +948,7 @@ def neldermead(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None,
     # A safeguard just in case the initial simplex is outside the bounds
     #
     def stat_cb0(x_new):
-        if _my_is_nan(x_new) or _outside_limits(x_new, xmin, xmax):
+        if np.isnan(x_new).any() or _outside_limits(x_new, xmin, xmax):
             return FUNC_MAX
         return fcn(x_new)[0]
 
