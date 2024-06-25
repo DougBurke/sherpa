@@ -215,26 +215,6 @@ def _outside_limits(x, xmin, xmax):
     return (np.any(x < xmin) or np.any(x > xmax))
 
 
-def _same_par(a, b):
-    b = np.array(b, np.float64)
-    same = np.flatnonzero(a < b)
-    if same.size == 0:
-        return 1
-    return 0
-
-
-def _set_limits(x, xmin, xmax):
-    below = np.nonzero(x < xmin)
-    if below.size > 0:
-        return 1
-
-    above = np.nonzero(x > xmax)
-    if above.size > 0:
-        return 1
-
-    return 0
-
-
 def _optval(x: np.ndarray,
             fval: float,
             ierr: int,
