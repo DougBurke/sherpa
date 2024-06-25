@@ -18,11 +18,14 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+from typing import Callable, Optional
+
 import numpy as np
 
 from sherpa.utils import Knuth_close, FuncCounter
 from sherpa.utils.parallel import multi, context, run_tasks
 from sherpa.utils.random import uniform
+from sherpa.utils.types import ArrayType
 
 
 __all__ = ('Opt', 'MyNcores', 'SimplexRandom', 'SimplexNoStep',
@@ -82,7 +85,11 @@ class Opt:
 
     """
 
-    def __init__(self, func, xmin, xmax):
+    def __init__(self,
+                 func: Callable[..., float],
+                 xmin: ArrayType,
+                 xmax: ArrayType
+                 ) -> None:
         self.npar = len(xmin)
         self.xmin = np.asarray(xmin)
         self.xmax = np.asarray(xmax)
@@ -90,13 +97,15 @@ class Opt:
         self.func = self.func_bounds(self.func_count)
 
     @property
-    def nfev(self):
+    def nfev(self) -> int:
         return self.func_count.nfev
 
-    def _outside_limits(self, x):
-        return (np.any(x < self.xmin) or np.any(x > self.xmax))
+    def _outside_limits(self, x: np.ndarray) -> bool:
+        return bool(np.any(x < self.xmin) or np.any(x > self.xmax))
 
-    def func_bounds(self, func):
+    def func_bounds(self,
+                    func: Callable[..., float]
+                    ) -> Callable[..., float]:
         """An infinite-well potential.
 
         Ensure that the parameter values are bounded by the xmin,xmax
