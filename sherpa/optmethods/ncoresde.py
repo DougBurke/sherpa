@@ -335,9 +335,7 @@ class MyDifEvo(Opt):
 
     def check_convergence(self, mypop, ftol, npar):
         fval_std = np.std([col[-1] for col in mypop])
-        if fval_std < ftol:
-            return True
-        return False
+        return fval_std < ftol
 
 
 class ncoresMyDifEvo(MyDifEvo):
