@@ -4641,7 +4641,7 @@ It is an integer or string.
 
         return create_expr_integrated(xlo[mask], xhi[mask], mask=mask, format=format, delim=delim)
 
-    def get_filter_expr(self):
+    def get_filter_expr(self) -> str:
         return (self.get_filter(format='%.4f', delim='-') +
                 ' ' + self.get_xlabel())
 
