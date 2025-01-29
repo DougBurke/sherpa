@@ -200,6 +200,13 @@ static PyObject* set_chatter( PyObject *self, PyObject *args )
 }
 
 
+// Ideally XSPEC would check this, but it doesn't appear to. This has
+// been added to make sure that get_xsabund(<element>) will not fail,
+// although we also have code there to catch that eventuality.
+//
+static bool abundances_can_be_set_to_file = false;
+
+
 // Based on xsFortran::FPSOLR
 //
 static PyObject* set_abund( PyObject *self, PyObject *args )
@@ -213,6 +220,12 @@ static PyObject* set_abund( PyObject *self, PyObject *args )
   tableName = XSutility::lowerCase(tableName);
 
   if (tableName == "file") {
+    if (!abundances_can_be_set_to_file) {
+      PyErr_SetString( PyExc_ValueError,
+		       (char*)"Abundances have not been read in from a file/vector" );
+      return NULL;
+    }
+
     FunctionUtility::ABUND(tableName);
     Py_RETURN_NONE;
   }
@@ -258,6 +271,9 @@ static PyObject* set_abund( PyObject *self, PyObject *args )
 
   FunctionUtility::ABUND("file");
   FunctionUtility::abundanceVectors("file", vals);
+
+  if (!abundances_can_be_set_to_file)
+    abundances_can_be_set_to_file = true;
 
   Py_RETURN_NONE;
 
@@ -310,6 +326,9 @@ static PyObject* set_abund_vector( PyObject *self, PyObject *args )
 			IosHolder::errHolder());
 
   FunctionUtility::abundanceVectors("file", vals);
+
+  if (!abundances_can_be_set_to_file)
+    abundances_can_be_set_to_file = true;
 
   Py_RETURN_NONE;
 }
