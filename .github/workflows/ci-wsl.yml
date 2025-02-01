@@ -33,7 +33,7 @@ jobs:
       shell: wsl-run {0} # add this to run the commands inside linux
       run: |
         apt update
-	apt upgrade -y
+        apt upgrade -y
         apt-get install -q -y git \
                               g++ \
                               gfortran \
