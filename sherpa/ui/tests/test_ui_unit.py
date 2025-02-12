@@ -1641,7 +1641,7 @@ def basic_linked_par_validation(mdl1, mdl2, f1, f2, c1, c2) -> None:
 
 
 
-@pytest.mark.parametrize("correlate", [pytest.param(False, marks=pytest.mark.xfail), True])  # See issue #2332
+@pytest.mark.parametrize("correlate", [False, True])
 def test_normal_sample_linked_par_chisq(correlate, clean_ui):
     """Does it work with a linked parameter?
 
@@ -1730,7 +1730,7 @@ def test_normal_sample_linked_par_chisq(correlate, clean_ui):
     assert check1 > f1.statval
 
 
-@pytest.mark.parametrize("correlate", [pytest.param(False, marks=pytest.mark.xfail), True])  # See issue #2332
+@pytest.mark.parametrize("correlate", [False, True])
 def test_normal_sample_linked_par_cash(correlate, clean_ui):
     """Does it work with a linked parameter?
 
