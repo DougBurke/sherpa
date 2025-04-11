@@ -4516,6 +4516,8 @@ def check_moncar(ncores, fr, g1, g2) -> None:
 
             nexp = None  # just checked, so skip below
 
+            import platform; assert False, (fr.nfev, platform.uname())  # DEBUG
+
         case 2:
             # Do the nexp values depend on OS/architecture?
             nexp = 7243
