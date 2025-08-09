@@ -632,10 +632,9 @@ def test_data_1d_to_fit(data):
 def test_data_1d_to_fit_no_data(data_class, args):
     """Regression test"""
     data = data_class("empty", *args)
-    dep, staterr, syserr = data.to_fit()
-    assert dep is None
-    assert staterr is None
-    assert syserr is None
+    with pytest.raises(DataErr,
+                       match="^The size of 'empty' has not been set$"):
+        _ = data.to_fit()
 
 
 @pytest.mark.parametrize("data", (Data1D, ), indirect=True)

@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2008, 2015 - 2017, 2019 - 2025
+#  Copyright (C) 2008, 2015-2017, 2019-2025
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -1552,10 +1552,27 @@ class Data(NoNewAttributesAfterInit, BaseData):
 
     def to_fit(self,
                staterrfunc: StatErrFunc | None = None
-               ) -> tuple[np.ndarray | None,
-                          ArrayType | None,  # should this be np.ndarray?
+               ) -> tuple[np.ndarray,
+                          np.ndarray | None,
                           np.ndarray | None]:
-        return (self.get_dep(True),
+        """Return the dependent, statistical, and systematic axes for fitting.
+
+        .. versionchanged:: 4.18.0
+           It is now an error to call this with dependent axes unset.
+
+        Return
+        ------
+        axes : tuple of ndarray
+           The dependent, statistical, and systematic error axes,
+           including any data filtering.
+
+        """
+
+        dep = self.get_dep(True)
+        if dep is None:
+            raise DataErr("sizenotset", self.name)
+
+        return (dep,
                 self.get_staterror(True, staterrfunc),
                 self.get_syserror(True))
 

@@ -3968,20 +3968,18 @@ def test_to_fit_when_empty_datapha():
     """This is a regression test."""
 
     data = DataPHA("empty", None, None)
-    dep, staterr, syserr = data.to_fit()
-    assert dep is None
-    assert staterr is None
-    assert syserr is None
+    with pytest.raises(DataErr,
+                       match="^The size of 'empty' has not been set$"):
+        _ = data.to_fit()
 
 
 def test_to_fit_when_empty_dataimg():
     """This is a regression test."""
 
     data = DataIMG("empty", None, None, None)
-    dep, staterr, syserr = data.to_fit()
-    assert dep is None
-    assert staterr is None
-    assert syserr is None
+    with pytest.raises(DataErr,
+                       match="^The size of 'empty' has not been set$"):
+        _ = data.to_fit()
 
 
 def make_pha_for_guess():

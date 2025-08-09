@@ -5193,15 +5193,6 @@ It is an integer or string.
             y /= arf  # photons/keV/cm^2/sec or photons/Ang/cm^2/sec
         return (y, elo, ehi)
 
-    def to_fit(self,
-               staterrfunc: StatErrFunc | None = None
-               ) -> tuple[np.ndarray | None,
-                          np.ndarray | None,
-                          np.ndarray | None]:
-        return (self.get_dep(True),
-                self.get_staterror(True, staterrfunc),
-                self.get_syserror(True))
-
     def to_plot(self,
                 yfunc: ModelFunc | None = None,
                 staterrfunc: StatErrFunc | None = None,
