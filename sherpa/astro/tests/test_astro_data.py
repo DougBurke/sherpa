@@ -3964,6 +3964,26 @@ def test_to_guess_when_all_ignored_dataimg():
         _ = data.to_guess()
 
 
+def test_to_fit_when_empty_datapha():
+    """This is a regression test."""
+
+    data = DataPHA("empty", None, None)
+    dep, staterr, syserr = data.to_fit()
+    assert dep is None
+    assert staterr is None
+    assert syserr is None
+
+
+def test_to_fit_when_empty_dataimg():
+    """This is a regression test."""
+
+    data = DataIMG("empty", None, None, None)
+    dep, staterr, syserr = data.to_fit()
+    assert dep is None
+    assert staterr is None
+    assert syserr is None
+
+
 def make_pha_for_guess():
 
     channels = [1, 2, 3, 4, 5]

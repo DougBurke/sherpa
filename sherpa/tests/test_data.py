@@ -628,6 +628,16 @@ def test_data_1d_to_fit(data):
     numpy.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.parametrize("data_class,args", EMPTY_DATA_OBJECTS)
+def test_data_1d_to_fit_no_data(data_class, args):
+    """Regression test"""
+    data = data_class("empty", *args)
+    dep, staterr, syserr = data.to_fit()
+    assert dep is None
+    assert staterr is None
+    assert syserr is None
+
+
 @pytest.mark.parametrize("data", (Data1D, ), indirect=True)
 def test_data_1d_to_plot(data):
     actual = data.to_plot()
