@@ -14027,7 +14027,10 @@ class Session(NoNewAttributesAfterInit):
             #
             getargs = []
             while largs:
-                if check(largs[0]):
+                # This can be an iterable of identifiers which would
+                # break the check call.
+                #
+                if not is_iterable_not_str(largs[0]) and check(largs[0]):
                     break
 
                 getargs.append(largs.pop(0))
@@ -14035,11 +14038,30 @@ class Session(NoNewAttributesAfterInit):
             funcname = f"get_{plottype}_{plotmeth}"
             getfunc = getattr(self, funcname)
 
-            # Need to make sure we have a copy of each plot
-            # object to support plots like
+            # Need to make sure we have a copy of each plot object to
+            # support plots like
+            #
             #    plot("data", 1, "data", 2)
             #
+            # However, it is complicated when supporting multiple
+            # identifiers such as
+            #
+            #    plot("data", [1, 2], "model", [1, 2])
+            #
+            # since the "get_xxx_plot" calls do not support multiple
+            # identifiers.
+            #
+
+            It was this
             plots.append(copy.deepcopy(getfunc(*getargs)))
+
+            How to work out the arguments for getfunc
+            plotobj = self._get_plot_objects(id??, getfunc,
+                                             recalc=True)
+            plots.append(copy.deepcopy(plotobj))
+
+
+
 
         nplots = len(plots)
 
