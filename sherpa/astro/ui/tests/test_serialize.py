@@ -161,7 +161,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha(1, "@@/3c273.pi")
+load_pha(1, '@@/3c273.pi')
 group(1)
 
 ######### Data Spectral Responses
@@ -304,7 +304,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha("grp", "@@/3c273.pi")
+load_pha('grp', '@@/3c273.pi')
 
 ######### Data grouping flags
 
@@ -424,7 +424,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha("bgrp", "@@/3c273.pi")
+load_pha('bgrp', '@@/3c273.pi')
 group("bgrp")
 
 ######### Data Spectral Responses
@@ -663,7 +663,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha("x", "@@/source1.pi")
+load_pha('x', '@@/source1.pi')
 
 ######### Set Energy or Wave Units
 
@@ -995,7 +995,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_image(1, "@@/img.fits")
+load_image(1, '@@/img.fits')
 
 ######### Set Image Coordinates
 
@@ -1029,7 +1029,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_image(1, "@@/img.fits")
+load_image(1, '@@/img.fits')
 
 ######### Set Image Coordinates
 
@@ -1151,7 +1151,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_image(1, "@@/img.fits")
+load_image(1, '@@/img.fits')
 
 ######### Set Image Coordinates
 
@@ -1820,7 +1820,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_data(1, "@@/data1.dat", ncols=3)
+load_data(1, '@@/data1.dat', ncols=3)
 
 
 ######### Set Statistic
@@ -1848,7 +1848,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_data(1, "@@/double.dat")
+load_data(1, '@@/double.dat')
 
 ######### Filter Data
 
@@ -1880,7 +1880,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha(1, "@@/3c120_meg_1.pha")
+load_pha(1, '@@/3c120_meg_1.pha')
 
 ######### Data Spectral Responses
 
@@ -1940,7 +1940,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha(1, "@@/3c120_pha2")
+load_pha(1, '@@/3c120_pha2')
 
 ######### Load Background Data Sets
 
@@ -2183,7 +2183,7 @@ from sherpa.astro.ui import *
 
 ######### Load Data Sets
 
-load_pha("csc", "@@/acisf01575_001N001_r0085_pha3.fits.gz")
+load_pha('csc', '@@/acisf01575_001N001_r0085_pha3.fits.gz')
 
 ######### Data grouping flags
 

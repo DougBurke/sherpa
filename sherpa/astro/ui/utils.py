@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 import logging
 import os
@@ -377,6 +378,14 @@ class Session(sherpa.ui.utils.Session):
         super().clean()
 
         self._pyblocxs = sherpa.astro.sim.MCMC()
+
+        # Store information from the load_xxx calls. The first key is
+        # the "type" of information: e.g. "data", "bkg", "arf", "rmf".
+        # These stores dictionaries keyed by identifier.
+        #
+        self._file_store : dict[str, dict[IdType, Any]] = {
+            "data": {}, "bkg": {}, "arf": {}, "rmf": {}, "psf": {}
+        }
 
     clean.__doc__ = sherpa.ui.utils.Session.clean.__doc__
     clean.__annotations__ = sherpa.ui.utils.Session.clean.__annotations__
@@ -1391,7 +1400,10 @@ class Session(sherpa.ui.utils.Session):
         >>> load_arrays('img', x, y, ivals, (3, 4), DataIMG)
 
         """
-        self.set_data(id, self.unpack_arrays(*args))
+        idval = self._fix_id(id)
+        self.set_data(idval, self.unpack_arrays(*args))
+        with suppress(KeyError):
+            self._file_store["data"][idval]
 
     # DOC-TODO: should unpack_ascii be merged into this?
     def unpack_table(self, filename, ncols=2, colkeys=None, dstype=Data1D):
@@ -1576,9 +1588,20 @@ class Session(sherpa.ui.utils.Session):
 
         """
         if filename is None:
-            id, filename = filename, id
+            idval = self.get_default_id()
+            filename = id
+        else:
+            idval = id
 
-        self.set_data(id, self.unpack_table(filename, ncols, colkeys, dstype))
+        self.set_data(idval, self.unpack_table(filename, ncols, colkeys, dstype))
+
+        kwargs = {"ncols": ncols,
+                  "colkeys": colkeys,
+                  "dstype": dstype}
+
+        self._file_store["data"][idval] = {"call": "load_table",
+                                           "args": [idval, filename],
+                                           "kwargs": kwargs}
 
     # DOC-TODO: should unpack_ascii be merged into unpack_table?
     # DOC-TODO: I am going to ignore the crates support here as
@@ -1770,11 +1793,40 @@ class Session(sherpa.ui.utils.Session):
 
         """
         if filename is None:
-            id, filename = filename, id
+            idval = self.get_default_id()
+            filename = id
+        else:
+            idval = id
 
-        self.set_data(id, self.unpack_ascii(filename, ncols=ncols,
-                                            colkeys=colkeys, dstype=dstype,
-                                            sep=sep, comment=comment))
+        data = self.unpack_ascii(filename, ncols=ncols,
+                                 colkeys=colkeys,
+                                 dstype=dstype, sep=sep,
+                                 comment=comment)
+        self.set_data(idval, data)
+
+        kwargs = {"ncols": ncols,
+                  "colkeys": colkeys,
+                  "dstype": dstype,
+                  "sep": sep,
+                  "comment": comment}
+        if ncols == 2:
+            del kwargs["ncols"]
+
+        if colkeys is None:
+            del kwargs["colkeys"]
+
+        if dstype == Data1D:
+            del kwargs["dstype"]
+
+        if sep == ' ':
+            del kwargs['sep']
+
+        if comment == '#':
+            del kwargs['comment']
+
+        self._file_store["data"][idval] = {"call": "load_ascii",
+                                           "args": [idval, filename],
+                                           "kwargs": kwargs}
 
     # DOC-NOTE: also in sherpa.utils
     def unpack_data(self, filename, *args, **kwargs):
@@ -1943,13 +1995,17 @@ class Session(sherpa.ui.utils.Session):
         """
 
         if filename is None:
-            id, filename = filename, id
-        self.set_data(id, self.unpack_ascii(filename, ncols=4,
-                                            colkeys=colkeys,
-                                            dstype=Data1DAsymmetricErrs,
-                                            sep=sep, comment=comment))
+            idval = self.get_default_id()
+            filename = id
+        else:
+            idval = id
 
-        data = self.get_data(id)
+        self.set_data(idval, self.unpack_ascii(filename, ncols=4,
+                                               colkeys=colkeys,
+                                               dstype=Data1DAsymmetricErrs,
+                                               sep=sep, comment=comment))
+
+        data = self.get_data(idval)
 
         if not delta:
             data.elo = data.y - data.elo
@@ -1962,9 +2018,37 @@ class Session(sherpa.ui.utils.Session):
 
         data.staterror = staterror
 
+        # Only set them if they are not equal to the default value.
+        #
+        kwargs = {"colkeys": colkeys,
+                  "sep": sep,
+                  "comment": comment,
+                  "func": func,
+                  "delta": delta}
+
+        if colkeys is None:
+            del kwargs["colkeys"]
+
+        if sep == ' ':
+            del kwargs['sep']
+
+        if comment == '#':
+            del kwargs['comment']
+
+        if func == np.average:
+            del kwargs['func']
+
+        if not delta:
+            del kwargs['delta']
+
+        self._file_store["data"][idval] = {"call": "load_ascii_with_errors",
+                                           "args": [idval, filename],
+                                           "kwargs": kwargs}
+
     def _load_data(self,
                    id: IdType | None,
-                   datasets: Data | Sequence[Data]
+                   datasets: Data | Sequence[Data],
+                   store: Mapping[str, Any]
                    ) -> None:
         """Load one or more datasets.
 
@@ -1982,11 +2066,14 @@ class Session(sherpa.ui.utils.Session):
         datasets : Data instance or iterable of Data instances
            The data to load, either as a single item or, for
            multiple-dataset files, an iterable of them.
+        infile : str
+           The name of the file from which the data was loaded.
 
         """
 
         if not np.iterable(datasets):
             self.set_data(id, datasets)
+            self._file_store["data"][id] = store
             return
 
         # One issue with the following is that if there's
@@ -2014,6 +2101,9 @@ class Session(sherpa.ui.utils.Session):
                  ids[0], ids[-1])
         else:
             info("One data set has been input: %s", ids[0])
+
+        # Must be a PHA2 file
+        self._file_store["data"][id] = {**store, "multiple": ids}
 
     # DOC-NOTE: also in sherpa.utils without the support for
     #           multiple datasets.
@@ -2086,11 +2176,57 @@ class Session(sherpa.ui.utils.Session):
         >>> load_data(2, 'profile.fits', colkeys=cols)
 
         """
+
         if filename is None:
-            id, filename = filename, id
+            idval = self.get_default_id()
+            filename = id
+        else:
+            idval = id
+
+        # There's no way to determine the default kwarg values here.
+        #
+        store = {"call": "load_data",
+                 "args": [idval, filename],
+                 "kwargs": kwargs}
+
+        store["args"].extend(args)
 
         datasets = self.unpack_data(filename, *args, **kwargs)
-        self._load_data(id, datasets)
+        self._load_data(idval, datasets, store=store)
+
+    # Copy over the docstring
+    def set_data(self, id, data=None) -> None:
+        idval = self._fix_id(id)
+        super().set_data(idval, data=data)
+        # Ensure no file name is associated with this identifier
+        with suppress(KeyError):
+            # TODO: should this delete the other keys with this id?
+            del self._file_store["data"][idval]
+
+    set_data.__doc__ = sherpa.ui.utils.Session.set_data.__doc__
+    set_data.__annotations__ = sherpa.ui.utils.Session.set_data.__annotations__
+
+    # Copy over the docstring
+    def delete_data(self, id: IdType | None = None) -> None:
+        idval = self._fix_id(id)
+        super().delete_data(id)
+        with suppress(KeyError):
+            # TODO: should this delete the other keys with this id?
+            del self._file_store["data"][idval]
+
+    delete_data.__doc__ = sherpa.ui.utils.Session.delete_data.__doc__
+    delete_data.__annotations__ = sherpa.ui.utils.Session.delete_data.__annotations__
+
+    # Copy over the docstring
+    def copy_data(self, fromid: IdType, toid: IdType) -> None:
+        super().copy_data(fromid, toid)
+        # If fromid has a valid entry in _file_store this could be
+        # copied over.
+        with suppress(KeyError):
+            del self._file_store[toid]
+
+    copy_data.__doc__ = sherpa.ui.utils.Session.copy_data.__doc__
+    copy_data.__annotations__ = sherpa.ui.utils.Session.copy_data.__annotations__
 
     def unpack_image(self, arg, coord='logical',
                      dstype=DataIMG):
@@ -2216,8 +2352,24 @@ class Session(sherpa.ui.utils.Session):
 
         """
         if arg is None:
-            id, arg = arg, id
-        self.set_data(id, self.unpack_image(arg, coord, dstype))
+            idval = self.get_default_id()
+            arg = id
+        else:
+            idval = id
+
+        self.set_data(idval, self.unpack_image(arg, coord, dstype))
+
+        kwargs = {"coord": coord,
+                  "dstype": dstype}
+        if coord == 'logical':
+            del kwargs["coord"]
+
+        if dstype == DataIMG:
+            del kwargs["dstype"]
+
+        self._file_store["data"][idval] = {"call": "load_image",
+                                           "args": [idval, arg],
+                                           "kwargs": kwargs}
 
     # DOC-TODO: what does this return when given a PHA2 file?
     def unpack_pha(self, arg, use_errors=False):
@@ -2479,10 +2631,21 @@ class Session(sherpa.ui.utils.Session):
 
         """
         if arg is None:
-            id, arg = arg, id
+            idval = self.get_default_id()
+            arg = id
+        else:
+            idval = id
 
         phasets = self.unpack_pha(arg, use_errors)
-        self._load_data(id, phasets)
+
+        kwargs = {}
+        if use_errors:
+            kwargs["use_errors"] = use_errors
+
+        store = {"call": "load_pha",
+                 "args": [idval, arg],
+                 "kwargs": kwargs}
+        self._load_data(idval, phasets, store=store)
 
     def _get_pha_data(self,
                       id: IdType | None,
@@ -8157,7 +8320,8 @@ class Session(sherpa.ui.utils.Session):
             self.ignore2d_id(idval, regions)
 
     # DOC-TODO: how best to include datastack support? How is it handled here?
-    def load_bkg(self, id, arg=None, use_errors=False,
+    def load_bkg(self, id, arg=None,
+                 use_errors: bool = False,
                  bkg_id: IdType | None = None
                  ) -> None:
         """Load the background from a file and add it to a PHA data set.
@@ -8223,15 +8387,39 @@ class Session(sherpa.ui.utils.Session):
 
         """
         if arg is None:
-            id, arg = arg, id
+            idval = self.get_default_id()
+            arg = id
+        else:
+            idval = id
 
+        # TODO: how to store this?
         bkgsets = self.unpack_bkg(arg, use_errors)
 
+        kwargs = {}
+        if use_errors:
+            kwargs["use_errors"] = use_errors
+
+        store = {"call": "load_bkg",
+                 "args": [idval, arg],
+                 "kwargs": kwargs}
+
         if np.iterable(bkgsets):
-            for bkgid, bkg in enumerate(bkgsets):
-                self.set_bkg(id, bkg, bkgid + 1)
+            bkg_ids = []
+            for bkgid, bkg in enumerate(bkgsets, 1):
+                self.set_bkg(idval, bkg, bkgid)
+                bkg_ids.append(bkgid)
+
+            store["bkg_ids"] = bkg_ids  # TODO: is this useful?
+
         else:
-            self.set_bkg(id, bkgsets, bkg_id)
+            # Only add bkg_id to the store if we use it.
+            #
+            if bkg_id is not None:
+                kwargs["bkg_id"] = bkg_id
+
+            self.set_bkg(idval, bkgsets, bkg_id)
+
+        self._file_store["bkg"][idval] = store
 
     def group(self,
               id: IdType | None = None,

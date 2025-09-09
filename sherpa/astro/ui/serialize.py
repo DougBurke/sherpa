@@ -25,6 +25,7 @@ intended for public use. The API and semantics of the
 routines in this module are subject to change.
 """
 
+from collections.abc import Sequence
 import inspect
 import logging
 import os
@@ -604,6 +605,22 @@ def _save_dataset_settings_2d(out: OutType,
     _output(out, f"set_coord({_id_to_str(id)}, '{data.coord}')")
 
 
+def _delete_datasets(out: OutType,
+                     state: SessionType,
+                     idvals: Sequence[IdType]) -> None:
+    """Delete one or more datasets.
+
+    These are assumed to be a PHA2 component that have been deleted,
+    since this should be the only way for there being identifiers with
+    no data.
+
+    """
+
+    _output_banner(out, "Detete unused data")
+    for idval in idvals:
+        _output(out, f"delete_data({id_to_str(idval)})")
+
+
 def _save_data(out: OutType, state: SessionType) -> None:
     """Save the data.
 
@@ -623,8 +640,8 @@ def _save_data(out: OutType, state: SessionType) -> None:
     to be serialized it is included in the script.
     """
 
-    ids = state.list_data_ids()
-    if len(ids) == 0:
+    data_ids = state.list_data_ids()
+    if len(data_ids) == 0:
         return
 
     # Try to only output a banner if the section contains a
@@ -632,26 +649,59 @@ def _save_data(out: OutType, state: SessionType) -> None:
     #
     _output_banner(out, "Load Data Sets")
 
-    cmd_id = ""
-    cmd_bkg_id = ""
+    # The _load_store contains identifiers for load_xxx commands, but
+    # they do not necessarily map to an element of ids (if a PHA2 file
+    # was loaded then the identifier in _load_store is not the actual
+    # identifier). If a dataset was created directly (i.e. via
+    # set_data) then the identifier will not be in _load_store.
+    #
+    # pha2_ids are identifiers that are created with the load of
+    # the PHA2 file, and so are not to be created directly.
+    #
+    load_ids = list(state._load_store.keys())
+    pha2_ids = []
+    for idval in load_ids:
+        try:
+            pha2_ids.extend(state._load_store[idval]["multiple"])
+        except KeyError:
+            pass
 
-    for id in ids:
-        # But if id is a string, then quote as a string
-        # But what about the rest of any possible load_data() options;
-        # how do we replicate the optional keywords that were possibly
-        # used?  Store them with data object?
-        cmd_id = _id_to_str(id)
-
-        data = state.get_data(id)
+    for idval in load_ids:
+        data = state.get_data(idval)
         if TYPE_CHECKING:
             # Assert an actual type rather than the base type of Data
             assert isinstance(data, (Data1D, Data2D))
 
-        _save_dataset(out, state, data, id)
-        _save_dataset_settings_pha(out, state, data, id)
-        _save_dataset_settings_2d(out, state, data, id)
+        _save_dataset_load(out, state, idval, data)
+        _save_dataset_settings_pha(out, state, data, idval)
+        _save_dataset_settings_2d(out, state, data, idval)
 
-        _handle_filter(out, state, data, id)
+        _handle_filter(out, state, data, idval)
+
+    for idval in data_ids:
+        if idval in load_ids or idval in pha2_ids:
+            continue
+
+        data = state.get_data(idval)
+        if TYPE_CHECKING:
+            # Assert an actual type rather than the base type of Data
+            assert isinstance(data, (Data1D, Data2D))
+
+        _save_dataset(out, state, data, idval)
+        _save_dataset_settings_pha(out, state, data, idval)
+        _save_dataset_settings_2d(out, state, data, idval)
+
+        _handle_filter(out, state, data, idval)
+
+    # Handle deletions of PHA2 file components.
+    #
+    delete_ids = []
+    for idval in pha2_ids:
+        if idval not in data_ids:
+            delete_ids.append(idval)
+
+    if delete_ids:
+        _delete_datasets(out, state, delete_ids)
 
 
 def _print_par(par: ParameterType) -> tuple[str, str]:
@@ -1156,8 +1206,53 @@ def _save_xspec(out: OutType) -> None:
     _save_entries(out, xspec_state["modelstrings"], tostatement)
 
 
-def _save_dataset_file(out: OutType, idstr: str, dset: Data) -> None:
-    """The data can be read in from a file."""
+def _save_dataset_load(out: OutType,
+                       state: SessionType,
+                       id: IdType,
+                       dset: Data) -> None:
+    """The data was created with a load_xxx call."""
+
+    # It is an error for this to fail.
+    #
+    store = state._load_store[id]
+    loadfunc = store["call"]
+
+    # Change the load function to something more appropriate.
+    #
+    if loadfunc == "load_data":
+        if isinstance(dset, DataPHA):
+            loadfunc = "load_pha"
+        elif isinstance(dset, DataIMG):
+            loadfunc = "load_image"
+
+    cmd = f"{loadfunc}("
+
+    argvals = []
+    try:
+        # How best to convert args to strings?
+        args = store["args"]
+        argvals.extend(repr(arg) for arg in args)
+    except KeyError:
+        pass
+
+    for key, val in store["kwargs"].items():
+        argvals.append(f"{key}={repr(val)}")
+
+    cmd += ", ".join(argvals)
+    cmd += ")"
+    _output(out, cmd)
+
+
+def _save_dataset_file(out: OutType,
+                       state: SessionType,
+                       id: IdType,
+                       dset: Data) -> None:
+    """The data can be read in from a file.
+
+    We do not have information on the load_xxx call that was
+    used to load the data.
+
+    """
 
     # TODO: this does not handle options like selecting the columns
     #       from a file, or the number of columns.
@@ -1178,6 +1273,7 @@ def _save_dataset_file(out: OutType, idstr: str, dset: Data) -> None:
             # and then staterror.
             ncols = len(dset.get_indep()) + 2
 
+    idstr = _id_to_str(id)
     cmd = f'load_{dtype}({idstr}, "{dset.name}"'
     if ncols is not None:
         cmd += f", ncols={ncols}"
@@ -1216,10 +1312,11 @@ def _output_add_wcs(out: OutType,
         _output(out, f"crota={wcs.crota}, epoch={wcs.epoch}, equinox={wcs.equinox})", indent=1)
 
 
-def _save_dataset_pha(out: OutType, idstr: str, pha: DataPHA) -> None:
+def _save_dataset_pha(out: OutType, id: IdType, pha: DataPHA) -> None:
     """Try to recreate the PHA"""
 
     spacer = "            "
+    idstr = _id_to_str(id)
     _output(out, f'load_arrays({idstr},')
     _output(out, f"{spacer}{pha.channel.tolist()},")
     _output(out, f"{spacer}{pha.counts.tolist()},")
@@ -1271,8 +1368,6 @@ def _save_dataset(out: OutType,
 
     """
 
-    idstr = _id_to_str(id)
-
     # If the name of the object is a file then we assume that the data
     # was read in from that location, otherwise we recreate the data
     # (i.e. do not read it in).  This will fail if the data was read
@@ -1316,7 +1411,7 @@ def _save_dataset(out: OutType,
             exists = os.path.isfile(f"{infile}.gz")
 
     if exists:
-        _save_dataset_file(out, idstr, data)
+        _save_dataset_file(out, state, id, data)
         return
 
     # We could use dataspace1d/2d but easiest to just use load_arrays.
@@ -1332,7 +1427,7 @@ def _save_dataset(out: OutType,
     # class is poorly tested, documented, or used.
     #
     if isinstance(data, DataPHA):
-        _save_dataset_pha(out, idstr, data)
+        _save_dataset_pha(out, id, data)
         return
 
     if isinstance(data, DataIMG):
@@ -1346,6 +1441,7 @@ def _save_dataset(out: OutType,
 
     spacer = "            "
 
+    idstr = _id_to_str(id)
     if isinstance(data, Data1DInt):
         _output(out, f'load_arrays({idstr},')
         _output(out, f"{spacer}{xs[0].tolist()},")
