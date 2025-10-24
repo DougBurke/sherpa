@@ -32,7 +32,8 @@ from typing import cast
 import numpy as np
 
 from sherpa.astro.data import DataPHA
-from sherpa.astro.instrument import PileupResponse1D
+from sherpa.astro.instrument import MultipleResponse1D, \
+    PileupResponse1D, Response1D
 from sherpa.astro.ui.utils import Session
 from sherpa.models.model import ArithmeticConstantModel, ArithmeticModel, \
     Model
@@ -81,15 +82,161 @@ def add_response(session: Session,
     #      (ie when fit_bkg is used). Or does that get generated
     #      by a different code path?
     pileup_model = session._pileup_models.get(idval)
+    bkg_srcs = get_bkg_srcs(session, idval)
+
+    return get_response_for_pha(data, model, bkg_srcs, pileup_model, idval)
+
+
+def get_bkg_srcs(session,
+                 idval: IdType
+                 ) -> dict[IdType, ArithmeticModel]:
+    """Return information on the background sources for the dataset."""
 
     # At present the background sources are labelled as Model and
     # not ArithmeticModel, which they arguably should be. So just
     # cast the value.
     #
-    bkg_srcs = cast(dict[IdType, ArithmeticModel],
-                    session._background_sources.get(idval, {})
-                    )
-    return get_response_for_pha(data, model, bkg_srcs, pileup_model, idval)
+    return cast(dict[IdType, ArithmeticModel],
+                session._background_sources.get(idval, {})
+                )
+
+
+# This implies that we always require a response, even if it is just
+# an ideal one.
+#
+def get_full_expr(idname: IdType,
+                  data: DataPHA,
+                  resp: PileupResponse1D | MultipleResponse1D | Response1D,
+                  model: ArithmeticModel,
+                  bkg_srcs: Mapping[IdType, ArithmeticModel]
+                  ) -> tuple[ArithmeticModel,
+                             list[tuple[ArithmeticConstantModel, ArithmeticModel]]
+                             ]:
+    """Return the full model expression.
+
+    This is to primarily evaluate any background contributions to the
+    model expression.
+
+    Parameters
+    ----------
+    idname
+       The identifier for warning or error messages.
+    data
+       The dataset (may be a background dataset).
+    resp
+       The response model.
+    model
+       The model (without response or background components)
+       to match to data.
+    bkg_srcs
+       Keys in the dictionary need to be the background ids in the dataset
+       ``data``, and the values are the corresponding source models.
+
+    Returns
+    -------
+    model, list of (con_i, model_i)
+       The full model is resp(model) + sum_i con_i * resp(model_i)
+
+    """
+
+    # At this point we have one or more background components that
+    # need to be added to the overall model.  If the scale factors are
+    # all scalars then we can return
+    #
+    #   model + sum (scale_i * bgnd_i), []        [1]
+    #
+    # but if any are arrays then we have to apply the scale factor
+    # after applying the response, that is
+    #
+    #   model, [(scale_i, bgnd_i)]   [2]
+    #
+    # This is because the scale values are in channel space, and not
+    # the instrument response (i.e. the values used inside the resp
+    # call).
+    #
+    # Note that if resp is not a linear response - for instance, it is
+    # a pileup model - then we will not get the correct answer if
+    # there's an array value for the scale factor (i.e. equation [2]
+    # above). A warning message is created in this case, but it is not
+    # treated as an error.
+    #
+    # For multiple background datasets we can have different models -
+    # that is, one for each dataset - but it is expected that the same
+    # model is used for all backgrounds (i.e. this is what we
+    # 'optimise' for).
+    #
+    # Identify the scalar and vector scale values for each background
+    # dataset, and combine using the model as a key.
+    #
+    scales_scalar = defaultdict(list)
+    scales_vector = defaultdict(list)
+    for bkg_id in data.background_ids:
+        try:
+            bmdl = bkg_srcs[bkg_id]
+        except KeyError:
+            raise ModelErr('nobkg', bkg_id, idname)
+
+        scale = data.get_background_scale(bkg_id, units='rate', group=False)
+
+        if np.isscalar(scale):
+            store = scales_scalar
+        else:
+            store = scales_vector
+
+        store[bmdl].append(scale)
+
+    # Combine the scalar terms, grouping by the model.
+    #
+    for mdl, scales in scales_scalar.items():
+        scale = sum(scales)
+        model += scale * mdl
+
+    # If there are no "arrays" for the scale factors then we can just
+    # return the response and the model.
+    #
+    if len(scales_vector) == 0:
+        return model, []
+
+    # Warn if a pileup model is being used. The error message here
+    # is terrible.
+    #
+    # Should this be a Python Warning rather than a logged message?
+    #
+    if isinstance(resp, PileupResponse1D):
+        wmsg = f"model results for dataset {idname} " + \
+                "likely wrong: use of pileup model and array scaling " + \
+                "for the background"
+
+        # warnings.warn(wmsg)
+        warning(wmsg)
+
+    # Combine the vector terms, grouping by the model. A trick here
+    # is that,to make the string version of the model be readable,
+    # we add a model to contain the scale values, using the
+    # ArithmeticConstantModel.
+    #
+    # Note that the model is given a name, to make it "easy" to
+    # read in the model expression, but this name is not registered
+    # anywhere. An alternative would be to use the default naming
+    # convention of the model, which will use 'float64[n]' as a label.
+    #
+    bmodels = []
+    nvectors = len(scales_vector)
+    for i, (mdl, scales) in enumerate(scales_vector.items(), 1):
+
+        # special case the single-value case
+        if nvectors == 1:
+            name = f'scale{idname}'
+        else:
+            name = f'scale{idname}_{i}'
+
+        # We sum up the scale arrays for this model.
+        #
+        scale = sum(scales)
+        tbl = ArithmeticConstantModel(scale, name=name)
+        bmodels.append((tbl, mdl))
+
+    return model, bmodels
 
 
 def get_response_for_pha(data: DataPHA,
@@ -133,110 +280,18 @@ def get_response_for_pha(data: DataPHA,
         background components.
 
     """
+
+    resp = data.get_full_response(pileup_model)
+    if data.subtracted or len(bkg_srcs) == 0:
+        return resp(model)
+
     if id is None:
         idname = data.name
     else:
         idname = str(id)
 
-    resp = data.get_full_response(pileup_model)
-    if data.subtracted or (len(bkg_srcs) == 0):
-        return resp(model)
+    base_model, bmodels = get_full_expr(idname, data, resp, model,
+                                        bkg_srcs)
 
-    # At this point we have background one or more background
-    # components that need to be added to the overall model.
-    # If the scale factors are all scalars then we can return
-    #
-    #   resp(model + sum (scale_i * bgnd_i))        [1]
-    #
-    # but if any are arrays then we have to apply the scale factor
-    # after applying the response, that is
-    #
-    #   resp(model) + sum(scale_i * resp(bgnd_i))   [2]
-    #
-    # This is because the scale values are in channel space,
-    # and not the instrument response (i.e. the values used inside
-    # the resp call).
-    #
-    # Note that if resp is not a linear response - for instance,
-    # it is a pileup model - then we will not get the correct
-    # answer if there's an array value for the scale factor
-    # (i.e. equation [2] above). A warning message is created in this
-    # case, but it is not treated as an error.
-    #
-    # For multiple background datasets we can have different models -
-    # that is, one for each dataset - but it is expected that the
-    # same model is used for all backgrounds (i.e. this is what
-    # we 'optimise' for).
-
-    # Identify the scalar and vector scale values for each
-    # background dataset, and combine using the model as a key.
-    #
-    scales_scalar = defaultdict(list)
-    scales_vector = defaultdict(list)
-    for bkg_id in data.background_ids:
-        try:
-            bmdl = bkg_srcs[bkg_id]
-        except KeyError:
-            raise ModelErr('nobkg', bkg_id, idname)
-
-        scale = data.get_background_scale(bkg_id, units='rate', group=False)
-
-        if np.isscalar(scale):
-            store = scales_scalar
-        else:
-            store = scales_vector
-
-        store[bmdl].append(scale)
-
-    # Combine the scalar terms, grouping by the model.
-    #
-    for mdl, scales in scales_scalar.items():
-        scale = sum(scales)
-        model += scale * mdl
-
-    # Apply the instrument response.
-    #
-    model = resp(model)
-
-    if len(scales_vector) == 0:
-        return model
-
-    # Warn if a pileup model is being used. The error message here
-    # is terrible.
-    #
-    # Should this be a Python Warning rather than a logged message?
-    #
-    if isinstance(resp, PileupResponse1D):
-        wmsg = f"model results for dataset {idname} " + \
-                "likely wrong: use of pileup model and array scaling " + \
-                "for the background"
-
-        # warnings.warn(wmsg)
-        warning(wmsg)
-
-    # Combine the vector terms, grouping by the model. A trick here
-    # is that,to make the string version of the model be readable,
-    # we add a model to contain the scale values, using the
-    # ArithmeticConstantModel.
-    #
-    # Note that the model is given a name, to make it "easy" to
-    # read in the model expression, but this name is not registered
-    # anywhere. An alternative would be to use the default naming
-    # convention of the model, which will use 'float64[n]' as a label.
-    #
-    nvectors = len(scales_vector)
-    for i, (mdl, scales) in enumerate(scales_vector.items(), 1):
-
-        # special case the single-value case
-        if nvectors == 1:
-            name = f'scale{idname}'
-        else:
-            name = f'scale{idname}_{i}'
-
-        # We sum up the scale arrays for this model.
-        #
-        scale = sum(scales)
-        tbl = ArithmeticConstantModel(scale, name=name)
-        model += tbl * resp(mdl)
-
-    return model
+    cpts = [resp(base_model)] + [scale * resp(bmdl) for scale, bmdl in bmodels]
+    return sum(cpts[1:], start=cpts[0])

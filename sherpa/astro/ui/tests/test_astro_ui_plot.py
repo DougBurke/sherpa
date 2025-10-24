@@ -5171,7 +5171,6 @@ def test_plot_model_components_pha_no_bgnd(idval, clean_astro_ui):
     assert p2.y == pytest.approx(y2)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("idval", [None, 2])
 def test_plot_model_components_pha_with_bgnd_scalar(idval, clean_astro_ui):
     """See issue #2400
@@ -5233,7 +5232,6 @@ def test_plot_model_components_pha_with_bgnd_scalar(idval, clean_astro_ui):
     assert p3.y == pytest.approx(y3)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("idval", [None, 2])
 def test_plot_model_components_pha_with_bgnd_vector(idval, clean_astro_ui):
     """See issue #2400
@@ -5267,19 +5265,21 @@ def test_plot_model_components_pha_with_bgnd_vector(idval, clean_astro_ui):
 
     mp = ui.get_model_components_plot(idval)
     assert mp.title == "Component plot"
-    assert len(mp.plots) == 2
+    assert len(mp.plots) == 3
 
     # Basic check the plots contain the expected data
     p1 = mp.plots[0]
     p2 = mp.plots[1]
+    p3 = mp.plots[2]
 
     if idval is None:
         cpt = "scale1"
     else:
         cpt = f"scale{idval}"
 
-    assert p1.title == "Model component: apply_rmf(apply_arf(1201.0 * (box1d.m1 + box1d.m2)))"
-    assert p2.title == f"Model component: {cpt} * apply_rmf(apply_arf(1201.0 * box1d.bm))"
+    assert p1.title == "Model component: apply_rmf(apply_arf(1201.0 * box1d.m1))"
+    assert p2.title == "Model component: apply_rmf(apply_arf(1201.0 * box1d.m2))"
+    assert p3.title == f"Model component: {cpt} * apply_rmf(apply_arf(1201.0 * box1d.bm))"
 
     for p in mp.plots:
         assert p.xlabel == "Channel"
@@ -5300,5 +5300,6 @@ def test_plot_model_components_pha_with_bgnd_vector(idval, clean_astro_ui):
     y2 = m2(elo, ehi) * norm
     y3 = bm(elo, ehi) * norm * src_backscal / bkg_backscal
 
-    assert p1.y == pytest.approx(y1 + y2)
-    assert p2.y == pytest.approx(y3)
+    assert p1.y == pytest.approx(y1)
+    assert p2.y == pytest.approx(y2)
+    assert p3.y == pytest.approx(y3)
