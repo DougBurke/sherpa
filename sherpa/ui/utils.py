@@ -44,17 +44,17 @@ import sherpa.all
 from sherpa import get_config
 
 import sherpa.data
-from sherpa.data import Data, DataSimulFit
+from sherpa.data import Data, DataSimulFit, Data1D, Data1DInt
 import sherpa.estmethods
 from sherpa.estmethods import EstMethod
 from sherpa.fit import Fit, FitResults
-import sherpa.instrument
+from sherpa.instrument import ConvolutionKernel, PSFKernel, PSFModel
 import sherpa.io
 import sherpa.image
 import sherpa.models
 from sherpa.models.basic import TableModel
 import sherpa.models.model
-from sherpa.models.model import Model, SimulFitModel
+from sherpa.models.model import ArithmeticModel, Model, SimulFitModel
 from sherpa.models.parameter import Parameter
 from sherpa.models.template import add_interpolator, create_template_model, \
     reset_interpolators
@@ -171,7 +171,7 @@ def _get_filter(data):
 
     Parameters
     ----------
-    data : sherpa.data.Data1D instance
+    data : Data1D instance
 
     Returns
     -------
@@ -1073,10 +1073,10 @@ class Session(NoNewAttributesAfterInit):
             'data': [sherpa.plot.DataPlot(), sherpa.plot.DataHistogramPlot()],
             'model': [sherpa.plot.ModelPlot(), sherpa.plot.ModelHistogramPlot()],
             'model_component': [sherpa.plot.ComponentModelPlot(), sherpa.plot.ComponentModelHistogramPlot()],
-            'model_components': [sherpa.plot.MultiPlot()],
+            'model_components': [MultiPlot()],
             'source': [sherpa.plot.SourcePlot(), sherpa.plot.SourceHistogramPlot()],
             'source_component': [sherpa.plot.ComponentSourcePlot(), sherpa.plot.ComponentSourceHistogramPlot()],
-            'source_components': [sherpa.plot.MultiPlot()],
+            'source_components': [MultiPlot()],
             'fit': [sherpa.plot.FitPlot()],
             'resid': [sherpa.plot.ResidPlot(), sherpa.plot.ResidHistogramPlot()],
             'ratio': [sherpa.plot.RatioPlot(), sherpa.plot.RatioHistogramPlot()],
@@ -4351,7 +4351,7 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     def dataspace1d(self, start, stop, step=1, numbins=None,
                     id: IdType | None = None,
-                    dstype=sherpa.data.Data1DInt
+                    dstype=Data1DInt
                     ) -> None:
         """Create the independent axis for a 1D data set.
 
@@ -4424,14 +4424,14 @@ class Session(NoNewAttributesAfterInit):
 
         """
         # support non-integrated grids with inclusive boundaries
-        if dstype in (sherpa.data.Data1D,):
+        if dstype in (Data1D,):
             stop += step
 
         xlo, xhi, y = sherpa.utils.dataspace1d(start, stop, step=step,
                                                numbins=numbins)
         args = [xlo, xhi, y]
 
-        if dstype is not sherpa.data.Data1DInt:
+        if dstype is not Data1DInt:
             args = [xlo, y]
 
         self.set_data(id, dstype('dataspace1d', *args))
@@ -4635,7 +4635,7 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.utils
 
     def unpack_data(self, filename, ncols=2, colkeys=None,
-                    dstype=sherpa.data.Data1D, sep=' ', comment='#',
+                    dstype=Data1D, sep=' ', comment='#',
                     require_floats=True):
         """Create a sherpa data object from an ASCII file.
 
@@ -4743,7 +4743,7 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.astro.utils
     def load_data(self, id, filename=None, ncols=2, colkeys=None,
-                  dstype=sherpa.data.Data1D, sep=' ', comment='#',
+                  dstype=Data1D, sep=' ', comment='#',
                   require_floats=True) -> None:
         """Load a data set from an ASCII file.
 
@@ -6222,7 +6222,7 @@ class Session(NoNewAttributesAfterInit):
         self._paramprompt = sherpa.utils.bool_cast(val)
 
     def _add_model_types(self, module,
-                         baselist=(sherpa.models.ArithmeticModel,)
+                         baselist=(ArithmeticModel,)
                          ) -> None:
         if not isinstance(baselist, tuple):
             baselist = (baselist,)
@@ -6250,7 +6250,7 @@ class Session(NoNewAttributesAfterInit):
         Parameters
         ----------
         modelclass
-           A class derived from `sherpa.models.model.ArithmeticModel`. This
+           A class derived from `ArithmeticModel`. This
            class defines the functional form and the parameters of the
            model.
         args
@@ -6294,7 +6294,7 @@ class Session(NoNewAttributesAfterInit):
         """
         name = modelclass.__name__.lower()
 
-        if not is_subclass(modelclass, sherpa.models.ArithmeticModel):
+        if not is_subclass(modelclass, ArithmeticModel):
             raise TypeError(f"model class '{name}' is not a derived class "
                             "from sherpa.models.ArithmeticModel")
 
@@ -7604,7 +7604,7 @@ class Session(NoNewAttributesAfterInit):
     #
 
     def _read_user_model(self, filename, ncols=2, colkeys=None,
-                         dstype=sherpa.data.Data1D, sep=' ', comment='#'):
+                         dstype=Data1D, sep=' ', comment='#'):
         x = None
         y = None
         try:
@@ -7624,7 +7624,7 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-TODO: I am not sure I have the data format correct.
     # DOC-TODO: description of template interpolation needs a lot of work.
-    def load_template_model(self, modelname, templatefile, dstype=sherpa.data.Data1D,
+    def load_template_model(self, modelname, templatefile, dstype=Data1D,
                             sep=' ', comment='#', method=sherpa.utils.linear_interp, template_interpolator_name='default'):
         """Load a set of templates and use it as a model component.
 
@@ -7763,7 +7763,7 @@ class Session(NoNewAttributesAfterInit):
         add_interpolator(name, interpolator_class, **kwargs)
 
     def load_table_model(self, modelname, filename, ncols=2, colkeys=None,
-                         dstype=sherpa.data.Data1D, sep=' ', comment='#',
+                         dstype=Data1D, sep=' ', comment='#',
                          method=sherpa.utils.linear_interp):
         """Load ASCII tabular data and use it as a model component.
 
@@ -7859,7 +7859,7 @@ class Session(NoNewAttributesAfterInit):
     # also in sherpa.astro.utils
     # DOC-TODO: how is the _y value used if set
     def load_user_model(self, func, modelname, filename=None, ncols=2,
-                        colkeys=None, dstype=sherpa.data.Data1D,
+                        colkeys=None, dstype=Data1D,
                         sep=' ', comment='#'):
         """Create a user-defined model.
 
@@ -8241,7 +8241,7 @@ class Session(NoNewAttributesAfterInit):
                 kernel = self.unpack_data(filename_or_model,
                                           *args, **kwargs)
 
-        conv = sherpa.instrument.ConvolutionKernel(kernel, modelname)
+        conv = ConvolutionKernel(kernel, modelname)
         self._add_model_component(conv)
 
     #
@@ -8305,7 +8305,7 @@ class Session(NoNewAttributesAfterInit):
                 kernel = self.unpack_data(filename_or_model,
                                           *args, **kwargs)
 
-        psf = sherpa.instrument.PSFModel(modelname, kernel)
+        psf = PSFModel(modelname, kernel)
         self._add_model_component(psf)
         self._psf_models.append(psf)
 
@@ -8325,7 +8325,7 @@ class Session(NoNewAttributesAfterInit):
         id : int or str, optional
            The data set. If not given then the
            default identifier is used, as returned by `get_default_id`.
-        psf : str or `sherpa.instrument.PSFModel` instance
+        psf : str or `PSFModel` instance
            The PSF model created by `load_psf`.
 
         See Also
@@ -8427,7 +8427,7 @@ class Session(NoNewAttributesAfterInit):
         if _is_str(psf):
             psf = self._eval_model_expression(psf)
 
-        self._set_item(id, psf, self._psf, sherpa.instrument.PSFModel, 'psf',
+        self._set_item(id, psf, self._psf, PSFModel, 'psf',
                        'a PSF model object or PSF model expression string')
 
         # fold the PSF with data and model if available, if not pass
@@ -8445,7 +8445,7 @@ class Session(NoNewAttributesAfterInit):
         # using the PSF center if the user has not already done so.
         # Note: PSFKernel only.
         if (psf.kernel is not None and callable(psf.kernel) and
-                psf.model is not None and isinstance(psf.model, sherpa.instrument.PSFKernel)):
+                psf.model is not None and isinstance(psf.model, PSFKernel)):
 
             psf_center = psf.center
             if np.isscalar(psf_center):
@@ -8471,7 +8471,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        psf : a `sherpa.instrument.PSFModel` instance
+        psf : a `PSFModel` instance
 
         Raises
         ------
@@ -12380,7 +12380,7 @@ class Session(NoNewAttributesAfterInit):
 
         # This uses the implicit conversion of bool to 0 or 1.
         #
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["data"][idx]
         if recalc:
             plotobj.prepare(data, self.get_stat())
@@ -12608,7 +12608,7 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(id)
 
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["model"][idx]
         if recalc:
             plotobj.prepare(data, self.get_model(id), self.get_stat())
@@ -12681,7 +12681,7 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(idval)
 
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["source"][idx]
         if recalc:
             plotobj.prepare(data, self.get_source(idval), self.get_stat())
@@ -12754,7 +12754,7 @@ class Session(NoNewAttributesAfterInit):
         else:
             data = self._get_data(id)
 
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["model_component"][idx]
         if recalc:
             plotobj.prepare(data, model, self.get_stat())
@@ -12877,7 +12877,7 @@ class Session(NoNewAttributesAfterInit):
         if isinstance(model, sherpa.models.TemplateModel):
             plotobj = self._comptmplsrcplot
         else:
-            idx = isinstance(data, sherpa.data.Data1DInt)
+            idx = isinstance(data, Data1DInt)
             plotobj = self._plot_types["source_component"][idx]
 
         if recalc:
@@ -13122,7 +13122,7 @@ class Session(NoNewAttributesAfterInit):
 
         # This uses the implicit conversion of bool to 0 or 1.
         #
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["resid"][idx]
         if recalc:
             plotobj.prepare(data, self.get_model(id), self.get_stat())
@@ -13199,7 +13199,7 @@ class Session(NoNewAttributesAfterInit):
 
         # This uses the implicit conversion of bool to 0 or 1.
         #
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["delchi"][idx]
         if recalc:
             plotobj.prepare(data, self.get_model(id), self.get_stat())
@@ -13276,7 +13276,7 @@ class Session(NoNewAttributesAfterInit):
 
         # This uses the implicit conversion of bool to 0 or 1.
         #
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["chisqr"][idx]
         if recalc:
             plotobj.prepare(data, self.get_model(id), self.get_stat())
@@ -13353,7 +13353,7 @@ class Session(NoNewAttributesAfterInit):
 
         # This uses the implicit conversion of bool to 0 or 1.
         #
-        idx = isinstance(data, sherpa.data.Data1DInt)
+        idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["ratio"][idx]
         if recalc:
             plotobj.prepare(data, self.get_model(id), self.get_stat())
