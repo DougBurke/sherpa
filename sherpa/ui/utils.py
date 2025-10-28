@@ -7019,7 +7019,10 @@ class Session(NoNewAttributesAfterInit):
         model, is_source = self._get_model_status(id)
         return self._add_convolution_models(id, data, model, is_source)
 
-    def _runparamprompt(self, pars):
+    def _runparamprompt(self,
+                        pars: Sequence[Parameter]
+                        ) -> None:
+        """Ask the user for the parameter values."""
 
         if not self._paramprompt:
             return
@@ -7960,9 +7963,14 @@ class Session(NoNewAttributesAfterInit):
                                                     dstype, sep, comment)
         self._add_model_component(usermodel)
 
-    def add_user_pars(self, modelname, parnames,
-                      parvals=None, parmins=None, parmaxs=None,
-                      parunits=None, parfrozen=None
+    def add_user_pars(self,
+                      modelname: str,
+                      parnames: Sequence[str],
+                      parvals: Sequence[float] | None = None,
+                      parmins: Sequence[float] | None = None,
+                      parmaxs: Sequence[float] | None = None,
+                      parunits: Sequence[str] | None = None,
+                      parfrozen: Sequence[bool] | None = None
                       ) -> None:
         """Add parameter information to a user model.
 
@@ -8051,16 +8059,16 @@ class Session(NoNewAttributesAfterInit):
             frozen = list(parfrozen)
 
         for name in parnames:
-            par = sherpa.models.Parameter(modelname, name, 0.0)
-            if parvals is not None:
+            par = Parameter(modelname, name, 0.0)
+            if vals is not None:
                 par.val = vals.pop(0)
-            if parmins is not None:
+            if mins is not None:
                 par.min = mins.pop(0)
-            if parmaxs is not None:
+            if maxs is not None:
                 par.max = maxs.pop(0)
-            if parunits is not None:
+            if units is not None:
                 par.units = units.pop(0)
-            if parfrozen is not None:
+            if frozen is not None:
                 par.frozen = frozen.pop(0)
             pars.append(par)
 
@@ -8150,7 +8158,7 @@ class Session(NoNewAttributesAfterInit):
             assert False
             # TODO: clean this up
             pars = [(key, priors.pop(key)) for key in priors.keys()
-                    if isinstance(priors[key], sherpa.models.Parameter)]
+                    if isinstance(priors[key], Parameter)]
             kwargs = dict(pars)
             userstat = sherpa.logposterior.Prior(calc_stat_func, priors, kwargs)
 
@@ -8570,7 +8578,7 @@ class Session(NoNewAttributesAfterInit):
             par = self._eval_model_expression(par, 'parameter')
         _check_type(par, Parameter, argname,
                     'a parameter object or parameter expression string')
-        return par
+        return cast(Parameter, par)
 
     def get_par(self, par: str | Parameter) -> Parameter:
         """Return a parameter of a model component.
@@ -8583,7 +8591,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        par : a `sherpa.models.parameter.Parameter` instance
+        par : a `Parameter` instance
            The parameter values - e.g. current value, limits, and
            whether it is frozen - can be changed using this
            object.
@@ -8677,7 +8685,9 @@ class Session(NoNewAttributesAfterInit):
         """
         self._check_par(par).set(val, min, max, frozen)
 
-    def freeze(self, *args) -> None:
+    def freeze(self,
+               *args: str | Parameter | Model
+               ) -> None:
         """Fix model parameters so they are not changed by a fit.
 
         The arguments can be parameters or models, in which case all
@@ -8725,17 +8735,22 @@ class Session(NoNewAttributesAfterInit):
         >>> freeze(gal.nh, src.abund)
 
         """
-        for par in list(args):
-            if _is_str(par):
-                par = self._eval_model_expression(par, 'parameter or model')
+        for arg in list(args):
+            if _is_str(arg):
+                obj = self._eval_model_expression(arg, 'parameter or model')
+            else:
+                obj = arg
 
+            obj = cast(Parameter | Model, obj)
             try:
-                par.freeze()
+                obj.freeze()
             except AttributeError as exc:
                 raise ArgumentTypeErr('badarg', 'par',
                                       'a parameter or model object or expression string') from exc
 
-    def thaw(self, *args) -> None:
+    def thaw(self,
+             *args: str | Parameter | Model
+             ) -> None:
         """Allow model parameters to be varied during a fit.
 
         The arguments can be parameters or models, in which case all
@@ -8788,12 +8803,15 @@ class Session(NoNewAttributesAfterInit):
         >>> thaw(gal.nh, src.abund)
 
         """
-        for par in list(args):
-            if _is_str(par):
-                par = self._eval_model_expression(par, 'parameter or model')
+        for arg in list(args):
+            if _is_str(arg):
+                obj = self._eval_model_expression(arg, 'parameter or model')
+            else:
+                obj = arg
 
+            obj = cast(Parameter | Model, obj)
             try:
-                par.thaw()
+                obj.thaw()
             except AttributeError as exc:
                 raise ArgumentTypeErr('badarg', 'par',
                                       'a parameter or model object or expression string') from exc
@@ -9410,7 +9428,12 @@ class Session(NoNewAttributesAfterInit):
 
         return self._fit_results
 
-    def guess(self, id=None, model=None, limits=True, values=True):
+    def guess(self,
+              id=None,
+              model=None,
+              limits: bool = True,
+              values: bool = True
+              ) -> None:
         """Estimate the parameter values and ranges given the loaded data.
 
         The guess function can change the parameter values and
@@ -11224,7 +11247,7 @@ class Session(NoNewAttributesAfterInit):
 
         Parameters
         ----------
-        args : sequence of sherpa.models.Parameter, sherpa.models.Model, int, or str
+        args : sequence of Parameter, Model, int, or str
             The dataset (when an integer or str) to evaluate, the
             model parameter to apply the error estimate on (must be
             thawed), or a model from which all the thawed parameters
@@ -11243,7 +11266,7 @@ class Session(NoNewAttributesAfterInit):
         parlist = []
         otherids = []
         for arg in args:
-            if isinstance(arg, sherpa.models.Parameter):
+            if isinstance(arg, Parameter):
                 if arg.frozen:
                     raise ParameterErr('frozen', arg.fullname)
 
@@ -11300,7 +11323,7 @@ class Session(NoNewAttributesAfterInit):
            The data set, or sets, that provides the data. If not given
            then all data sets with an associated model are used
            simultaneously.
-        parameter : sherpa.models.parameter.Parameter, optional
+        parameter : Parameter, optional
            The default is to calculate the confidence limits on all
            thawed parameters of the model, or models, for all the data
            sets. The evaluation can be restricted by listing the
@@ -11447,7 +11470,7 @@ class Session(NoNewAttributesAfterInit):
            The data set, or sets, that provides the data. If not given
            then all data sets with an associated model are used
            simultaneously.
-        parameter : sherpa.models.parameter.Parameter, optional
+        parameter : Parameter, optional
            The default is to calculate the confidence limits on all
            thawed parameters of the model, or models, for all the data
            sets. The evaluation can be restricted by listing the
@@ -11671,7 +11694,7 @@ class Session(NoNewAttributesAfterInit):
            The data set, or sets, that provides the data. If not given
            then all data sets with an associated model are used
            simultaneously.
-        parameter : sherpa.models.parameter.Parameter, optional
+        parameter : Parameter, optional
            The default is to calculate the confidence limits on all
            thawed parameters of the model, or models, for all the data
            sets. The evaluation can be restricted by listing the
@@ -11766,7 +11789,7 @@ class Session(NoNewAttributesAfterInit):
     #           to avoid copying the docs?
     ###########################################################################
 
-    def set_sampler_opt(self, opt, value):
+    def set_sampler_opt(self, opt: str, value: Any) -> None:
         """Set an option for the current MCMC sampler.
 
         Parameters
@@ -11825,7 +11848,7 @@ class Session(NoNewAttributesAfterInit):
         """
         self._pyblocxs.set_sampler_opt(opt, value)
 
-    def get_sampler_opt(self, opt):
+    def get_sampler_opt(self, opt: str) -> Any:
         """Return an option of the current MCMC sampler.
 
         Returns
@@ -11848,7 +11871,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._pyblocxs.get_sampler_opt(opt)
 
-    def get_sampler_name(self):
+    def get_sampler_name(self) -> str:
         """Return the name of the current MCMC sampler.
 
         Returns
@@ -11869,7 +11892,11 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._pyblocxs.get_sampler_name()
 
-    def set_sampler(self, sampler):
+    # Technically sampler can also be type[Sampler], but there are
+    # currently problems with this, so leave with sampler just
+    # accepting a string.
+    #
+    def set_sampler(self, sampler: str) -> None:
         """Set the MCMC sampler.
 
         The sampler determines the type of jumping rule to
@@ -11877,10 +11904,10 @@ class Session(NoNewAttributesAfterInit):
 
         Parameters
         ----------
-        sampler : str or `sherpa.sim.Sampler` instance
-           When a string, the name of the sampler to use (case
-           insensitive). The supported options are given by the
-           `list_samplers` function.
+        sampler : str
+           The name of the sampler to use (case insensitive). The
+           supported options are given by the `list_samplers`
+           function.
 
         See Also
         --------
@@ -11927,7 +11954,7 @@ class Session(NoNewAttributesAfterInit):
         """
         self._pyblocxs.set_sampler(sampler)
 
-    def get_sampler(self):
+    def get_sampler(self) -> dict[str, Any]:
         """Return the current MCMC sampler options.
 
         Returns the options for the current pyBLoCXS MCMC sampling
@@ -11956,7 +11983,10 @@ class Session(NoNewAttributesAfterInit):
         return self._pyblocxs.get_sampler()
 
     # DOC-TODO: should set_sampler_opt be mentioned here?
-    def set_prior(self, par, prior):
+    def set_prior(self,
+                  par: Parameter,
+                  prior: Callable
+                  ) -> None:
         """Set the prior function to use with a parameter.
 
         The default prior used by `get_draws` for each parameter
@@ -11969,7 +11999,7 @@ class Session(NoNewAttributesAfterInit):
 
         Parameters
         ----------
-        par : a `sherpa.models.parameter.Parameter` instance
+        par : a `Parameter` instance
            A parameter of a model instance.
         prior : function or sherpa.models.model.Model instance
            The function to use for a prior. It must accept a
@@ -12018,7 +12048,7 @@ class Session(NoNewAttributesAfterInit):
 
         self._pyblocxs.set_prior(par, prior)
 
-    def get_prior(self, par):
+    def get_prior(self, par: Parameter) -> Callable:
         """Return the prior function for a parameter (MCMC).
 
         The default behavior of the pyBLoCXS MCMC sampler (run by the
@@ -12028,7 +12058,7 @@ class Session(NoNewAttributesAfterInit):
 
         Parameters
         ----------
-        par : a `sherpa.models.parameter.Parameter` instance
+        par : a `Parameter` instance
            A parameter of a model instance.
 
         Returns
@@ -12055,7 +12085,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._pyblocxs.get_prior(par)
 
-    def list_priors(self):
+    def list_priors(self) -> dict[str, Callable]:
         """Return the priors set for model parameters, if any.
 
         Returns
@@ -12081,7 +12111,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._pyblocxs.list_priors()
 
-    def list_samplers(self):
+    def list_samplers(self) -> list[str]:
         """List the MCMC samplers.
 
         Returns
@@ -17378,7 +17408,10 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._intproj
         if recalc:
-            par = self._check_par(par)
+            # Using @overload to say that par can not be None adds a
+            # lot of text and still seems to need the cast, so for now
+            # stick with just the cast.
+            par = self._check_par(cast(str | Parameter, par))
             if otherids is None:
                 otherids = ()
             ids, fit = self._get_fit(id, otherids)
@@ -17498,7 +17531,7 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._intunc
         if recalc:
-            par = self._check_par(par)
+            par = self._check_par(cast(str | Parameter, par))
             if otherids is None:
                 otherids = ()
             ids, fit = self._get_fit(id, otherids)
@@ -17638,8 +17671,8 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._regproj
         if recalc:
-            par0 = self._check_par(par0, 'par0')
-            par1 = self._check_par(par1, 'par1')
+            par0 = self._check_par(cast(str | Parameter, par0), 'par0')
+            par1 = self._check_par(cast(str | Parameter, par1), 'par1')
             if otherids is None:
                 otherids = ()
             ids, fit = self._get_fit(id, otherids)
@@ -17779,8 +17812,8 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._regunc
         if recalc:
-            par0 = self._check_par(par0, 'par0')
-            par1 = self._check_par(par1, 'par1')
+            par0 = self._check_par(cast(str | Parameter, par0), 'par0')
+            par1 = self._check_par(cast(str | Parameter, par1), 'par1')
 
             if otherids is None:
                 otherids = ()
