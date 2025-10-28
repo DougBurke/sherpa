@@ -31,7 +31,7 @@ import logging
 import os
 import pickle
 import sys
-from typing import Any, Literal, TypeVar, overload
+from typing import Any, Literal, TypeGuard, TypeVar, cast, overload
 
 import numpy as np
 
@@ -107,6 +107,12 @@ T = TypeVar("T")
 
 
 def _check_type(arg, argtype, argname: str, argdesc: str) -> None:
+    """Validate that arg matches the expected type
+
+    At the moment the caller is expected to use cast(T, arg) to
+    reflect any type restriction.
+
+    """
     if isinstance(arg, argtype):
         return
 
@@ -114,20 +120,23 @@ def _check_type(arg, argtype, argname: str, argdesc: str) -> None:
 
 
 def _check_str_type(arg: str, argname: str) -> None:
-    """Ensure that arg (with name argname) is a string"""
+    """Ensure that arg (with name argname) is a string.
+
+    At the moment the caller is expected to use cast(T, arg) to
+    reflect any type restriction.
+
+    """
     if _is_str(arg):
         return
 
     raise ArgumentTypeErr('badarg', argname, "a string")
 
 
-# With Python 3.10 these can return TypeGuard annotations.
-#
-def _is_integer(val):
+def _is_integer(val: Any) -> bool:  # how best to use TypeGuard?
     return isinstance(val, (int, np.integer))
 
 
-def _is_str(val):
+def _is_str(val: Any) -> TypeGuard[str]:
     return isinstance(val, (str, ))
 
 
@@ -2087,7 +2096,7 @@ class Session(NoNewAttributesAfterInit):
     ###########################################################################
 
     @staticmethod
-    def _valid_id(id: Any) -> bool:  # TODO: mark as TypeGuard[IdType] instead
+    def _valid_id(id: Any) -> TypeGuard[IdType]:
         """Is the identifier valid for Sherpa?
 
         This does not treat None as a valid identifier.
@@ -2141,6 +2150,7 @@ class Session(NoNewAttributesAfterInit):
         if _is_integer(id):
             return id
 
+        id = cast(str, id)
         if self._check_plottype(id) or self._check_contourtype(id):
             raise IdentifierErr("badid", id)
 
@@ -2169,7 +2179,7 @@ class Session(NoNewAttributesAfterInit):
 
             return out
 
-        return [self._fix_id(idvals)]
+        return [self._fix_id(cast(IdType | None, idvals))]
 
     def _get_plottype(self, plottype: str) -> str:
         """Return the name to refer to a given plot type.
@@ -6676,6 +6686,8 @@ class Session(NoNewAttributesAfterInit):
         if isinstance(typename, Model) and name is None:
             return typename
 
+        typename = cast(str, typename)
+        name = cast(str, name)
         _check_str_type(typename, "typename")
         _check_str_type(name, "name")
 
@@ -14120,6 +14132,7 @@ class Session(NoNewAttributesAfterInit):
         largs = list(args)
         while largs:
             plottype = largs.pop(0)
+            plottype = cast(str, plottype)
             _check_str_type(plottype, "plottype")
             plottype = get(plottype.lower())
 
