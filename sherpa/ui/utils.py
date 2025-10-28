@@ -31,7 +31,8 @@ import logging
 import os
 import pickle
 import sys
-from typing import Any, Literal, TypeGuard, TypeVar, cast, overload
+from typing import Any, Concatenate, Literal, TypeGuard, TypeVar, \
+    cast, overload
 
 import numpy as np
 
@@ -56,8 +57,8 @@ from sherpa.models.basic import TableModel
 import sherpa.models.model
 from sherpa.models.model import ArithmeticModel, Model, SimulFitModel
 from sherpa.models.parameter import Parameter
-from sherpa.models.template import add_interpolator, create_template_model, \
-    reset_interpolators
+from sherpa.models.template import TemplateModel, add_interpolator, \
+    create_template_model, reset_interpolators
 import sherpa.optmethods
 from sherpa.optmethods import OptMethod
 import sherpa.plot
@@ -442,10 +443,13 @@ copy_reg.pickle(np.ufunc, reduce_ufunc)
 ###############################################################################
 
 
-def read_template_model(modelname, templatefile,
-                        sep=' ', comment='#',
-                        method=sherpa.utils.linear_interp,
-                        template_interpolator_name='default'):
+def read_template_model(modelname: str,
+                        templatefile: str,
+                        sep: str = ' ',
+                        comment: str = '#',
+                        method: Callable = sherpa.utils.linear_interp,
+                        template_interpolator_name: str = 'default'
+                        ) -> TemplateModel:
     """Read in a set of templates and create a template model.
 
     Parameters
@@ -1208,7 +1212,9 @@ class Session(NoNewAttributesAfterInit):
         self._set_plot_types()
         self._set_contour_types()
 
-    def save(self, filename='sherpa.save', clobber=False) -> None:
+    def save(self,
+             filename: str = 'sherpa.save',
+             clobber: bool = False) -> None:
         """Save the current Sherpa session to a file.
 
         Parameters
@@ -1264,7 +1270,7 @@ class Session(NoNewAttributesAfterInit):
             # Use the default version rather than fix a version
             pickle.dump(self, fout)
 
-    def restore(self, filename='sherpa.save') -> None:
+    def restore(self, filename: str = 'sherpa.save') -> None:
         """Load in a Sherpa session from a file.
 
         .. warning::
@@ -1476,7 +1482,7 @@ class Session(NoNewAttributesAfterInit):
         covar_str += self.get_covar_results().format() + '\n\n'
         return covar_str
 
-    def show_stat(self, outfile=None, clobber=False) -> None:
+    def show_stat(self, outfile=None, clobber: bool = False) -> None:
         """Display the current fit statistic.
 
         Parameters
@@ -1515,7 +1521,7 @@ class Session(NoNewAttributesAfterInit):
         txt = self._get_show_stat()
         send_to_pager(txt, outfile, clobber)
 
-    def show_method(self, outfile=None, clobber=False) -> None:
+    def show_method(self, outfile=None, clobber: bool = False) -> None:
         """Display the current optimization method and options.
 
         Parameters
@@ -1560,7 +1566,7 @@ class Session(NoNewAttributesAfterInit):
         txt = self._get_show_method()
         send_to_pager(txt, outfile, clobber)
 
-    def show_fit(self, outfile=None, clobber=False) -> None:
+    def show_fit(self, outfile=None, clobber: bool = False) -> None:
         """Summarize the fit results.
 
         Display the results of the last call to `fit`, including:
@@ -1599,7 +1605,7 @@ class Session(NoNewAttributesAfterInit):
 
     def show_data(self,
                   id: IdType | None = None,
-                  outfile=None, clobber=False) -> None:
+                  outfile=None, clobber: bool = False) -> None:
         """Summarize the available data sets.
 
         Display information on the data sets that have been
@@ -1637,7 +1643,7 @@ class Session(NoNewAttributesAfterInit):
 
     def show_filter(self,
                     id: IdType | None = None,
-                    outfile=None, clobber=False) -> None:
+                    outfile=None, clobber: bool = False) -> None:
         """Show any filters applied to a data set.
 
         Display any filters that have been applied to the independent
@@ -1678,7 +1684,7 @@ class Session(NoNewAttributesAfterInit):
 
     def show_model(self,
                    id: IdType | None = None,
-                   outfile=None, clobber=False) -> None:
+                   outfile=None, clobber: bool = False) -> None:
         """Display the model expression used to fit a data set.
 
         This displays the model used to fit the data set, that is,
@@ -1722,7 +1728,7 @@ class Session(NoNewAttributesAfterInit):
 
     def show_source(self,
                     id: IdType | None = None,
-                    outfile=None, clobber=False) -> None:
+                    outfile=None, clobber: bool = False) -> None:
         """Display the source model expression for a data set.
 
         This displays the source model for a data set, that is, the
@@ -1766,7 +1772,7 @@ class Session(NoNewAttributesAfterInit):
     # as the Notes section below is inadequate
     def show_kernel(self,
                     id: IdType | None = None,
-                    outfile=None, clobber=False) -> None:
+                    outfile=None, clobber: bool = False) -> None:
         """Display any kernel applied to a data set.
 
         The kernel represents the subset of the PSF model that is used
@@ -1823,7 +1829,7 @@ class Session(NoNewAttributesAfterInit):
     # as the Notes section below is inadequate
     def show_psf(self,
                  id: IdType | None = None,
-                 outfile=None, clobber=False) -> None:
+                 outfile=None, clobber: bool = False) -> None:
         """Display any PSF model applied to a data set.
 
         The PSF model represents the full model or data set that is
@@ -1876,7 +1882,7 @@ class Session(NoNewAttributesAfterInit):
         txt = self._get_show_psf(id)
         send_to_pager(txt, outfile, clobber)
 
-    def show_conf(self, outfile=None, clobber=False) -> None:
+    def show_conf(self, outfile=None, clobber: bool = False) -> None:
         """Display the results of the last conf evaluation.
 
         The output includes the best-fit model parameter values,
@@ -1909,7 +1915,7 @@ class Session(NoNewAttributesAfterInit):
         txt = self._get_show_conf()
         send_to_pager(txt, outfile, clobber)
 
-    def show_proj(self, outfile=None, clobber=False) -> None:
+    def show_proj(self, outfile=None, clobber: bool = False) -> None:
         """Display the results of the last proj evaluation.
 
         The output includes the best-fit model parameter values,
@@ -1942,7 +1948,7 @@ class Session(NoNewAttributesAfterInit):
         txt = self._get_show_proj()
         send_to_pager(txt, outfile, clobber)
 
-    def show_covar(self, outfile=None, clobber=False) -> None:
+    def show_covar(self, outfile=None, clobber: bool = False) -> None:
         """Display the results of the last covar evaluation.
 
         The output includes the best-fit model parameter values,
@@ -1977,7 +1983,7 @@ class Session(NoNewAttributesAfterInit):
 
     def show_all(self,
                  id: IdType | None = None,
-                 outfile=None, clobber=False) -> None:
+                 outfile=None, clobber: bool = False) -> None:
         """Report the current state of the Sherpa session.
 
         Display information about one or all of the data sets that
@@ -2054,7 +2060,7 @@ class Session(NoNewAttributesAfterInit):
                 funcs.append(func)
         return funcs
 
-    def list_functions(self, outfile=None, clobber=False) -> None:
+    def list_functions(self, outfile=None, clobber: bool = False) -> None:
         """Display the functions provided by Sherpa.
 
         Unlike the other ``list_xxx`` commands, this does not
@@ -3324,13 +3330,20 @@ class Session(NoNewAttributesAfterInit):
         self._set_item(id, data, self._data, sherpa.data.Data, 'data',
                        'a data set')
 
-    def _read_error(self, filename, *args, **kwargs):
+    def _read_error(self,
+                    filename: str,
+                    *args, **kwargs
+                    ) -> np.ndarray:
+        """Return the last column of data"""
         err = sherpa.io.get_ascii_data(filename, *args, **kwargs)[1].pop()
         return err
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-NOTE: is ncols really 2 here? Does it make sense?
-    def load_staterror(self, id, filename=None, ncols=2,
+    def load_staterror(self,
+                       id,
+                       filename=None,
+                       ncols: int = 2,
                        *args, **kwargs) -> None:
         """Load the statistical errors from an ASCII file.
 
@@ -3403,7 +3416,10 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-NOTE: is ncols really 2 here? Does it make sense?
-    def load_syserror(self, id, filename=None, ncols=2,
+    def load_syserror(self,
+                      id,
+                      filename=None,
+                      ncols: int = 2,
                       *args, **kwargs) -> None:
         """Load the systematic errors from an ASCII file.
 
@@ -3473,7 +3489,11 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: does ncols make sense here? (have removed for now)
-    def load_filter(self, id, filename=None, ignore=False, ncols=2,
+    def load_filter(self,
+                    id,
+                    filename=None,
+                    ignore: bool = False,
+                    ncols: int = 2,
                     *args, **kwargs) -> None:
         """Load the filter array from an ASCII file and add to a data set.
 
@@ -4567,8 +4587,13 @@ class Session(NoNewAttributesAfterInit):
         ndep = method(data.eval_model(model), rng=self.get_rng())
         self.set_dep(id, ndep)
 
+    # This appears to only be used in unpack_data so can we remove it?
+    #
     @staticmethod
-    def _read_data(readfunc, filename, *args, **kwargs):
+    def _read_data(readfunc: Callable[Concatenate[str, ...], Data],
+                   filename: str,
+                   *args,
+                   **kwargs) -> Data:
         _check_str_type(filename, "filename")
         return readfunc(filename, *args, **kwargs)
 
@@ -4631,9 +4656,15 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.utils
 
-    def unpack_data(self, filename, ncols=2, colkeys=None,
-                    dstype=Data1D, sep=' ', comment='#',
-                    require_floats=True):
+    def unpack_data(self,
+                    filename: str,
+                    ncols: int = 2,
+                    colkeys: Sequence[str] | None  =None,
+                    dstype=Data1D,
+                    sep: str = ' ',
+                    comment: str = '#',
+                    require_floats: bool = True
+                    ) -> Data:
         """Create a sherpa data object from an ASCII file.
 
         This function is used to read in columns from an ASCII
@@ -4739,9 +4770,16 @@ class Session(NoNewAttributesAfterInit):
                                sep, dstype, comment, require_floats)
 
     # DOC-NOTE: also in sherpa.astro.utils
-    def load_data(self, id, filename=None, ncols=2, colkeys=None,
-                  dstype=Data1D, sep=' ', comment='#',
-                  require_floats=True) -> None:
+    def load_data(self,
+                  id,
+                  filename = None,
+                  ncols: int = 2,
+                  colkeys: Sequence[str] | None = None,
+                  dstype=Data1D,
+                  sep: str = ' ',
+                  comment: str = '#',
+                  require_floats: bool = True
+                  ) -> None:
         """Load a data set from an ASCII file.
 
         Parameters
@@ -4890,7 +4928,9 @@ class Session(NoNewAttributesAfterInit):
         self.set_data(id, self.unpack_arrays(*args))
 
     def _save_type(self, objtype: str,
-                   id, filename, **kwargs) -> None:
+                   id,
+                   filename,
+                   **kwargs) -> None:
         if filename is None:
             id, filename = filename, id
 
@@ -4925,8 +4965,15 @@ class Session(NoNewAttributesAfterInit):
         sherpa.io.write_arrays(filename, args, fields, **kwargs)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
-    def save_arrays(self, filename, args, fields=None, clobber=False, sep=' ',
-                    comment='#', linebreak='\n', format='%g'
+    def save_arrays(self,
+                    filename: str,
+                    args: Sequence,
+                    fields: Sequence[str] | None = None,
+                    clobber: bool = False,
+                    sep: str = ' ',
+                    comment: str = '#',
+                    linebreak: str = '\n',
+                    format: str = '%g'
                     ) -> None:
         """Write a list of arrays to an ASCII file.
 
@@ -4984,8 +5031,14 @@ class Session(NoNewAttributesAfterInit):
                                linebreak, format)
 
     # DOC-NOTE: also in sherpa.utils with a different interface
-    def save_source(self, id, filename=None, clobber=False, sep=' ',
-                    comment='#', linebreak='\n', format='%g'
+    def save_source(self,
+                    id,
+                    filename=None,
+                    clobber: bool = False,
+                    sep: str = ' ',
+                    comment: str = '#',
+                    linebreak: str = '\n',
+                    format: str = '%g'
                     ) -> None:
         """Save the model values to a file.
 
@@ -5060,8 +5113,14 @@ class Session(NoNewAttributesAfterInit):
                         comment=comment, linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.utils with a different interface
-    def save_model(self, id, filename=None, clobber=False, sep=' ',
-                   comment='#', linebreak='\n', format='%g'
+    def save_model(self,
+                   id,
+                   filename=None,
+                   clobber: bool = False,
+                   sep: str = ' ',
+                   comment: str = '#',
+                   linebreak: str = '\n',
+                   format: str = '%g'
                    ) -> None:
         """Save the model values to a file.
 
@@ -5137,8 +5196,14 @@ class Session(NoNewAttributesAfterInit):
                         comment=comment, linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.utils with a different interface
-    def save_resid(self, id, filename=None, clobber=False, sep=' ',
-                   comment='#', linebreak='\n', format='%g'
+    def save_resid(self,
+                   id,
+                   filename=None,
+                   clobber: bool = False,
+                   sep: str = ' ',
+                   comment: str = '#',
+                   linebreak: str = '\n',
+                   format: str = '%g'
                    ) -> None:
         """Save the residuals (data-model) to a file.
 
@@ -5208,8 +5273,14 @@ class Session(NoNewAttributesAfterInit):
                         comment=comment, linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.utils with a different interface
-    def save_delchi(self, id, filename=None, clobber=False, sep=' ',
-                    comment='#', linebreak='\n', format='%g'
+    def save_delchi(self,
+                    id,
+                    filename=None,
+                    clobber: bool = False,
+                    sep: str = ' ',
+                    comment: str = '#',
+                    linebreak: str = '\n',
+                    format: str = '%g'
                     ) -> None:
         """Save the ratio of residuals (data-model) to error to a file.
 
@@ -5279,8 +5350,15 @@ class Session(NoNewAttributesAfterInit):
                         comment=comment, linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils
-    def save_data(self, id, filename=None, fields=None, sep=' ', comment='#',
-                  clobber=False, linebreak='\n', format='%g'
+    def save_data(self,
+                  id,
+                  filename=None,
+                  fields: Sequence[str] | None = None,
+                  sep: str = ' ',
+                  comment: str = '#',
+                  clobber: bool = False,
+                  linebreak: str = '\n',
+                  format: str = '%g'
                   ) -> None:
         """Save the data to a file.
 
@@ -5362,8 +5440,14 @@ class Session(NoNewAttributesAfterInit):
                              comment, clobber, linebreak, format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
-    def save_filter(self, id, filename=None, clobber=False, sep=' ',
-                    comment='#', linebreak='\n', format='%g'
+    def save_filter(self,
+                    id,
+                    filename=None,
+                    clobber: bool = False,
+                    sep: str = ' ',
+                    comment: str = '#',
+                    linebreak: str = '\n',
+                    format: str = '%g'
                     ) -> None:
         """Save the filter array to a file.
 
@@ -5442,8 +5526,14 @@ class Session(NoNewAttributesAfterInit):
                          linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
-    def save_staterror(self, id, filename=None, clobber=False, sep=' ',
-                       comment='#', linebreak='\n', format='%g'
+    def save_staterror(self,
+                       id,
+                       filename=None,
+                       clobber: bool = False,
+                       sep: str = ' ',
+                       comment: str = '#',
+                       linebreak: str = '\n',
+                       format: str = '%g'
                        ) -> None:
         """Save the statistical errors to a file.
 
@@ -5523,8 +5613,14 @@ class Session(NoNewAttributesAfterInit):
                          linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
-    def save_syserror(self, id, filename=None, clobber=False, sep=' ',
-                      comment='#', linebreak='\n', format='%g'
+    def save_syserror(self,
+                      id,
+                      filename=None,
+                      clobber: bool = False,
+                      sep: str = ' ',
+                      comment: str = '#',
+                      linebreak: str = '\n',
+                      format: str = '%g'
                       ) -> None:
         """Save the statistical errors to a file.
 
@@ -5602,8 +5698,14 @@ class Session(NoNewAttributesAfterInit):
                          linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
-    def save_error(self, id, filename=None, clobber=False, sep=' ',
-                   comment='#', linebreak='\n', format='%g'
+    def save_error(self,
+                   id,
+                   filename=None,
+                   clobber: bool = False,
+                   sep: str = ' ',
+                   comment: str = '#',
+                   linebreak: str = '\n',
+                   format: str = '%g'
                    ) -> None:
         """Save the errors to a file.
 
@@ -7605,8 +7707,16 @@ class Session(NoNewAttributesAfterInit):
     # "Special" models (user and table models)
     #
 
-    def _read_user_model(self, filename, ncols=2, colkeys=None,
-                         dstype=Data1D, sep=' ', comment='#'):
+    def _read_user_model(self,
+                         filename: str,
+                         ncols: int = 2,
+                         colkeys: Sequence[str] | None = None,
+                         dstype=Data1D,
+                         sep: str = ' ',
+                         comment: str = '#'
+                         ) -> tuple[np.ndarray | None, np.ndarray | None]:
+        """Read in the data."""
+
         x = None
         y = None
         try:
@@ -7622,12 +7732,22 @@ class Session(NoNewAttributesAfterInit):
                                          sep=sep, dstype=dstype,
                                          comment=comment)[1].pop()
 
+        # y is expected to be set, but for now this is not guaranteed
+        # so leave the return value as "ndarray | None".
+        #
         return (x, y)
 
     # DOC-TODO: I am not sure I have the data format correct.
     # DOC-TODO: description of template interpolation needs a lot of work.
-    def load_template_model(self, modelname, templatefile, dstype=Data1D,
-                            sep=' ', comment='#', method=sherpa.utils.linear_interp, template_interpolator_name='default'):
+    def load_template_model(self,
+                            modelname: str,
+                            templatefile: str,
+                            dstype=Data1D,
+                            sep: str = ' ',
+                            comment: str = '#',
+                            method: Callable = sherpa.utils.linear_interp,
+                            template_interpolator_name: str = 'default'
+                            ) -> None:
         """Load a set of templates and use it as a model component.
 
         A template model can be considered to be an extension
@@ -7736,7 +7856,11 @@ class Session(NoNewAttributesAfterInit):
         self._add_model_component(templatemodel)
 
     # DOC-TODO: description of template interpolation needs a lot of work.
-    def load_template_interpolator(self, name, interpolator_class, **kwargs):
+    def load_template_interpolator(self,
+                                   name: str,
+                                   interpolator_class,
+                                   **kwargs
+                                   ) -> None:
         """Set the template interpolation scheme.
 
         Parameters
@@ -7764,9 +7888,16 @@ class Session(NoNewAttributesAfterInit):
         """
         add_interpolator(name, interpolator_class, **kwargs)
 
-    def load_table_model(self, modelname, filename, ncols=2, colkeys=None,
-                         dstype=Data1D, sep=' ', comment='#',
-                         method=sherpa.utils.linear_interp):
+    def load_table_model(self,
+                         modelname: str,
+                         filename: str,
+                         ncols: int = 2,
+                         colkeys: Sequence[str] | None = None,
+                         dstype=Data1D,
+                         sep: str = ' ',
+                         comment: str = '#',
+                         method: Callable = sherpa.utils.linear_interp
+                         ) -> None:
         """Load ASCII tabular data and use it as a model component.
 
         A table model is defined on a grid of points which is
@@ -7860,9 +7991,16 @@ class Session(NoNewAttributesAfterInit):
 
     # also in sherpa.astro.utils
     # DOC-TODO: how is the _y value used if set
-    def load_user_model(self, func, modelname, filename=None, ncols=2,
-                        colkeys=None, dstype=Data1D,
-                        sep=' ', comment='#'):
+    def load_user_model(self,
+                        func: Callable,
+                        modelname: str,
+                        filename: str | None = None,
+                        ncols: int = 2,
+                        colkeys: Sequence[str] | None = None,
+                        dstype=Data1D,
+                        sep: str = ' ',
+                        comment: str = '#'
+                        ) -> None:
         """Create a user-defined model.
 
         Assign a name to a function; this name can then be used as any
@@ -8085,7 +8223,10 @@ class Session(NoNewAttributesAfterInit):
         self._add_model_component(newusermodel)
 
     # DOC-TODO: Improve priors documentation
-    def load_user_stat(self, statname, calc_stat_func, calc_err_func=None,
+    def load_user_stat(self,
+                       statname: str,
+                       calc_stat_func: Callable,
+                       calc_err_func: Callable | None = None,
                        priors={}
                        ) -> None:
         """Create a user-defined statistic.
@@ -8180,7 +8321,12 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: why isn't the "flux" of the convolved model ~
     # that of the unconvolved model?
     # DOC-NOTE: better description of conv vs psf
-    def load_conv(self, modelname, filename_or_model, *args, **kwargs):
+    def load_conv(self,
+                  modelname: str,
+                  filename_or_model,
+                  *args,
+                  **kwargs
+                  ) -> None:
         """Load a 1D convolution model.
 
         The convolution model can be defined either by a data set,
@@ -8255,7 +8401,12 @@ class Session(NoNewAttributesAfterInit):
     # PSF1
     #
 
-    def load_psf(self, modelname, filename_or_model, *args, **kwargs):
+    def load_psf(self,
+                 modelname: str,
+                 filename_or_model,
+                 *args,
+                 **kwargs
+                 ) -> None:
         """Create a PSF model.
 
         Create a PSF model representing either an array of data, read
