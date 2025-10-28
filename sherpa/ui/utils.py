@@ -575,8 +575,10 @@ class ModelWrapper(NoNewAttributesAfterInit):
     #
     def __init__(self,
                  session: Session,
-                 modeltype,
-                 args=(), kwargs=None) -> None:
+                 modeltype: type[Model],
+                 args=(),
+                 kwargs=None
+                 ) -> None:
         # This is an internal class so do not bother with
         # sherpa.utils.err exceptions.
         #
@@ -640,10 +642,9 @@ class ModelWrapper(NoNewAttributesAfterInit):
         NoNewAttributesAfterInit.__init__(self)
 
     # TODO: can we say that this is the same class as sent to
-    # the constructor? A TypeVar could be used, but how do we
-    # constrain it to Model?
+    # the constructor?
     #
-    def __call__(self, name):
+    def __call__(self, name: str) -> Model:
         _check_str_type(name, "name")
 
         m = self._session._get_model_component(name)
@@ -654,7 +655,7 @@ class ModelWrapper(NoNewAttributesAfterInit):
         self._session._add_model_component(m)
         return m
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Model:
         if name.startswith('_'):
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
@@ -1008,7 +1009,7 @@ class Session(NoNewAttributesAfterInit):
         self._tbl_models: list[Model] = []
         self._psf_models: list[Model] = []
 
-        self._model_autoassign_func = _assign_model_to_main
+        self._model_autoassign_func: Callable[[str, Model], None] | None = _assign_model_to_main
         self._model_components: dict[str, Model] = {}
         self._models: dict[IdType, Model] = {}
         self._sources: dict[IdType, Model] = {}
@@ -6341,7 +6342,11 @@ class Session(NoNewAttributesAfterInit):
             self._model_types[name] = ModelWrapper(self, cls)
             self._model_globals.update(self._model_types)
 
-    def add_model(self, modelclass, args=(), kwargs={}) -> None:
+    def add_model(self,
+                  modelclass: type[Model],
+                  args=(),
+                  kwargs={}
+                  ) -> None:
         """Create a user-defined model class.
 
         Create a model from a class. The name of the class can then be
@@ -6351,9 +6356,8 @@ class Session(NoNewAttributesAfterInit):
         Parameters
         ----------
         modelclass
-           A class derived from `ArithmeticModel`. This
-           class defines the functional form and the parameters of the
-           model.
+           A class derived from `ArithmeticModel`. This class defines
+           the functional form and the parameters of the model.
         args
            Arguments for the class constructor.
         kwargs
@@ -6408,7 +6412,7 @@ class Session(NoNewAttributesAfterInit):
     #
 
     def get_model_autoassign_func(self
-                                  ) -> Callable[[str, Model], None]:
+                                  ) -> Callable[[str, Model], None] | None:
         """Return the method used to create model component identifiers.
 
         Provides access to the function which is used by
@@ -6614,7 +6618,7 @@ class Session(NoNewAttributesAfterInit):
     @overload
     def _get_model_component(self,
                              name: str,
-                             require: Literal[False]
+                             require: Literal[False] = False
                              ) -> Model | None:
         ...
 
@@ -6716,7 +6720,24 @@ class Session(NoNewAttributesAfterInit):
         _check_str_type(name, "name")
         return self._get_model_component(name, require=True)
 
-    def create_model_component(self, typename=None, name=None):
+    @overload
+    def create_model_component(self,
+                               typename: Model,
+                               name: None
+                               ) -> Model:
+        ...
+
+    @overload
+    def create_model_component(self,
+                               typename: str,
+                               name: str
+                               ) -> Model:
+        ...
+
+    def create_model_component(self,
+                               typename: str | Model,
+                               name: str | None = None
+                               ) -> Model:
         """Create a model component.
 
         Model components created by this function are set to their
@@ -6739,7 +6760,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        model : the sherpa.models.Model object created
+        model : the Model object created
 
         See Also
         --------
@@ -6801,7 +6822,8 @@ class Session(NoNewAttributesAfterInit):
         self._model_components[name] = model
         return model
 
-    def reset(self, model=None,
+    def reset(self,
+              model: Model | None = None,
               id: IdType | None = None
               ) -> None:
         """Reset the model parameters to their default settings.
@@ -6935,7 +6957,12 @@ class Session(NoNewAttributesAfterInit):
     # Source models
     #
 
-    def _eval_model_expression(self, expr, typestr='model'):
+    # At the moment it is not clear whether we can guarantee the
+    # return type.
+    #
+    def _eval_model_expression(self,
+                               expr: str,
+                               typestr: str = 'model') -> Any:
         try:
             return eval(expr, self._model_globals, self._model_components)
         except Exception as exc:
@@ -6966,7 +6993,8 @@ class Session(NoNewAttributesAfterInit):
     # Return full model for fitting, plotting, etc.  Expects a corresponding
     # data set to be available.
     def _get_model_status(self,
-                          id: IdType | None = None):
+                          id: IdType | None = None
+                          ) -> tuple[Model, bool]:
         id = self._fix_id(id)
         src = self._sources.get(id)
         mdl = self._models.get(id)
@@ -6974,18 +7002,21 @@ class Session(NoNewAttributesAfterInit):
         if src is None and mdl is None:
             raise IdentifierErr('getitem', 'model', id, 'has not been set')
 
-        model = mdl
-        is_source = False
-
-        if mdl is None and src is not None:
+        if mdl is None:
             is_source = True
-            model = src
+            model = cast(Model, src)
+        else:
+            is_source = False
+            model = mdl
 
         return (model, is_source)
 
     def _add_convolution_models(self,
                                 id: IdType | None,
-                                data, model, is_source):
+                                data: Data,
+                                model: Model,
+                                is_source: bool
+                                ) -> Model:
         """Add in "hidden" components to the model expression.
 
         This handles PSF and table models (ensuring that the
@@ -7024,7 +7055,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        model : a sherpa.models.Model object
+        model : a Model object
            This can contain multiple model components. Changing
            attributes of this model changes the model used by the data
            set.
@@ -7174,9 +7205,11 @@ class Session(NoNewAttributesAfterInit):
                     continue
 
     # DOC-NOTE: also in sherpa.astro.utils
-    # DOC-TODO: what examples/info should be talked about here?
-    # (e.g. no PHA/ARF/RMF)
-    def set_full_model(self, id, model=None):
+    #
+    def set_full_model(self,
+                       id,
+                       model=None
+                       ) -> None:
         """Define the convolved model expression for a data set.
 
         The model expression created by `set_model` can be modified by
@@ -7192,7 +7225,7 @@ class Session(NoNewAttributesAfterInit):
            The data set containing the source expression. If not given
            then the default identifier is used, as returned by
            `get_default_id`.
-        model : str or sherpa.models.Model object
+        model : str or Model object
            This defines the model used to fit the data. It can be a
            Python expression or a string version of it.
 
@@ -7234,8 +7267,10 @@ class Session(NoNewAttributesAfterInit):
         self._models[idval] = model
         self._runparamprompt(model.pars)
 
-    # DOC-TODO: the .cache value appears to default to 5
-    def set_model(self, id, model=None):
+    def set_model(self,
+                  id,
+                  model=None
+                  ) -> None:
         """Set the source model expression for a data set.
 
         The function is available as both `set_model` and
@@ -7423,11 +7458,11 @@ class Session(NoNewAttributesAfterInit):
 
         Parameters
         ----------
-        model : `str` or a `sherpa.models.model.Model` object
+        model : `str` or a `Model` object
 
         Returns
         -------
-        model : `sherpa.models.model.Model` instance
+        model : `Model` instance
 
         Raises
         ------
@@ -7441,16 +7476,19 @@ class Session(NoNewAttributesAfterInit):
             mdl = self._eval_model_expression(model)
         else:
             mdl = model
+
         _check_type(mdl, Model, 'model',
                     'a model object or model expression string')
-        return mdl
+        return cast(Model, mdl)
 
-    def get_model_type(self, model):
+    def get_model_type(self,
+                       model: Model
+                       ) -> str:
         """Describe a model expression.
 
         Parameters
         ----------
-        model : str or a sherpa.models.model.Model object
+        model : `str` or a `Model` object
 
         Returns
         -------
@@ -8468,7 +8506,10 @@ class Session(NoNewAttributesAfterInit):
         self._psf_models.append(psf)
 
     # DOC-TODO: am I correct about the multiple use warning?
-    def set_psf(self, id, psf=None):
+    def set_psf(self,
+                id,
+                psf=None
+                ) -> None:
         """Add a PSF model to a data set.
 
         After this call, the model that is fit to the data (as set by
@@ -8615,7 +8656,9 @@ class Session(NoNewAttributesAfterInit):
             except NotImplementedError:
                 pass
 
-    def get_psf(self, id: IdType | None = None):
+    def get_psf(self,
+                id: IdType | None = None
+                ) -> Model:
         """Return the PSF model defined for a data set.
 
         Return the parameter settings for the PSF model assigned to
@@ -8707,7 +8750,16 @@ class Session(NoNewAttributesAfterInit):
         keys = list(self._psf.keys())
         return sorted(keys, key=str)
 
-    def _add_psf(self, id: IdType | None, data, model):
+    # This returns the original model or a ConvolutionModel. For now
+    # treat the return value just as Model.
+    #
+    def _add_psf(self,
+                 id: IdType | None,
+                 data: Data,
+                 model: Model
+                 ) -> Model:
+        """Add any PSF convolution, if necessary."""
+
         idval = self._fix_id(id)
         psf = self._psf.get(idval, None)
 
