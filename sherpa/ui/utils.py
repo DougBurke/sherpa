@@ -4807,7 +4807,6 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: rework the Data type notes section (also needed by unpack_arrays)
-    # @loggable(with_id = True)
     def load_arrays(self,
                     id: IdType,
                     *args) -> None:
@@ -7061,7 +7060,6 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: what examples/info should be talked about here?
     # (e.g. no PHA/ARF/RMF)
-    # @loggable(with_id=True, with_keyword='model')
     def set_full_model(self, id, model=None):
         """Define the convolved model expression for a data set.
 
@@ -7121,7 +7119,6 @@ class Session(NoNewAttributesAfterInit):
         self._runparamprompt(model.pars)
 
     # DOC-TODO: the .cache value appears to default to 5
-    # @loggable(with_id=True, with_keyword="model")
     def set_model(self, id, model=None):
         """Set the source model expression for a data set.
 
@@ -7725,7 +7722,6 @@ class Session(NoNewAttributesAfterInit):
         self._add_model_component(templatemodel)
 
     # DOC-TODO: description of template interpolation needs a lot of work.
-    # @loggable()
     def load_template_interpolator(self, name, interpolator_class, **kwargs):
         """Set the template interpolation scheme.
 
@@ -7850,7 +7846,6 @@ class Session(NoNewAttributesAfterInit):
 
     # also in sherpa.astro.utils
     # DOC-TODO: how is the _y value used if set
-    # @loggable()
     def load_user_model(self, func, modelname, filename=None, ncols=2,
                         colkeys=None, dstype=sherpa.data.Data1D,
                         sep=' ', comment='#'):
@@ -7953,7 +7948,6 @@ class Session(NoNewAttributesAfterInit):
                                                     dstype, sep, comment)
         self._add_model_component(usermodel)
 
-    # @loggable()
     def add_user_pars(self, modelname, parnames,
                       parvals=None, parmins=None, parmaxs=None,
                       parunits=None, parfrozen=None
@@ -8167,7 +8161,6 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: why isn't the "flux" of the convolved model ~
     # that of the unconvolved model?
     # DOC-NOTE: better description of conv vs psf
-    # @loggable()
     def load_conv(self, modelname, filename_or_model, *args, **kwargs):
         """Load a 1D convolution model.
 
@@ -8305,7 +8298,6 @@ class Session(NoNewAttributesAfterInit):
         self._psf_models.append(psf)
 
     # DOC-TODO: am I correct about the multiple use warning?
-    # @loggable(with_id=True, with_keyword='psf')
     def set_psf(self, id, psf=None):
         """Add a PSF model to a data set.
 
