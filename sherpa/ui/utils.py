@@ -834,7 +834,7 @@ class FitStore:
     model : Model
 
 
-def get_components_helper(getfunc: Callable[..., Plot],
+def get_components_helper(getfunc: Callable[..., Plot | HistogramPlot],
                           model: Model,
                           idval: IdType) -> MultiPlot:
     """Handle get_source/model_components_plot.
@@ -1074,6 +1074,13 @@ class Session(NoNewAttributesAfterInit):
         # plots, such as "fit", storing the object directly, and not
         # as a single-element list, but it was felt that having a
         # consistent access pattern was cleaner.
+        #
+        # The type is close to Plot | HistogramPlot | MultiPlot, but
+        # not exactly, as we need to use something that supports the
+        # prepare method for Plot, and at the moment the plot
+        # hierarchy does not have a way to express this requirement.
+        # Using a Protocol is hard since there are different ways to
+        # call prepare, depending on the class.
         #
         self._plot_types: dict[str, list[Any]] = {
             'data': [sherpa.plot.DataPlot(), sherpa.plot.DataHistogramPlot()],
@@ -2234,7 +2241,7 @@ class Session(NoNewAttributesAfterInit):
         return plottype in self._plot_types or \
             plottype in self._plot_types_alias
 
-    def _get_contourtype(self, plottype: str):
+    def _get_contourtype(self, plottype: str) -> str:
         """Return the name to refer to a given contour type."""
 
         if plottype in self._contour_types:
@@ -10263,7 +10270,8 @@ class Session(NoNewAttributesAfterInit):
                         num: int = 500,
                         bins: int = 25,
                         numcores: int | None = None,
-                        recalc: bool = False):
+                        recalc: bool = False
+                        ) -> sherpa.plot.LRHistogram:
         """Return the data used by plot_pvalue.
 
         Access the data arrays and preferences defining the histogram plot
@@ -12496,7 +12504,7 @@ class Session(NoNewAttributesAfterInit):
     #
 
     def _get_plot_objects(self,
-                          ids: IdType | IdTypes,
+                          ids: IdType | IdTypes | None,
                           getfunc: Callable[..., Plot | HistogramPlot],
                           *,
                           recalc: bool = True,
@@ -12559,7 +12567,7 @@ class Session(NoNewAttributesAfterInit):
 
         return plotobj
 
-    def get_split_plot(self):
+    def get_split_plot(self) -> sherpa.plot.SplitPlot:
         """Return the plot attributes for displays with multiple plots.
 
         Returns
@@ -12585,7 +12593,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_data_plot(self,
                       id: IdType | None = None,
-                      recalc: bool = True):
+                      recalc: bool = True
+                      ) -> sherpa.plot.DataPlot | sherpa.plot.DataHistogramPlot:
         """Return the data used by plot_data.
 
         Parameters
@@ -12819,7 +12828,8 @@ class Session(NoNewAttributesAfterInit):
     # also in sherpa.astro.utils (copies this docstring)
     def get_model_plot(self,
                        id: IdType | None = None,
-                       recalc: bool = True):
+                       recalc: bool = True
+                       ) -> sherpa.plot.ModelPlot | sherpa.plot.ModelHistogramPlot:
         """Return the data used to create the model plot.
 
         Parameters
@@ -12867,7 +12877,8 @@ class Session(NoNewAttributesAfterInit):
     # also in sherpa.astro.utils (does not copy this docstring)
     def get_source_plot(self,
                         id: IdType | None = None,
-                        recalc: bool = True):
+                        recalc: bool = True
+                        ) -> sherpa.plot.SourcePlot | sherpa.plot.SourceHistogramPlot:
         """Return the data used to create the source plot.
 
         Parameters
@@ -12937,7 +12948,12 @@ class Session(NoNewAttributesAfterInit):
 
         return plotobj
 
-    def get_model_component_plot(self, id, model=None, recalc: bool = True):
+    # TODO: apparently this does not map to a routine that returns Plot
+    def get_model_component_plot(self,
+                                 id,
+                                 model=None,
+                                 recalc: bool = True
+                                 ) -> sherpa.plot.ComponentModelPlot | sherpa.plot.ComponentModelHistogramPlot:
         """Return the data used to create the model-component plot.
 
         Parameters
@@ -13057,7 +13073,11 @@ class Session(NoNewAttributesAfterInit):
                                      model=model, idval=idval)
 
     # sherpa.astro.utils version copies this docstring
-    def get_source_component_plot(self, id, model=None, recalc: bool = True):
+    def get_source_component_plot(self,
+                                  id,
+                                  model=None,
+                                  recalc: bool = True
+                                  ) -> sherpa.plot.ComponentSourcePlot | sherpa.plot.ComponentSourceHistogramPlot:
         """Return the data used by plot_source_component.
 
         Parameters
@@ -13235,7 +13255,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_fit_plot(self,
                      id: IdType | None = None,
-                     recalc: bool = True):
+                     recalc: bool = True
+                     ) -> sherpa.plot.FitPlot:
         """Return the data used to create the fit plot.
 
         Parameters
@@ -13304,7 +13325,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_resid_plot(self,
                        id: IdType | None = None,
-                       recalc: bool = True):
+                       recalc: bool = True
+                       ) -> sherpa.plot.ResidPlot | sherpa.plot.ResidHistogramPlot:
         """Return the data used by plot_resid.
 
         Parameters
@@ -13380,7 +13402,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_delchi_plot(self,
                         id: IdType | None = None,
-                        recalc: bool = True):
+                        recalc: bool = True
+                        ) -> sherpa.plot.DelchiPlot | sherpa.plot.DelchiHistogramPlot:
         """Return the data used by plot_delchi.
 
         Parameters
@@ -13457,7 +13480,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_chisqr_plot(self,
                         id: IdType | None = None,
-                        recalc: bool = True):
+                        recalc: bool = True
+                        ) -> sherpa.plot.ChisqrPlot | sherpa.plot.ChisqrHistogramPlot:
         """Return the data used by plot_chisqr.
 
         Parameters
@@ -13534,7 +13558,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_ratio_plot(self,
                        id: IdType | None = None,
-                       recalc: bool = True):
+                       recalc: bool = True
+                       ) -> sherpa.plot.RatioPlot | sherpa.plot.RatioHistogramPlot:
         """Return the data used by plot_ratio.
 
         Parameters
@@ -13611,7 +13636,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_data_contour(self,
                          id: IdType | None = None,
-                         recalc: bool = True):
+                         recalc: bool = True
+                         ) -> sherpa.plot.DataContour:
         """Return the data used by contour_data.
 
         Parameters
@@ -13774,7 +13800,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_model_contour(self,
                           id: IdType | None = None,
-                          recalc: bool = True):
+                          recalc: bool = True
+                          ) -> sherpa.plot.ModelContour:
         """Return the data used by contour_model.
 
         Parameters
@@ -13825,7 +13852,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_source_contour(self,
                            id: IdType | None = None,
-                           recalc: bool = True):
+                           recalc: bool = True
+                           ) -> sherpa.plot.SourceContour:
         """Return the data used by contour_source.
 
         Parameters
@@ -13926,7 +13954,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_fit_contour(self,
                         id: IdType | None = None,
-                        recalc: bool = True):
+                        recalc: bool = True
+                        ) -> sherpa.plot.FitContour:
         """Return the data used by contour_fit.
 
         Parameters
@@ -13983,7 +14012,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_resid_contour(self,
                           id: IdType | None = None,
-                          recalc: bool = True):
+                          recalc: bool = True
+                          ) -> sherpa.plot.ResidContour:
         """Return the data used by contour_resid.
 
         Parameters
@@ -14035,7 +14065,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_ratio_contour(self,
                           id: IdType | None = None,
-                          recalc: bool = True):
+                          recalc: bool = True
+                          ) -> sherpa.plot.RatioContour:
         """Return the data used by contour_ratio.
 
         Parameters
@@ -14087,7 +14118,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_psf_contour(self,
                         id: IdType | None = None,
-                        recalc: bool = True):
+                        recalc: bool = True
+                        ) -> sherpa.plot.PSFContour:
         """Return the data used by contour_psf.
 
         Parameters
@@ -14134,7 +14166,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_kernel_contour(self,
                            id: IdType | None = None,
-                           recalc: bool = True):
+                           recalc: bool = True
+                           ) -> sherpa.plot.PSFKernelContour:
         """Return the data used by contour_kernel.
 
         Parameters
@@ -14182,7 +14215,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_psf_plot(self,
                      id: IdType | None = None,
-                     recalc: bool = True):
+                     recalc: bool = True
+                     ) -> sherpa.plot.PSFPlot:
         """Return the data used by plot_psf.
 
         Parameters
@@ -14228,7 +14262,8 @@ class Session(NoNewAttributesAfterInit):
 
     def get_kernel_plot(self,
                         id: IdType | None = None,
-                        recalc: bool = True):
+                        recalc: bool = True
+                        ) -> sherpa.plot.PSFKernelPlot:
         """Return the data used by plot_kernel.
 
         Parameters
@@ -14564,7 +14599,7 @@ class Session(NoNewAttributesAfterInit):
             plotobj.plot(**kwargs)
 
     def _set_plot_item(self, plottype: str,
-                       item, value) -> None:
+                       item: str, value) -> None:
         """Change a plot setting.
 
         This will change all related plot classes; that is setting
@@ -15772,8 +15807,9 @@ class Session(NoNewAttributesAfterInit):
 
         plotobj = self._get_plot_objects(id, self.get_fit_plot,
                                          recalc=not replot)
-        # We know plotobj.plots[0] exists
-        plotobj.title = plotobj.plots[0].dataplot.title
+        # We know plotobj.plots[0] exists and is a FitPlot
+        fitplot = cast(sherpa.plot.FitPlot, plotobj.plots[0])
+        plotobj.title = fitplot.dataplot.title
         self._plot(plotobj, overplot=overplot,
                    clearwindow=clearwindow, **kwargs)
 
@@ -16254,7 +16290,9 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot,
                    clearwindow=clearwindow, **kwargs)
 
-    def _jointplot2(self, plot1, plot2,
+    def _jointplot2(self,
+                    plot1: MultiPlot,
+                    plot2: MultiPlot,
                     overplot: bool = False,
                     clearwindow: bool = True,
                     **kwargs) -> None:
@@ -16301,8 +16339,11 @@ class Session(NoNewAttributesAfterInit):
             p2prefs = get_plot_prefs(plot2)
             oldval = p2prefs['xlog']
 
-            dprefs = get_plot_prefs(plot1.plots[0].dataplot)
-            mprefs = get_plot_prefs(plot1.plots[0].modelplot)
+            # The first plot containse FitPlot objects but the types
+            # do not know this.
+            fitplot = cast(sherpa.plot.FitPlot, plot1.plots[0])
+            dprefs = get_plot_prefs(fitplot.dataplot)
+            mprefs = get_plot_prefs(fitplot.modelplot)
 
             if dprefs['xlog'] or mprefs['xlog']:
                 p2prefs['xlog'] = True
@@ -16697,7 +16738,7 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot,
                    clearwindow=clearwindow, **kwargs)
 
-    def get_pdf_plot(self):
+    def get_pdf_plot(self) -> sherpa.plot.PDFPlot:
         """Return the data used to plot the last PDF.
 
         Returns
@@ -16771,7 +16812,7 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot,
                    clearwindow=clearwindow, **kwargs)
 
-    def get_cdf_plot(self):
+    def get_cdf_plot(self) -> sherpa.plot.CDFPlot:
         """Return the data used to plot the last CDF.
 
         Returns
@@ -16852,7 +16893,7 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot,
                    clearwindow=clearwindow, **kwargs)
 
-    def get_trace_plot(self):
+    def get_trace_plot(self) -> sherpa.plot.TracePlot:
         """Return the data used to plot the last trace.
 
         Returns
@@ -16932,7 +16973,7 @@ class Session(NoNewAttributesAfterInit):
         self._plot(plotobj, overplot=overplot,
                    clearwindow=clearwindow, **kwargs)
 
-    def get_scatter_plot(self):
+    def get_scatter_plot(self) -> sherpa.plot.ScatterPlot:
         """Return the data used to plot the last scatter plot.
 
         Returns
@@ -16953,7 +16994,10 @@ class Session(NoNewAttributesAfterInit):
     # Contours
     #
 
-    def _contour(self, plotobj, overcontour=False, **kwargs) -> None:
+    def _contour(self,
+                 plotobj,
+                 overcontour: bool = False,
+                 **kwargs) -> None:
         """Display a plot object
 
         Parameters
@@ -17526,7 +17570,8 @@ class Session(NoNewAttributesAfterInit):
                      delv: float | None = None,
                      fac: float = 1,
                      log: bool = False,
-                     numcores: int | None = None):
+                     numcores: int | None = None
+                     ) -> sherpa.plot.IntervalProjection:
         """Return the interval-projection object.
 
         This returns (and optionally calculates) the data used to
@@ -17653,7 +17698,8 @@ class Session(NoNewAttributesAfterInit):
                     delv: float | None = None,
                     fac: float = 1,
                     log: bool = False,
-                    numcores: int | None = None):
+                    numcores: int | None = None
+                    ) -> sherpa.plot.IntervalUncertainty:
         """Return the interval-uncertainty object.
 
         This returns (and optionally calculates) the data used to
@@ -17776,7 +17822,8 @@ class Session(NoNewAttributesAfterInit):
                      log=(False, False),
                      sigma=(1, 2, 3),
                      levels=None,
-                     numcores: int | None = None):
+                     numcores: int | None = None
+                     ) -> sherpa.plot.RegionProjection:
         """Return the region-projection object.
 
         This returns (and optionally calculates) the data used to
@@ -17917,7 +17964,8 @@ class Session(NoNewAttributesAfterInit):
                     log=(False, False),
                     sigma=(1, 2, 3),
                     levels=None,
-                    numcores: int | None = None):
+                    numcores: int | None = None
+                    ) -> sherpa.plot.RegionUncertainty:
         """Return the region-uncertainty object.
 
         This returns (and optionally calculates) the data used to
@@ -18617,7 +18665,8 @@ class Session(NoNewAttributesAfterInit):
     #
 
     def get_data_image(self,
-                       id: IdType | None = None):
+                       id: IdType | None = None
+                       ) -> sherpa.image.DataImage:
         """Return the data used by image_data.
 
         Parameters
@@ -18661,7 +18710,8 @@ class Session(NoNewAttributesAfterInit):
         return imageobj
 
     def get_model_image(self,
-                        id: IdType | None = None):
+                        id: IdType | None = None
+                        ) -> sherpa.image.ModelImage:
         """Return the data used by image_model.
 
         Evaluate the source expression for the image pixels -
@@ -18714,7 +18764,8 @@ class Session(NoNewAttributesAfterInit):
     # DOC-TODO: it looks like get_source_image doesn't raise DataErr with
     # a non-2D data set
     def get_source_image(self,
-                         id: IdType | None = None):
+                         id: IdType | None = None
+                         ) -> sherpa.image.SourceImage:
         """Return the data used by image_source.
 
         Evaluate the source expression for the image pixels - without
@@ -18760,7 +18811,10 @@ class Session(NoNewAttributesAfterInit):
         imageobj.prepare_image(data, source)
         return imageobj
 
-    def get_model_component_image(self, id, model=None):
+    def get_model_component_image(self,
+                                  id,
+                                  model=None
+                                  ) -> sherpa.image.ComponentModelImage:
         """Return the data used by image_model_component.
 
         Parameters
@@ -18825,7 +18879,10 @@ class Session(NoNewAttributesAfterInit):
         imageobj.prepare_image(data, model)
         return imageobj
 
-    def get_source_component_image(self, id, model=None):
+    def get_source_component_image(self,
+                                   id,
+                                   model=None
+                                   ) -> sherpa.image.ComponentSourceImage:
         """Return the data used by image_source_component.
 
         Parameters
@@ -18886,7 +18943,8 @@ class Session(NoNewAttributesAfterInit):
         return imageobj
 
     def get_ratio_image(self,
-                        id: IdType | None = None):
+                        id: IdType | None = None
+                        ) -> sherpa.image.RatioImage:
         """Return the data used by image_ratio.
 
         Parameters
@@ -18930,7 +18988,8 @@ class Session(NoNewAttributesAfterInit):
         return imageobj
 
     def get_resid_image(self,
-                        id: IdType | None = None):
+                        id: IdType | None = None
+                        ) -> sherpa.image.ResidImage:
         """Return the data used by image_resid.
 
         Parameters
@@ -18974,7 +19033,8 @@ class Session(NoNewAttributesAfterInit):
         return imageobj
 
     def get_psf_image(self,
-                      id: IdType | None = None):
+                      id: IdType | None = None
+                      ) -> sherpa.image.PSFImage:
         """Return the data used by image_psf.
 
         Parameters
@@ -19015,7 +19075,8 @@ class Session(NoNewAttributesAfterInit):
         return imageobj
 
     def get_kernel_image(self,
-                         id: IdType | None = None):
+                         id: IdType | None = None
+                         ) -> sherpa.image.PSFKernelImage:
         """Return the data used by image_kernel.
 
         Parameters
