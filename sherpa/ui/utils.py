@@ -363,19 +363,29 @@ def notice_data_range(get_data: Callable[[IdType], Data],
 
 @overload
 def calc_multiplot_size(rows: int,
-                        cols: int | None,
-                        nplots: int
-                        ) -> tuple[int, int]:
-    ...
-
-@overload
-def calc_multiplot_size(rows: int | None,
                         cols: int,
                         nplots: int
                         ) -> tuple[int, int]:
     ...
 
-def calc_multiplot_size(rows, cols, nplots):
+@overload
+def calc_multiplot_size(rows: int,
+                        cols: None,
+                        nplots: int
+                        ) -> tuple[int, int]:
+    ...
+
+@overload
+def calc_multiplot_size(rows: None,
+                        cols: int,
+                        nplots: int
+                        ) -> tuple[int, int]:
+    ...
+
+def calc_multiplot_size(rows: int | None,
+                        cols: int | None,
+                        nplots: int
+                        ) -> tuple[int, int]:
     """How many rows and columns to use for multi plot/contours?
 
     Parameters
@@ -394,10 +404,12 @@ def calc_multiplot_size(rows, cols, nplots):
     def get(n: int) -> int:
         return int(np.ceil(nplots / n))
 
-    # Since at least one of rows or cols must be set.
+    # Since at least one of rows or cols must be set. However, even
+    # with the overload statements, the typing code does not recognize
+    # this, hence the need for cast.
     #
-    nrows = rows if rows is not None else get(cols)
-    ncols = cols if cols is not None else get(rows)
+    nrows = rows if rows is not None else get(cast(int, cols))
+    ncols = cols if cols is not None else get(cast(int, rows))
 
     if nrows * ncols < nplots:
         # Go for the nearest (upper) square value for the number
@@ -14560,6 +14572,11 @@ class Session(NoNewAttributesAfterInit):
                                                    ncols_orig, nplots)
 
         else:
+            # At this point either rows or cols is set, but the typing
+            # code does not know this and complains that there is no
+            # matching overload for calc_multiplot_size. For now, we
+            # do not rewrite the code to try and avoid this.
+            #
             nrows, ncols = calc_multiplot_size(rows, cols, nplots)
 
         plotfunc = getattr(sp, f"add{plotmeth}")
