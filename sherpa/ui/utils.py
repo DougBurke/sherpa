@@ -886,7 +886,7 @@ class Session(NoNewAttributesAfterInit):
     # High-level utilities
     ###########################################################################
 
-    def _export_names(self, gdict):
+    def _export_names(self, gdict) -> list[str]:
         allnames = []
 
         for name in dir(self):
