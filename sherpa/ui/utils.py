@@ -48,7 +48,7 @@ import sherpa.data
 from sherpa.data import Data, DataSimulFit, Data1D, Data1DInt
 import sherpa.estmethods
 from sherpa.estmethods import EstMethod
-from sherpa.fit import Fit, FitResults
+from sherpa.fit import ErrorEstResults, Fit, FitResults, StatInfoResults
 from sherpa.instrument import ConvolutionKernel, PSFKernel, PSFModel
 import sherpa.io
 import sherpa.image
@@ -66,6 +66,7 @@ from sherpa.plot import Plot, HistogramPlot, MultiPlot, \
     set_backend, get_per_plot_kwargs
 import sherpa.sim
 from sherpa.sim.sample import ClipValue
+from sherpa.sim.simulate import LikelihoodRatioResults
 import sherpa.stats
 from sherpa.stats import Stat, UserStat
 import sherpa.utils
@@ -1014,12 +1015,12 @@ class Session(NoNewAttributesAfterInit):
         self._models: dict[IdType, Model] = {}
         self._sources: dict[IdType, Model] = {}
 
-        self._fit_results = None
-        self._pvalue_results = None
+        self._fit_results: FitResults | None = None
+        self._pvalue_results: LikelihoodRatioResults | None = None
 
-        self._covariance_results = None
-        self._confidence_results = None
-        self._projection_results = None
+        self._covariance_results: ErrorEstResults | None = None
+        self._confidence_results: ErrorEstResults | None = None
+        self._projection_results: ErrorEstResults | None = None
 
         self._pyblocxs = sherpa.sim.MCMC()
 
@@ -2558,7 +2559,7 @@ class Session(NoNewAttributesAfterInit):
         else:
             _check_type(meth, OptMethod, 'meth',
                         'a method name or object')
-            method = meth
+            method = cast(OptMethod, meth)
 
         self._current_method = method
 
@@ -3174,7 +3175,7 @@ class Session(NoNewAttributesAfterInit):
         else:
             _check_type(stat, Stat, 'stat',
                         'a statistic name or object')
-            statobj = stat
+            statobj = cast(Stat, stat)
 
         self._current_stat = statobj
 
@@ -9325,7 +9326,7 @@ class Session(NoNewAttributesAfterInit):
         store = self._prepare_fit(id, otherids)
         return self._get_fit_obj(store, estmethod, numcores)
 
-    def _get_stat_info(self):
+    def _get_stat_info(self) -> list[StatInfoResults]:
         """Return the stat info structures.
 
         For each identifier with a dataset and model, calculate the
@@ -9335,7 +9336,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        stats : list of `sherpa.Fit.StatInfoResults`
+        stats : list of `StatInfoResults`
 
         Raises
         ------
@@ -9372,7 +9373,7 @@ class Session(NoNewAttributesAfterInit):
         output.append(statinfo)
         return output
 
-    def calc_stat_info(self):
+    def calc_stat_info(self) -> None:
         """Display the statistic values for the current models.
 
         Displays the statistic value for each data set, and the
@@ -9438,7 +9439,7 @@ class Session(NoNewAttributesAfterInit):
         else:
             info(output[0])
 
-    def get_stat_info(self):
+    def get_stat_info(self) -> list[StatInfoResults]:
         """Return the statistic values for the current models.
 
         Calculate the statistic value for each data set, and the
@@ -9447,7 +9448,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        stats : array of `sherpa.fit.StatInfoResults`
+        stats : array of `StatInfoResults`
            The values for each data set. If there are multiple model
            expressions then the last element will be the value for the
            combined data sets.
@@ -9768,7 +9769,8 @@ class Session(NoNewAttributesAfterInit):
 
     def calc_stat(self,
                   id: IdType | None = None,
-                  *otherids: IdType):
+                  *otherids: IdType
+                  ) -> float:
         """Calculate the fit statistic for a data set.
 
         Evaluate the model for one or more data sets, compare it to
@@ -9827,7 +9829,8 @@ class Session(NoNewAttributesAfterInit):
 
     def calc_chisqr(self,
                     id: IdType | None = None,
-                    *otherids: IdType):
+                    *otherids: IdType
+                    ) -> np.ndarray | None:
         """Calculate the per-bin chi-squared statistic.
 
         Evaluate the model for one or more data sets, compare it to the
@@ -10018,7 +10021,10 @@ class Session(NoNewAttributesAfterInit):
         """
         ids, f = self._get_fit(id, otherids)
         res = f.fit(**kwargs)
-        res.datasets = ids
+        # Rather than convert to a list, leave as a tuple but pretend
+        # it is a tuple. Users may be expecting a tuple rather than
+        # list here.
+        res.datasets = cast(list[IdType], ids)
         self._fit_results = res
         info(res.format())
 
@@ -10030,7 +10036,7 @@ class Session(NoNewAttributesAfterInit):
     # Simulation functions
     #
 
-    def get_pvalue_results(self):
+    def get_pvalue_results(self) -> LikelihoodRatioResults | None:
         """Return the data calculated by the last plot_pvalue call.
 
         The `get_pvalue_results` function returns the likelihood ratio test
@@ -10050,10 +10056,10 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        plot : None or a `sherpa.sim.simulate.LikelihoodRatioResults` instance
+        plot : None or a `LikelihoodRatioResults` instance
            If `plot_pvalue` or `get_pvalue_plot` have been called then
-           the return value is a `sherpa.sim.simulate.LikelihoodRatioResults`
-           instance, otherwise `None` is returned.
+           the return value is a `LikelihoodRatioResults` instance,
+           otherwise `None` is returned.
 
         See Also
         --------
@@ -10648,7 +10654,7 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-TODO: how best to document the settings?
     # DOC-TODO: have I got soft_limits described correctly?
-    def get_covar(self):
+    def get_covar(self) -> EstMethod:
         """Return the covariance estimation object.
 
         Returns
@@ -10705,7 +10711,7 @@ class Session(NoNewAttributesAfterInit):
     # DOC-TODO: have I got soft_limits described correctly?
     # DOC-TODO: when verbose=True how is extra output displayed?
     # stdout, stderr, sherpa logging?
-    def get_conf(self):
+    def get_conf(self) -> EstMethod:
         """Return the confidence-interval estimation object.
 
         Returns
@@ -10810,7 +10816,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._estmethods['confidence']
 
-    def get_proj(self):
+    def get_proj(self) -> EstMethod:
         """Return the confidence-interval estimation object.
 
         .. note:: The `conf` function should be used instead of `proj`.
@@ -10905,12 +10911,14 @@ class Session(NoNewAttributesAfterInit):
     # New "wrappers" to access estimation methods without calling
     # get_proj(), etc.
 
-    def _check_estmethod_opt(self, estmethod, optname):
+    def _check_estmethod_opt(self, estmethod: EstMethod, optname: str) -> None:
         _check_str_type(optname, "optname")
         if optname not in estmethod.config:
             raise ArgumentErr('badopt', optname, estmethod.name)
 
-    def _get_estmethod_opt(self, methodname, optname=None):
+    def _get_estmethod_opt(self,
+                           methodname: str,
+                           optname: str | None = None) -> Any:
         meth = self._estmethods.get(methodname.lower())
         if meth is None:
             raise ArgumentErr('badconf', methodname)
@@ -10919,14 +10927,17 @@ class Session(NoNewAttributesAfterInit):
         self._check_estmethod_opt(meth, optname)
         return meth.config[optname]
 
-    def _set_estmethod_opt(self, methodname, optname, val):
+    def _set_estmethod_opt(self,
+                           methodname: str,
+                           optname: str,
+                           val: Any) -> None:
         meth = self._estmethods.get(methodname.lower())
         if meth is None:
             raise ArgumentErr('badconf', methodname)
         self._check_estmethod_opt(meth, optname)
         meth.config[optname] = val
 
-    def get_covar_opt(self, name=None):
+    def get_covar_opt(self, name: str | None = None) -> Any:
         """Return one or all of the options for the covariance
         method.
 
@@ -10967,7 +10978,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._get_estmethod_opt('covariance', name)
 
-    def get_conf_opt(self, name=None):
+    def get_conf_opt(self, name: str | None = None) -> Any:
         """Return one or all of the options for the confidence interval
         method.
 
@@ -11008,7 +11019,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._get_estmethod_opt('confidence', name)
 
-    def get_proj_opt(self, name=None):
+    def get_proj_opt(self, name: str | None = None) -> Any:
         """Return one or all of the options for the confidence interval
         method.
 
@@ -11052,7 +11063,7 @@ class Session(NoNewAttributesAfterInit):
         """
         return self._get_estmethod_opt('projection', name)
 
-    def set_covar_opt(self, name, val):
+    def set_covar_opt(self, name: str, val) -> None:
         """Set an option for the covariance method.
 
         This is a helper function since the options can also
@@ -11086,7 +11097,7 @@ class Session(NoNewAttributesAfterInit):
         """
         self._set_estmethod_opt('covariance', name, val)
 
-    def set_conf_opt(self, name, val):
+    def set_conf_opt(self, name: str, val: Any) -> None:
         """Set an option for the confidence interval method.
 
         This is a helper function since the options can also
@@ -11120,7 +11131,7 @@ class Session(NoNewAttributesAfterInit):
         """
         self._set_estmethod_opt('confidence', name, val)
 
-    def set_proj_opt(self, name, val):
+    def set_proj_opt(self, name: str, val: Any) -> None:
         """Set an option for the projection method.
 
         .. note:: The `conf` function should be used instead of `proj`.
@@ -11157,12 +11168,12 @@ class Session(NoNewAttributesAfterInit):
         """
         self._set_estmethod_opt('projection', name, val)
 
-    def get_covar_results(self):
+    def get_covar_results(self) -> ErrorEstResults:
         """Return the results of the last `covar` run.
 
         Returns
         -------
-        results : sherpa.fit.ErrorEstResults object
+        results : `ErrorEstResults` object
 
         Raises
         ------
@@ -11253,12 +11264,12 @@ class Session(NoNewAttributesAfterInit):
 
         return self._covariance_results
 
-    def get_conf_results(self):
+    def get_conf_results(self) -> ErrorEstResults:
         """Return the results of the last `conf` run.
 
         Returns
         -------
-        results : sherpa.fit.ErrorEstResults object
+        results : `ErrorEstResults` object
 
         Raises
         ------
@@ -11350,14 +11361,14 @@ class Session(NoNewAttributesAfterInit):
 
         return self._confidence_results
 
-    def get_proj_results(self):
+    def get_proj_results(self) -> ErrorEstResults:
         """Return the results of the last `proj` run.
 
         .. note:: The `conf` function should be used instead of `proj`.
 
         Returns
         -------
-        results : sherpa.fit.ErrorEstResults object
+        results : `ErrorEstResults` object
 
         Raises
         ------
@@ -11441,7 +11452,10 @@ class Session(NoNewAttributesAfterInit):
 
         return self._projection_results
 
-    def _est_errors(self, args, methodname):
+    def _est_errors(self,
+                    args,
+                    methodname: str
+                    ) -> ErrorEstResults:
         """Evaluate the errors for the given arguments.
 
         The formatted output of the estimation is logged at the
@@ -11460,7 +11474,7 @@ class Session(NoNewAttributesAfterInit):
 
         Returns
         -------
-        result : sherpa.fit.ErrorEstResults instance
+        result : `ErrorEstResults` instance
 
         """
 
@@ -11502,12 +11516,15 @@ class Session(NoNewAttributesAfterInit):
 
         ids, f = self._get_fit(id, otherids, self._estmethods[methodname])
         res = f.est_errors(self._methods, parlist)
-        res.datasets = ids
+        # Rather than convert to a list, leave as a tuple but pretend
+        # it is a tuple. Users may be expecting a tuple rather than
+        # list here.
+        res.datasets = cast(list[IdType], ids)
         info(res.format())
         return res
 
     # DOC-TODO: include screen output of covar() ?
-    def covar(self, *args):
+    def covar(self, *args) -> None:
         """Estimate parameter confidence intervals using the covariance method.
 
         The `covar` command computes confidence interval bounds for
@@ -11652,7 +11669,7 @@ class Session(NoNewAttributesAfterInit):
         self._covariance_results = self._est_errors(args, 'covariance')
 
     # DOC-TODO: include screen output of conf() ?
-    def conf(self, *args):
+    def conf(self, *args) -> None:
         """Estimate parameter confidence intervals using the confidence method.
 
         The `conf` command computes confidence interval bounds for the
@@ -11874,7 +11891,7 @@ class Session(NoNewAttributesAfterInit):
         self._confidence_results = self._est_errors(args, 'confidence')
 
     # DOC-TODO: add a deprecation note?
-    def proj(self, *args):
+    def proj(self, *args) -> None:
         """Estimate parameter confidence intervals using the projection method.
 
         .. note:: The `conf` function should be used instead of `proj`.
