@@ -31,7 +31,7 @@ import logging
 import os
 import pickle
 import sys
-from typing import Any, Concatenate, Literal, TypeGuard, TypeVar, \
+from typing import Any, Literal, TypeGuard, TypeVar, \
     cast, overload
 
 import numpy as np
@@ -162,7 +162,7 @@ def get_plot_prefs(plotobj) -> PrefsType:
             raise AttributeError("plot object has no preferences") from None
 
 
-def _get_filter(data):
+def _get_filter(data: Data) -> str | None:
     """Report the filter for report_filter_change.
 
     This takes care of calling get_filter with the correct
@@ -173,7 +173,7 @@ def _get_filter(data):
 
     Parameters
     ----------
-    data : Data1D instance
+    data
 
     Returns
     -------
@@ -733,7 +733,7 @@ def _remove_obj_from_main(name: str) -> None:
             pass
 
 
-def set_dep(data, val) -> None:
+def set_dep(data: Data, val: float | ArrayType) -> None:
     """Set the dependent axis.
 
     Parameters
@@ -747,13 +747,18 @@ def set_dep(data, val) -> None:
     if np.iterable(val):
         dep = np.asarray(val, SherpaFloat)
     else:
+        if data.size is None:
+            raise DataErr("sizenotset", data.name)
+
         val = SherpaFloat(val)
-        dep = np.array([val] * data.size)
+        dep = np.full(data.size, val)
 
     data.dep = dep
 
 
-def set_error(data, field, val,
+def set_error(data: Data,
+              field: Literal["staterror"] | Literal["syserror"],
+              val: float | ArrayType | None,
               fractional: bool = False) -> None:
     """Set the error field.
 
@@ -783,14 +788,22 @@ def set_error(data, field, val,
     else:
         val = SherpaFloat(val)
         if fractional:
-            err = val * data.get_dep()
+            dep = data.get_dep()
+            if dep is None:
+                raise DataErr('no dependent axis to scale')
+
+            err = val * dep
+        elif data.size is not None:
+            err = np.full(data.size, val)
+
         else:
-            err = np.array([val] * data.size)
+            raise DataErr("sizenotset", data.name)
 
     setattr(data, field, err)
 
 
-def set_filter(data, val,
+def set_filter(data: Data,
+               val: ArrayType,
                ignore: bool = False) -> None:
     """Set the filter field.
 
@@ -817,12 +830,12 @@ def set_filter(data, val,
     # Note that we do not use data.size as the check, as that fails
     # for grouped PHA data. Is there some way to have an "effective
     # size" value?
-    #
-    nexp = len(data.get_y(False))
     if np.iterable(data.mask):
+        # If mask is an array then there must be independent/y values,
+        # so get_y can not return None, hence the cast.
+        nexp = len(cast(np.ndarray, data.get_y(False)))
         if nexp != nval:
-            raise sherpa.utils.err.DataErr('mismatchn', 'data', 'filter',
-                                           nexp, nval)
+            raise DataErr('mismatchn', 'data', 'filter', nexp, nval)
 
         if not ignore:
             data.mask |= val
@@ -3580,7 +3593,9 @@ class Session(NoNewAttributesAfterInit):
                             filename, ncols=ncols, *args, **kwargs),
                         ignore=ignore)
 
-    def set_filter(self, id, val=None,
+    def set_filter(self,
+                   id: IdType | ArrayType | None,
+                   val: ArrayType | None = None,
                    ignore: bool = False) -> None:
         """Set the filter array of a data set.
 
@@ -3630,7 +3645,10 @@ class Session(NoNewAttributesAfterInit):
         set_filter(d, val, ignore=ignore)
 
     # also in sherpa.astro.utils
-    def set_dep(self, id, val=None) -> None:
+    def set_dep(self,
+                id: IdType | float | ArrayType | None,
+                val: float | ArrayType | None = None
+                ) -> None:
         """Set the dependent axis of a data set.
 
         Parameters
@@ -3678,7 +3696,9 @@ class Session(NoNewAttributesAfterInit):
         set_dep(d, val)
 
     # DOC-NOTE: also in sherpa.utils
-    def set_staterror(self, id, val=None,
+    def set_staterror(self,
+                      id: IdType | float | ArrayType | None,
+                      val: float | ArrayType | None = None,
                       fractional: bool = False) -> None:
         """Set the statistical errors on the dependent axis of a data set.
 
@@ -3736,8 +3756,11 @@ class Session(NoNewAttributesAfterInit):
         d = self.get_data(id)
         set_error(d, "staterror", val, fractional=bool_cast_scalar(fractional))
 
+
     # DOC-NOTE: also in sherpa.astro.utils
-    def set_syserror(self, id, val=None,
+    def set_syserror(self,
+                     id: IdType | float | ArrayType | None,
+                     val: float | ArrayType | None = None,
                      fractional: bool = False) -> None:
         """Set the systematic errors on the dependent axis of a data set.
 
@@ -3795,7 +3818,7 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     def get_staterror(self,
                       id: IdType | None = None,
-                      filter: bool = False):
+                      filter: bool = False) -> np.ndarray:
         """Return the statistical error on the dependent axis of a data set.
 
         The function returns the statistical errors on the values
@@ -3870,13 +3893,17 @@ class Session(NoNewAttributesAfterInit):
         array([2, 3, 5])
 
         """
-        return self.get_data(id).get_staterror(filter,
-                                               self.get_stat().calc_staterror)
+        idarg = self._fix_id(id)
+        data = self.get_data(idarg)
+        evals = data.get_staterror(filter, self.get_stat().calc_staterror)
+        if evals is None:
+            raise DataErr(f"No statistical error is provided for dataset {idarg}")
+        return np.asarray(evals)
 
     # DOC-NOTE: also in sherpa.astro.utils
     def get_syserror(self,
                      id: IdType | None = None,
-                     filter: bool = False):
+                     filter: bool = False) -> np.ndarray:
         """Return the systematic error on the dependent axis of a data set.
 
         The function returns the systematic errors on the values
@@ -3949,7 +3976,7 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     def get_error(self,
                   id: IdType | None = None,
-                  filter: bool = False):
+                  filter: bool = False) -> ArrayType | None:
         """Return the errors on the dependent axis of a data set.
 
         The function returns the total errors (a quadrature addition
@@ -4014,13 +4041,15 @@ class Session(NoNewAttributesAfterInit):
         >>> err = get_error('core', filter=True)
 
         """
-        return self.get_data(id).get_error(filter,
-                                           self.get_stat().calc_staterror)
+        statfunc = self.get_stat().calc_staterror
+        return self.get_data(id).get_error(filter=filter,
+                                           staterrfunc=statfunc)
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-NOTE: shouldn't this expose a filter parameter?
     def get_indep(self,
-                  id: IdType | None = None):
+                  id: IdType | None = None
+                  ) -> tuple[np.ndarray, ...] | tuple[None, ...]:
         """Return the independent axes of a data set.
 
         This function returns the coordinates of each point, or pixel,
@@ -4073,7 +4102,7 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     def get_dep(self,
                 id: IdType | None = None,
-                filter: bool = False):
+                filter: bool = False) -> np.ndarray | None:
         """Return the dependent axis of a data set.
 
         This function returns the data values (the dependent axis)
@@ -4131,11 +4160,11 @@ class Session(NoNewAttributesAfterInit):
         array([4, 5])
 
         """
-        return self.get_data(id).get_y(filter)
+        return self.get_data(id).get_y(filter=filter)
 
     def get_dims(self,
                  id: IdType | None = None,
-                 filter: bool = False):
+                 filter: bool = False) -> tuple[int, ...]:
         """Return the dimensions of the data set.
 
         Parameters
@@ -4172,7 +4201,7 @@ class Session(NoNewAttributesAfterInit):
         >>> nfilt = get_dims('a2543', filter=True)
 
         """
-        return self.get_data(id).get_dims(filter)
+        return self.get_data(id).get_dims(filter=filter)
 
     # DOC-NOTE: should there be a version in sherpa.astro.utils with a bkg_id
     # parameter?
@@ -4390,7 +4419,11 @@ class Session(NoNewAttributesAfterInit):
         self._data.pop(idval, None)
 
     # DOC-NOTE: also in sherpa.astro.utils
-    def dataspace1d(self, start, stop, step=1, numbins=None,
+    def dataspace1d(self,
+                    start: float,
+                    stop: float,
+                    step: float = 1,
+                    numbins: int | None = None,
                     id: IdType | None = None,
                     dstype=Data1DInt
                     ) -> None:
@@ -4478,7 +4511,8 @@ class Session(NoNewAttributesAfterInit):
         self.set_data(id, dstype('dataspace1d', *args))
 
     # DOC-NOTE: also in sherpa.astro.utils
-    def dataspace2d(self, dims,
+    def dataspace2d(self,
+                    dims: Sequence[int],
                     id: IdType | None = None,
                     dstype=sherpa.data.Data2D
                     ) -> None:
@@ -4534,7 +4568,7 @@ class Session(NoNewAttributesAfterInit):
 
     def fake(self,
              id: IdType | None = None,
-             method=sherpa.utils.poisson_noise
+             method: Callable = sherpa.utils.poisson_noise
              ) -> None:
         """Simulate a data set.
 
@@ -4611,19 +4645,9 @@ class Session(NoNewAttributesAfterInit):
         ndep = method(data.eval_model(model), rng=self.get_rng())
         self.set_dep(id, ndep)
 
-    # This appears to only be used in unpack_data so can we remove it?
-    #
-    @staticmethod
-    def _read_data(readfunc: Callable[Concatenate[str, ...], Data],
-                   filename: str,
-                   *args,
-                   **kwargs) -> Data:
-        _check_str_type(filename, "filename")
-        return readfunc(filename, *args, **kwargs)
-
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: What data types are supported here?
-    def unpack_arrays(self, *args):
+    def unpack_arrays(self, *args) -> Data:
         """Create a sherpa data object from arrays of data.
 
         The object returned by `unpack_arrays` can be used in a
@@ -4790,8 +4814,11 @@ class Session(NoNewAttributesAfterInit):
         ...                    dstype=ui.Data1DInt)
 
         """
-        return self._read_data(sherpa.io.read_data, filename, ncols, colkeys,
-                               sep, dstype, comment, require_floats)
+        _check_str_type(filename, "filename")
+        return sherpa.io.read_data(filename, ncols=ncols,
+                                   colkeys=colkeys, sep=sep,
+                                   dstype=dstype, comment=comment,
+                                   require_floats=require_floats)
 
     # DOC-NOTE: also in sherpa.astro.utils
     def load_data(self,

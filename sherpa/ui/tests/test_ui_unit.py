@@ -1018,9 +1018,8 @@ def test_set_dep_scalar_empty(clean_ui):
     """
 
     ui.set_data(ui.Data1D("x", None, None))
-    with pytest.raises(TypeError):
-        # The message is some variant of:
-        # "can't multiply sequence by non-int of type 'NoneType'"
+    with pytest.raises(DataErr,
+                       match="^The size of 'x' has not been set$"):
         ui.set_dep(3)
 
 
@@ -1220,10 +1219,9 @@ def test_set_staterr_scalar_nodep(fractional, clean_ui):
     """Corner case: set_staterror with scalar and no data."""
 
     ui.set_data(ui.Data1D("x", None, None))
-    with pytest.raises(TypeError):
-        # The errors are some variant of:
-        # "can't multiply sequence by non-int of type 'NoneType'"
-        # "unsupported operand type(s) for *: 'float' and 'NoneType'"
+    with pytest.raises(DataErr):
+        # This can error with 'The size of 'x' has not been set'
+        # or 'no dependent acis to scale'
         ui.set_staterror(2.3, fractional=fractional)
 
 
