@@ -1260,12 +1260,9 @@ class Session(NoNewAttributesAfterInit):
         if os.path.isfile(filename) and not clobber:
             raise IOErr("filefound", filename)
 
-        fout = open(filename, 'wb')
-        try:
+        with open(filename, 'wb') as fout:
             # Use the default version rather than fix a version
             pickle.dump(self, fout)
-        finally:
-            fout.close()
 
     def restore(self, filename='sherpa.save') -> None:
         """Load in a Sherpa session from a file.
@@ -4810,10 +4807,12 @@ class Session(NoNewAttributesAfterInit):
         """
         if filename is None:
             id, filename = filename, id
-        self.set_data(id, self.unpack_data(filename, ncols=ncols,
-                                           colkeys=colkeys, dstype=dstype,
-                                           sep=sep, comment=comment,
-                                           require_floats=require_floats))
+
+        data = self.unpack_data(filename, ncols=ncols,
+                                colkeys=colkeys, dstype=dstype,
+                                sep=sep, comment=comment,
+                                require_floats=require_floats)
+        self.set_data(id, data)
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: rework the Data type notes section (also needed by unpack_arrays)
@@ -8441,9 +8440,7 @@ class Session(NoNewAttributesAfterInit):
         # fold the PSF with data and model if available, if not pass
         try:
             data = self.get_data(id)
-            psf = self._psf.get(id, None)
-            if psf is not None:
-                psf.fold(data)
+            psf.fold(data)
 
         except IdentifierErr:
             pass
@@ -8452,8 +8449,10 @@ class Session(NoNewAttributesAfterInit):
         # attribute, then populate the model position parameters
         # using the PSF center if the user has not already done so.
         # Note: PSFKernel only.
-        if (psf.kernel is not None and callable(psf.kernel) and
-                psf.model is not None and isinstance(psf.model, PSFKernel)):
+        if psf.kernel is not None and \
+           psf.model is not None and \
+           callable(psf.kernel) and \
+           isinstance(psf.model, PSFKernel):
 
             psf_center = psf.center
             if np.isscalar(psf_center):
