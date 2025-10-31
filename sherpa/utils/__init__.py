@@ -1077,7 +1077,25 @@ def filter_bins(mins: Sequence[float | None],
     return mask
 
 
-# It would be useful to be able to tstat that this only returns a
+def bool_cast_scalar(val: Any) -> bool:
+    """bool_cast but for an-assumed-to-be scalar value."""
+
+    if type(val) == str:
+        # since built in bool() only returns false for empty strings
+        vlo = val.lower()
+        if vlo in ('false', 'off', 'no', '0', 'f', 'n'):
+            return False
+
+        if vlo in ('true', 'on', 'yes', '1', 't', 'y'):
+            return True
+
+        raise TypeError(f"unknown boolean value: '{val}'")
+
+    # use built in bool cast
+    return bool(val)
+
+
+# It would be useful to be able to say that this only returns a
 # ndarray when the input is some form of iterable/sequence, but given
 # the lack of restriction on the input value (here labelled as Any) it
 # is not obvious how to make the distinction.
@@ -1111,19 +1129,7 @@ def bool_cast(val: Any) -> bool | np.ndarray:
     if type(val) in (tuple, list, np.ndarray):
         return np.asarray([bool_cast(item) for item in val], bool)
 
-    if type(val) == str:
-        # since built in bool() only returns false for empty strings
-        vlo = val.lower()
-        if vlo in ('false', 'off', 'no', '0', 'f', 'n'):
-            return False
-
-        if vlo in ('true', 'on', 'yes', '1', 't', 'y'):
-            return True
-
-        raise TypeError(f"unknown boolean value: '{val}'")
-
-    # use built in bool cast
-    return bool(val)
+    return bool_cast_scalar(val)
 
 
 # This could take and return "Callable[P, T]" where P is
