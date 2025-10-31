@@ -3402,8 +3402,8 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-NOTE: is ncols really 2 here? Does it make sense?
     def load_staterror(self,
-                       id,
-                       filename=None,
+                       id: IdType | None,
+                       filename: str | None = None,
                        ncols: int = 2,
                        *args, **kwargs) -> None:
         """Load the statistical errors from an ASCII file.
@@ -3469,17 +3469,15 @@ class Session(NoNewAttributesAfterInit):
         >>> load_staterror('core', 'errors.dat')
 
         """
-        if filename is None:
-            id, filename = filename, id
-
-        self.set_staterror(id, self._read_error(filename, ncols=ncols,
-                                                *args, **kwargs))
+        idarg, filearg = separate_id_from_arg(id, filename)
+        errs = self._read_error(filearg, ncols=ncols, *args, **kwargs)
+        self.set_staterror(idarg, errs)
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-NOTE: is ncols really 2 here? Does it make sense?
     def load_syserror(self,
-                      id,
-                      filename=None,
+                      id: IdType | None,
+                      filename: str | None = None,
                       ncols: int = 2,
                       *args, **kwargs) -> None:
         """Load the systematic errors from an ASCII file.
@@ -3542,17 +3540,15 @@ class Session(NoNewAttributesAfterInit):
         >>> load_syserror('core', 'errors.dat')
 
         """
-        if filename is None:
-            id, filename = filename, id
-
-        self.set_syserror(id, self._read_error(filename, ncols=ncols,
-                                               *args, **kwargs))
+        idarg, filearg = separate_id_from_arg(id, filename)
+        errs = self._read_error(filearg, ncols=ncols, *args, **kwargs)
+        self.set_syserror(idarg, errs)
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: does ncols make sense here? (have removed for now)
     def load_filter(self,
-                    id,
-                    filename=None,
+                    id: IdType | None,
+                    filename: str | None = None,
                     ignore: bool = False,
                     ncols: int = 2,
                     *args, **kwargs) -> None:
@@ -3612,13 +3608,9 @@ class Session(NoNewAttributesAfterInit):
         >>> load_filter(2, 'filt.dat', colkeys=['FILTER'])
 
         """
-        if filename is None:
-            id, filename = filename, id
-
-        self.set_filter(id,
-                        self._read_error(
-                            filename, ncols=ncols, *args, **kwargs),
-                        ignore=ignore)
+        idarg, filearg = separate_id_from_arg(id, filename)
+        fvals = self._read_error(filearg, ncols=ncols, *args, **kwargs)
+        self.set_filter(idarg, fvals, ignore=ignore)
 
     def set_filter(self,
                    id: IdType | ArrayType | None,
@@ -4840,8 +4832,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.astro.utils
     def load_data(self,
-                  id,
-                  filename = None,
+                  id: IdType | None,
+                  filename: str | None = None,
                   ncols: int = 2,
                   colkeys: Sequence[str] | None = None,
                   dstype=Data1D,
@@ -4912,14 +4904,12 @@ class Session(NoNewAttributesAfterInit):
         >>> load_data(2, 'profile.dat', colkeys=cols)
 
         """
-        if filename is None:
-            id, filename = filename, id
-
-        data = self.unpack_data(filename, ncols=ncols,
+        idarg, filearg = separate_id_from_arg(id, filename)
+        data = self.unpack_data(filearg, ncols=ncols,
                                 colkeys=colkeys, dstype=dstype,
                                 sep=sep, comment=comment,
                                 require_floats=require_floats)
-        self.set_data(id, data)
+        self.set_data(idarg, data)
 
     # DOC-NOTE: also in sherpa.astro.utils
     # DOC-TODO: rework the Data type notes section (also needed by unpack_arrays)
@@ -4996,16 +4986,16 @@ class Session(NoNewAttributesAfterInit):
         """
         self.set_data(id, self.unpack_arrays(*args))
 
-    def _save_type(self, objtype: str,
-                   id,
-                   filename,
+    def _save_type(self,
+                   objtype: str,
+                   id: IdType | None,
+                   filename: str | None,
                    **kwargs) -> None:
-        if filename is None:
-            id, filename = filename, id
+        """Write out data"""
 
-        _check_str_type(filename, "filename")
-
-        d = self.get_data(id)
+        idarg, filearg = separate_id_from_arg(id, filename)
+        _check_str_type(filearg, "filename")
+        d = self.get_data(idarg)
 
         args = None
         fields = None
@@ -5019,7 +5009,7 @@ class Session(NoNewAttributesAfterInit):
             funcname = f"get_{objtype}_image"
             imgtype = getattr(self, funcname)
 
-            obj = imgtype(id)
+            obj = imgtype(idarg)
             args = [obj.y]
             fields = [str(objtype).upper()]
 
@@ -5027,11 +5017,11 @@ class Session(NoNewAttributesAfterInit):
             funcname = f"get_{objtype}_plot"
             plottype = getattr(self, funcname)
 
-            obj = plottype(id)
+            obj = plottype(idarg)
             args = [obj.x, obj.y]
             fields = ["X", str(objtype).upper()]
 
-        sherpa.io.write_arrays(filename, args, fields, **kwargs)
+        sherpa.io.write_arrays(filearg, args, fields, **kwargs)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
     def save_arrays(self,
@@ -5102,8 +5092,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.utils with a different interface
     def save_source(self,
-                    id,
-                    filename=None,
+                    id: IdType | None,
+                    filename: str | None = None,
                     clobber: bool = False,
                     sep: str = ' ',
                     comment: str = '#',
@@ -5185,8 +5175,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.utils with a different interface
     def save_model(self,
-                   id,
-                   filename=None,
+                   id: IdType | None,
+                   filename: str | None = None,
                    clobber: bool = False,
                    sep: str = ' ',
                    comment: str = '#',
@@ -5269,8 +5259,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.utils with a different interface
     def save_resid(self,
-                   id,
-                   filename=None,
+                   id: IdType | None,
+                   filename: str | None = None,
                    clobber: bool = False,
                    sep: str = ' ',
                    comment: str = '#',
@@ -5347,8 +5337,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.utils with a different interface
     def save_delchi(self,
-                    id,
-                    filename=None,
+                    id: IdType | None,
+                    filename: str | None = None,
                     clobber: bool = False,
                     sep: str = ' ',
                     comment: str = '#',
@@ -5425,8 +5415,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-NOTE: also in sherpa.astro.utils
     def save_data(self,
-                  id,
-                  filename=None,
+                  id: IdType | None,
+                  filename: str | None = None,
                   fields: Sequence[str] | None = None,
                   sep: str = ' ',
                   comment: str = '#',
@@ -5506,19 +5496,17 @@ class Session(NoNewAttributesAfterInit):
 
         """
         clob = bool_cast_scalar(clobber)
-        if filename is None:
-            id, filename = filename, id
-
-        _check_str_type(filename, "filename")
-        sherpa.io.write_data(filename, self.get_data(id),
+        idarg, filearg = separate_id_from_arg(id, filename)
+        _check_str_type(filearg, "filename")
+        sherpa.io.write_data(filearg, self.get_data(idarg),
                              fields=fields, sep=sep, comment=comment,
                              clobber=clob, linebreak=linebreak,
                              format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
     def save_filter(self,
-                    id,
-                    filename=None,
+                    id: IdType | None,
+                    filename: str | None = None,
                     clobber: bool = False,
                     sep: str = ' ',
                     comment: str = '#',
@@ -5583,28 +5571,25 @@ class Session(NoNewAttributesAfterInit):
 
         """
         clob = bool_cast_scalar(clobber)
-        if filename is None:
-            id, filename = filename, id
-
-        _check_str_type(filename, "filename")
-        d = self.get_data(id)
-        id = self._fix_id(id)
-
+        idarg, filearg = separate_id_from_arg(id, filename)
+        _check_str_type(filearg, "filename")
+        idval = self._fix_id(idarg)
+        d = self.get_data(idval)
         if d.mask is False:
             raise sherpa.utils.err.DataErr('notmask')
         if not np.iterable(d.mask):
-            raise sherpa.utils.err.DataErr('nomask', id)
+            raise sherpa.utils.err.DataErr('nomask', idval)
 
         x = d.get_indep(filter=False)[0]
         mask = np.asarray(d.mask, int)
-        self.save_arrays(filename, [x, mask], fields=['X', 'FILTER'],
+        self.save_arrays(filearg, [x, mask], fields=['X', 'FILTER'],
                          clobber=clob, sep=sep, comment=comment,
                          linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
     def save_staterror(self,
-                       id,
-                       filename=None,
+                       id: IdType | None,
+                       filename: str | None = None,
                        clobber: bool = False,
                        sep: str = ' ',
                        comment: str = '#',
@@ -5678,20 +5663,19 @@ class Session(NoNewAttributesAfterInit):
 
         """
         clob = bool_cast_scalar(clobber)
-        if filename is None:
-            id, filename = filename, id
-
-        _check_str_type(filename, "filename")
-        x = self.get_data(id).get_indep(filter=False)[0]
-        err = self.get_staterror(id, filter=False)
-        self.save_arrays(filename, [x, err], fields=['X', 'STAT_ERR'],
+        idarg, filearg = separate_id_from_arg(id, filename)
+        _check_str_type(filearg, "filename")
+        idval = self._fix_id(idarg)
+        x = self.get_data(idval).get_indep(filter=False)[0]
+        err = self.get_staterror(idval, filter=False)
+        self.save_arrays(filearg, [x, err], fields=['X', 'STAT_ERR'],
                          clobber=clob, sep=sep, comment=comment,
                          linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
     def save_syserror(self,
-                      id,
-                      filename=None,
+                      id: IdType | None,
+                      filename: str | None = None,
                       clobber: bool = False,
                       sep: str = ' ',
                       comment: str = '#',
@@ -5763,20 +5747,19 @@ class Session(NoNewAttributesAfterInit):
 
         """
         clob = bool_cast_scalar(clobber)
-        if filename is None:
-            id, filename = filename, id
-
-        _check_str_type(filename, "filename")
-        x = self.get_data(id).get_indep(filter=False)[0]
-        err = self.get_syserror(id, filter=False)
-        self.save_arrays(filename, [x, err], fields=['X', 'SYS_ERR'],
+        idarg, filearg = separate_id_from_arg(id, filename)
+        _check_str_type(filearg, "filename")
+        idval = self._fix_id(idarg)
+        x = self.get_data(idval).get_indep(filter=False)[0]
+        err = self.get_syserror(idval, filter=False)
+        self.save_arrays(filearg, [x, err], fields=['X', 'SYS_ERR'],
                          clobber=clob, sep=sep, comment=comment,
                          linebreak=linebreak, format=format)
 
     # DOC-NOTE: also in sherpa.astro.utils with a different interface
     def save_error(self,
-                   id,
-                   filename=None,
+                   id: IdType | None,
+                   filename: str | None = None,
                    clobber: bool = False,
                    sep: str = ' ',
                    comment: str = '#',
@@ -5855,13 +5838,12 @@ class Session(NoNewAttributesAfterInit):
 
         """
         clob = bool_cast_scalar(clobber)
-        if filename is None:
-            id, filename = filename, id
-
-        _check_str_type(filename, "filename")
-        x = self.get_data(id).get_indep(filter=False)[0]
-        err = self.get_error(id, filter=False)
-        self.save_arrays(filename, [x, err], fields=['X', 'ERR'],
+        idarg, filearg = separate_id_from_arg(id, filename)
+        _check_str_type(filearg, "filename")
+        idval = self._fix_id(idarg)
+        x = self.get_data(idval).get_indep(filter=False)[0]
+        err = self.get_error(idval, filter=False)
+        self.save_arrays(filearg, [x, err], fields=['X', 'ERR'],
                          clobber=clob, sep=sep, comment=comment,
                          linebreak=linebreak, format=format)
 
