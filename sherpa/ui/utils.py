@@ -422,6 +422,31 @@ def calc_multiplot_size(rows: int | None,
     return nrows, ncols
 
 
+# These overload lines do not seem to help, but leave in as a comment.
+#
+#@overload
+#def separate_id_from_arg(arg1: IdType, arg2: T) -> tuple[IdType, T]:
+#    ...
+#
+#@overload
+#def separate_id_from_arg(arg1: None, arg2: T) -> tuple[None, T]:
+#    ...
+#
+#@overload
+#def separate_id_from_arg(arg1: T, arg2: None) -> tuple[None, T]:
+#    ...
+#
+def separate_id_from_arg(arg1: IdType | T | None,
+                         arg2: T | None
+                         ) -> tuple[IdType | None, T]:
+    """Allow typing of '(id, val=None, ...)' routines."""
+
+    if arg2 is None:
+        return None, cast(T, arg1)
+
+    return cast(IdType | None, arg1), arg2
+
+
 ###############################################################################
 #
 # Pickling support
@@ -2289,10 +2314,10 @@ class Session(NoNewAttributesAfterInit):
                   itemdesc: str,
                   errdesc: str
                   ) -> T:
-        id = self._fix_id(id)
-        item = itemdict.get(id)
+        idval = self._fix_id(id)
+        item = itemdict.get(idval)
         if item is None:
-            raise IdentifierErr('getitem', itemdesc, id, errdesc)
+            raise IdentifierErr('getitem', itemdesc, idval, errdesc)
         return item
 
     def _set_item(self,
@@ -2303,9 +2328,9 @@ class Session(NoNewAttributesAfterInit):
                   itemname: str,
                   itemdesc: str
                   ) -> None:
-        id = self._fix_id(id)
+        idval = self._fix_id(id)
         _check_type(item, itemtype, itemname, itemdesc)
-        itemdict[id] = item
+        itemdict[idval] = item
 
     def get_default_id(self) -> IdType:
         """Return the default data set identifier.
@@ -3316,7 +3341,10 @@ class Session(NoNewAttributesAfterInit):
         return self._data.get(self._fix_id(id))
 
     # DOC-TODO: terrible synopsis
-    def set_data(self, id, data=None) -> None:
+    def set_data(self,
+                 id: IdType | Data | None,
+                 data: Data | None = None
+                 ) -> None:
 
         """Set a data set.
 
@@ -3359,10 +3387,9 @@ class Session(NoNewAttributesAfterInit):
         >>> set_data('bkg', get_bkg())
 
         """
-        if data is None:
-            id, data = data, id
-        self._set_item(id, data, self._data, sherpa.data.Data, 'data',
-                       'a data set')
+        idarg, dataarg = separate_id_from_arg(id, data)
+        self._set_item(idarg, dataarg, self._data, Data,
+                       'data', 'a data set')
 
     def _read_error(self,
                     filename: str,
@@ -3638,11 +3665,9 @@ class Session(NoNewAttributesAfterInit):
         >>> set_filter(d >= 20)
 
         """
-        if val is None:
-            val, id = id, val
-
-        d = self.get_data(id)
-        set_filter(d, val, ignore=ignore)
+        idarg, valarg = separate_id_from_arg(id, val)
+        d = self.get_data(idarg)
+        set_filter(d, valarg, ignore=ignore)
 
     # also in sherpa.astro.utils
     def set_dep(self,
@@ -3689,11 +3714,9 @@ class Session(NoNewAttributesAfterInit):
         >>> set_dep('src', y1)
 
         """
-        if val is None:
-            val, id = id, val
-        d = self.get_data(id)
-
-        set_dep(d, val)
+        idarg, valarg = separate_id_from_arg(id, val)
+        d = self.get_data(idarg)
+        set_dep(d, valarg)
 
     # DOC-NOTE: also in sherpa.utils
     def set_staterror(self,
@@ -3750,12 +3773,9 @@ class Session(NoNewAttributesAfterInit):
         >>> set_staterror('core', 0.05, fractional=True)
 
         """
-        if val is None:
-            val, id = id, val
-
-        d = self.get_data(id)
-        set_error(d, "staterror", val, fractional=bool_cast_scalar(fractional))
-
+        idarg, valarg = separate_id_from_arg(id, val)
+        d = self.get_data(idarg)
+        set_error(d, "staterror", valarg, fractional=bool_cast_scalar(fractional))
 
     # DOC-NOTE: also in sherpa.astro.utils
     def set_syserror(self,
@@ -3809,11 +3829,9 @@ class Session(NoNewAttributesAfterInit):
         >>> set_syserror('core', 0.05, fractional=True)
 
         """
-        if val is None:
-            val, id = id, val
-
-        d = self.get_data(id)
-        set_error(d, "syserror", val, fractional=bool_cast_scalar(fractional))
+        idarg, valarg = separate_id_from_arg(id, val)
+        d = self.get_data(idarg)
+        set_error(d, "syserror", valarg, fractional=bool_cast_scalar(fractional))
 
     # DOC-NOTE: also in sherpa.astro.utils
     def get_staterror(self,
