@@ -7272,8 +7272,8 @@ class Session(NoNewAttributesAfterInit):
     # DOC-NOTE: also in sherpa.astro.utils
     #
     def set_full_model(self,
-                       id,
-                       model=None
+                       id: IdType | Model | None,
+                       model: Model | None = None
                        ) -> None:
         """Define the convolved model expression for a data set.
 
@@ -7324,17 +7324,15 @@ class Session(NoNewAttributesAfterInit):
         >>> set_full_model("src", smodel)
 
         """
-        if model is None:
-            id, model = model, id
-
-        model = self._check_model(model)
-        idval = self._fix_id(id)
-        self._models[idval] = model
-        self._runparamprompt(model.pars)
+        idarg, modelarg = separate_id_from_arg(id, model)
+        modelval = self._check_model(modelarg)
+        idval = self._fix_id(idarg)
+        self._models[idval] = modelval
+        self._runparamprompt(modelval.pars)
 
     def set_model(self,
-                  id,
-                  model=None
+                  id: IdType | Model | None,
+                  model: Model | None = None
                   ) -> None:
         """Set the source model expression for a data set.
 
@@ -7450,11 +7448,9 @@ class Session(NoNewAttributesAfterInit):
         >>> gal.cache = 1
 
         """
-        if model is None:
-            id, model = model, id
-
-        model = self._check_model(model)
-        idval = self._fix_id(id)
+        idarg, modelarg = separate_id_from_arg(id, model)
+        modelval = self._check_model(modelarg)
+        idval = self._fix_id(idarg)
 
         # Fit(data, model) does the dimensionality validation. Note
         # that we assume that any convolution-style model (e.g. a PSF
@@ -7462,10 +7458,10 @@ class Session(NoNewAttributesAfterInit):
         #
         data = self._data.get(idval)
         if data is not None:
-            Fit(data, model)
+            Fit(data, modelval)
 
-        self._sources[idval] = model
-        self._runparamprompt(model.pars)
+        self._sources[idval] = modelval
+        self._runparamprompt(modelval.pars)
 
         # Delete any previous model set with set_full_model()
         mdl = self._models.pop(idval, None)
@@ -8572,8 +8568,8 @@ class Session(NoNewAttributesAfterInit):
 
     # DOC-TODO: am I correct about the multiple use warning?
     def set_psf(self,
-                id,
-                psf=None
+                id: IdType | Model | None,  # should use PSFModel
+                psf: Model | None = None
                 ) -> None:
         """Add a PSF model to a data set.
 
@@ -8684,20 +8680,21 @@ class Session(NoNewAttributesAfterInit):
         >>> image_kernel(newframe=True, tile=True)
 
         """
-        if psf is None:
-            id, psf, = psf, id
-        id = self._fix_id(id)
+        idarg, psfarg = separate_id_from_arg(id, psf)
+        idval = self._fix_id(idarg)
 
-        if _is_str(psf):
-            psf = self._eval_model_expression(psf)
+        if _is_str(psfarg):
+            psfmdl = self._eval_model_expression(psfarg)
+        else:
+            psfmdl = psfarg
 
-        self._set_item(id, psf, self._psf, PSFModel, 'psf',
+        self._set_item(idval, psfmdl, self._psf, PSFModel, 'psf',
                        'a PSF model object or PSF model expression string')
 
         # fold the PSF with data and model if available, if not pass
         try:
-            data = self.get_data(id)
-            psf.fold(data)
+            data = self.get_data(idval)
+            psfmdl.fold(data)
 
         except IdentifierErr:
             pass
@@ -8706,18 +8703,18 @@ class Session(NoNewAttributesAfterInit):
         # attribute, then populate the model position parameters
         # using the PSF center if the user has not already done so.
         # Note: PSFKernel only.
-        if psf.kernel is not None and \
-           psf.model is not None and \
-           callable(psf.kernel) and \
-           isinstance(psf.model, PSFKernel):
+        if psfmdl.kernel is not None and \
+           psfmdl.model is not None and \
+           callable(psfmdl.kernel) and \
+           isinstance(psfmdl.model, PSFKernel):
 
-            psf_center = psf.center
+            psf_center = psfmdl.center
             if np.isscalar(psf_center):
                 psf_center = [psf_center]
             try:
-                center = psf.kernel.get_center()
+                center = psfmdl.kernel.get_center()
                 if (np.asarray(center) == 0.0).all():
-                    psf.kernel.set_center(*psf_center, values=True)
+                    psfmdl.kernel.set_center(*psf_center, values=True)
             except NotImplementedError:
                 pass
 
@@ -8827,10 +8824,11 @@ class Session(NoNewAttributesAfterInit):
 
         idval = self._fix_id(id)
         psf = self._psf.get(idval, None)
+        if psf is None:
+            return model
 
-        if psf is not None:
-            model = psf(model)
-            psf.fold(data)
+        model = psf(model)  # Model is not enough to type this
+        psf.fold(data)
         return model
 
     #
@@ -9696,8 +9694,8 @@ class Session(NoNewAttributesAfterInit):
         return self._fit_results
 
     def guess(self,
-              id=None,
-              model=None,
+              id: IdType | Model | None = None,
+              model: Model | None = None,
               limits: bool = True,
               values: bool = True
               ) -> None:
@@ -9809,20 +9807,22 @@ class Session(NoNewAttributesAfterInit):
         #       -> is this id=X or model=X
         #    id=X, model=Y
         #
-        if model is None:
-            # Try to find out if this is a known identifier
-            if id not in self.list_data_ids():
-                id, model = model, id
+        if model is None and id not in self.list_data_ids():
+            idarg = None
+            modelarg = cast(Model | None, id)
+        else:
+            idarg = cast(IdType | None, id)
+            modelarg = cast(Model | None, model)
 
-        idval = self._fix_id(id)
+        idval = self._fix_id(idarg)
         kwargs = {'limits': limits, 'values': values}
 
-        if model is not None:
-            model = self._check_model(model)
+        if modelarg is not None:
+            modelval = self._check_model(modelarg)
             try:
-                model.guess(*self.get_data(idval).to_guess(), **kwargs)
+                modelval.guess(*self.get_data(idval).to_guess(), **kwargs)
             except NotImplementedError:
-                warning('No guess found for %s', model.name)
+                warning('No guess found for %s', modelval.name)
             return
 
         ids, f = self._get_fit(idval)
@@ -10207,7 +10207,10 @@ class Session(NoNewAttributesAfterInit):
     #
     # For now do not try to support multiple identifiers.
     #
-    def plot_pvalue(self, null_model, alt_model, conv_model=None,
+    def plot_pvalue(self,
+                    null_model: Model,
+                    alt_model: Model,
+                    conv_model=None,
                     id: IdType = 1,
                     otherids: IdTypes = (),
                     num: int = 500,
@@ -10321,7 +10324,10 @@ class Session(NoNewAttributesAfterInit):
         self._plot(lrplot, overplot=overplot, clearwindow=clearwindow,
                    **kwargs)
 
-    def get_pvalue_plot(self, null_model=None, alt_model=None, conv_model=None,
+    def get_pvalue_plot(self,
+                        null_model: Model | None = None,  # why allow None?
+                        alt_model: Model | None = None,
+                        conv_model=None,
                         id: IdType = 1,
                         otherids: IdTypes = (),
                         num: int = 500,
@@ -13005,10 +13011,9 @@ class Session(NoNewAttributesAfterInit):
 
         return plotobj
 
-    # TODO: apparently this does not map to a routine that returns Plot
     def get_model_component_plot(self,
-                                 id,
-                                 model=None,
+                                 id: IdType | Model | None,
+                                 model: Model | None = None,
                                  recalc: bool = True
                                  ) -> sherpa.plot.ComponentModelPlot | sherpa.plot.ComponentModelHistogramPlot:
         """Return the data used to create the model-component plot.
@@ -13067,19 +13072,17 @@ class Session(NoNewAttributesAfterInit):
         >>> plot2 = get_model_component_plot('jet', gline*gal)
 
         """
-        if model is None:
-            id, model = model, id
-        model = self._check_model(model)
-
+        idarg, modelarg = separate_id_from_arg(id, model)
+        modelval = self._check_model(modelarg)
         if recalc:
-            data = self.get_data(id)
+            data = self.get_data(idarg)
         else:
-            data = self._get_data(id)
+            data = self._get_data(idarg)
 
         idx = isinstance(data, Data1DInt)
         plotobj = self._plot_types["model_component"][idx]
         if recalc:
-            plotobj.prepare(data, model, self.get_stat())
+            plotobj.prepare(data, modelval, self.get_stat())
 
         return plotobj
 
@@ -13131,8 +13134,8 @@ class Session(NoNewAttributesAfterInit):
 
     # sherpa.astro.utils version copies this docstring
     def get_source_component_plot(self,
-                                  id,
-                                  model=None,
+                                  id: IdType | Model | None,
+                                  model: Model | None = None,
                                   recalc: bool = True
                                   ) -> sherpa.plot.ComponentSourcePlot | sherpa.plot.ComponentSourceHistogramPlot:
         """Return the data used by plot_source_component.
@@ -13191,23 +13194,21 @@ class Session(NoNewAttributesAfterInit):
         >>> plot2 = get_source_component_plot('jet', gline*gal)
 
         """
-        if model is None:
-            id, model = model, id
-        model = self._check_model(model)
-
+        idarg, modelarg = separate_id_from_arg(id, model)
+        modelval = self._check_model(modelarg)
         if recalc:
-            data = self.get_data(id)
+            data = self.get_data(idarg)
         else:
-            data = self._get_data(id)
+            data = self._get_data(idarg)
 
-        if isinstance(model, sherpa.models.TemplateModel):
+        if isinstance(modelval, sherpa.models.TemplateModel):
             plotobj = self._comptmplsrcplot
         else:
             idx = isinstance(data, Data1DInt)
             plotobj = self._plot_types["source_component"][idx]
 
         if recalc:
-            plotobj.prepare(data, model, self.get_stat())
+            plotobj.prepare(data, modelval, self.get_stat())
 
         return plotobj
 
@@ -15369,8 +15370,8 @@ class Session(NoNewAttributesAfterInit):
     # unclear how best to handle the coupling of id and model.
     #
     def plot_source_component(self,
-                              id,
-                              model=None,
+                              id: IdType | Model | None,
+                              model: Model | None = None,
                               replot: bool = False,
                               overplot: bool = False,
                               clearwindow: bool = True,
@@ -15434,10 +15435,8 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        if model is None:
-            id, model = model, id
-
-        plotobj = self.get_source_component_plot(id, model,
+        idarg, modelarg = separate_id_from_arg(id, model)
+        plotobj = self.get_source_component_plot(idarg, modelarg,
                                                  recalc=not replot)
 
         # Note: if replot=True then the value of model is ignored,
@@ -15516,8 +15515,8 @@ class Session(NoNewAttributesAfterInit):
     # unclear how best to handle the coupling of id and model.
     #
     def plot_model_component(self,
-                             id,
-                             model=None,
+                             id: IdType | Model | None,
+                             model: Model | None = None,
                              replot: bool = False,
                              overplot: bool = False,
                              clearwindow: bool = True,
@@ -15599,10 +15598,8 @@ class Session(NoNewAttributesAfterInit):
 
         """
 
-        if model is None:
-            id, model = model, id
-
-        plotobj = self.get_model_component_plot(id, model,
+        idarg, modelarg = separate_id_from_arg(id, model)
+        plotobj = self.get_model_component_plot(idarg, modelarg,
                                                 recalc=not replot)
 
         # Note: if replot=True then the value of model is ignored,
@@ -18874,8 +18871,8 @@ class Session(NoNewAttributesAfterInit):
         return imageobj
 
     def get_model_component_image(self,
-                                  id,
-                                  model=None
+                                  id: IdType | Model | None,
+                                  model: Model | None = None
                                   ) -> sherpa.image.ComponentModelImage:
         """Return the data used by image_model_component.
 
@@ -18927,23 +18924,23 @@ class Session(NoNewAttributesAfterInit):
         >>> minfo = get_model_component_image(2, bgnd)
 
         """
-        if model is None:
-            id, model = model, id
-        model = self._check_model(model)
+
+        idarg, modelarg = separate_id_from_arg(id, model)
+        modelval = self._check_model(modelarg)
 
         # Ensure the convolution models get applied
-        is_source = self._get_model_status(id)[1]
-        model = self._add_convolution_models(id, self.get_data(id),
-                                             model, is_source)
+        data = self.get_data(idarg)
+        is_source = self._get_model_status(idarg)[1]
+        convolved = self._add_convolution_models(idarg, data,
+                                                 modelval, is_source)
 
         imageobj = self._image_types['model_component']
-        data = self.get_data(id)
-        imageobj.prepare_image(data, model)
+        imageobj.prepare_image(data, convolved)
         return imageobj
 
     def get_source_component_image(self,
-                                   id,
-                                   model=None
+                                   id: IdType | Model | None,
+                                   model: Model | None = None
                                    ) -> sherpa.image.ComponentSourceImage:
         """Return the data used by image_source_component.
 
@@ -18995,13 +18992,13 @@ class Session(NoNewAttributesAfterInit):
         >>> sinfo = get_source_component_image(2, bgnd)
 
         """
-        if model is None:
-            id, model = model, id
-        model = self._check_model(model)
+
+        idarg, modelarg = separate_id_from_arg(id, model)
+        modelval = self._check_model(modelarg)
 
         imageobj = self._image_types['source_component']
-        data = self.get_data(id)
-        imageobj.prepare_image(data, model)
+        data = self.get_data(idarg)
+        imageobj.prepare_image(data, modelval)
         return imageobj
 
     def get_ratio_image(self,
@@ -19313,7 +19310,9 @@ class Session(NoNewAttributesAfterInit):
         imageobj = self.get_model_image(id)
         imageobj.image(newframe=newframe, tile=tile)
 
-    def image_source_component(self, id, model=None,
+    def image_source_component(self,
+                               id: IdType | Model | None,
+                               model: Model | None = None,
                                newframe: bool = False,
                                tile: bool = False) -> None:
         """Display a component of the source expression in the image viewer.
@@ -19387,7 +19386,9 @@ class Session(NoNewAttributesAfterInit):
         imageobj = self.get_source_component_image(id, model)
         imageobj.image(newframe=newframe, tile=tile)
 
-    def image_model_component(self, id, model=None,
+    def image_model_component(self,
+                              id: IdType | Model | None,
+                              model: Model | None = None,
                               newframe: bool = False,
                               tile: bool = False) -> None:
         """Display a component of the model in the image viewer.
