@@ -307,7 +307,7 @@ def report_filter_change(idstr: str,
 
 def notice_data_range(get_data: Callable[[IdType], Data],
                       ids: IdTypes,
-                      lo, hi,
+                      lo: float | None, hi: float | None,
                       kwargs) -> None:
     """Filter each dataset and report the change in filter.
 
@@ -5848,7 +5848,7 @@ class Session(NoNewAttributesAfterInit):
                          linebreak=linebreak, format=format)
 
     def _notice_expr(self,
-                     expr: str | None = None,
+                     expr: str,
                      **kwargs) -> None:
         ids = self.list_data_ids()
         for vals in sherpa.utils.parse_expr(expr):
@@ -5856,7 +5856,7 @@ class Session(NoNewAttributesAfterInit):
 
     def _notice_expr_id(self,
                         ids: IdType | IdTypes,
-                        expr: str | None = None,
+                        expr: str,
                         **kwargs) -> None:
         for vals in sherpa.utils.parse_expr(expr):
             self.notice_id(ids, *vals, **kwargs)
@@ -5865,7 +5865,10 @@ class Session(NoNewAttributesAfterInit):
     # should only be in the sherpa.astro.ui version, but it is not
     # worth creating a copy of the routine just for this.
     #
-    def notice(self, lo=None, hi=None, **kwargs) -> None:
+    def notice(self,
+               lo: float | str | None = None,
+               hi: float | None = None,
+               **kwargs) -> None:
         """Include data in the fit.
 
         Select one or more ranges of data to include by filtering on
@@ -5999,7 +6002,10 @@ class Session(NoNewAttributesAfterInit):
     # should only be in the sherpa.astro.ui version, but it is not
     # worth creating a copy of the routine just for this.
     #
-    def ignore(self, lo=None, hi=None, **kwargs) -> None:
+    def ignore(self,
+               lo: float | str | None = None,
+               hi: float | None = None,
+               **kwargs) -> None:
         """Exclude data from the fit.
 
         Select one or more ranges of data to exclude by filtering on
@@ -6111,7 +6117,8 @@ class Session(NoNewAttributesAfterInit):
     #
     def notice_id(self,
                   ids: IdType | IdTypes,
-                  lo=None, hi=None, **kwargs
+                  lo: float | str | None = None,
+                  hi: float | None = None, **kwargs
                   ) -> None:
         """Include data from the fit for a data set.
 
@@ -6205,7 +6212,7 @@ class Session(NoNewAttributesAfterInit):
             idvals = (ids,)
         else:
             try:
-                idvals = tuple(ids)
+                idvals = tuple(cast(IdTypes, ids))
             except TypeError:
                 raise ArgumentTypeErr('badarg', 'ids',
                                       'an identifier or list of identifiers') from None
@@ -6226,7 +6233,9 @@ class Session(NoNewAttributesAfterInit):
     #
     def ignore_id(self,
                   ids: IdType | IdTypes,
-                  lo=None, hi=None, **kwargs
+                  lo: float | str | None = None,
+                  hi: float | None = None,
+                  **kwargs
                   ) -> None:
         """Exclude data from the fit for a data set.
 
