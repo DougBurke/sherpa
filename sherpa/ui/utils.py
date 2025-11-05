@@ -11394,7 +11394,7 @@ class Session(NoNewAttributesAfterInit):
         Change the limits to be 1.6 sigma (90%) rather than the default
         1 sigma.
 
-        >>> set_covar_ope('sigma', 1.6)
+        >>> set_covar_opt('sigma', 1.6)
         >>> covar()
 
         Only evaluate the ``clus.kt`` parameter for the data sets with
