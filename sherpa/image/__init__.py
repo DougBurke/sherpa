@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2007, 2016, 2021, 2024
+#  Copyright (C) 2007, 2016, 2021, 2024-2025
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -32,10 +32,12 @@ References
 
 """
 
-import numpy
+import logging
+
+import numpy as np
+
 from sherpa.utils import NoNewAttributesAfterInit, bool_cast
 
-import logging
 warning = logging.getLogger(__name__).warning
 backend = None
 
@@ -181,8 +183,8 @@ class DataImage(Image):
     def __str__(self):
         y = self.y
         if self.y is not None:
-            y = numpy.array2string(self.y, separator=',', precision=4,
-                                   suppress_small=False)
+            y = np.array2string(self.y, separator=',', precision=4,
+                                suppress_small=False)
         return (('name   = %s\n' % self.name) +
                 ('y      = %s\n' % y) +
                 ('eqpos  = %s\n' % self.eqpos) +
@@ -215,8 +217,8 @@ class ModelImage(Image):
     def __str__(self):
         y = self.y
         if self.y is not None:
-            y = numpy.array2string(self.y, separator=',', precision=4,
-                                   suppress_small=False)
+            y = np.array2string(self.y, separator=',', precision=4,
+                                suppress_small=False)
         return (('name   = %s\n' % self.name) +
                 ('y      = %s\n' % y) +
                 ('eqpos  = %s\n' % self.eqpos) +
@@ -262,17 +264,17 @@ class RatioImage(Image):
     def __str__(self):
         y = self.y
         if self.y is not None:
-            y = numpy.array2string(self.y, separator=',', precision=4,
-                                   suppress_small=False)
+            y = np.array2string(self.y, separator=',', precision=4,
+                                suppress_small=False)
         return (('name   = %s\n' % self.name) +
                 ('y      = %s\n' % y) +
                 ('eqpos  = %s\n' % self.eqpos) +
                 ('sky    = %s\n' % self.sky))
 
     def _calc_ratio(self, ylist):
-        data = numpy.array(ylist[0])
-        model = numpy.asarray(ylist[1])
-        bad = numpy.where(model == 0.0)
+        data = np.array(ylist[0])
+        model = np.asarray(ylist[1])
+        bad = np.where(model == 0.0)
         data[bad] = 0.0
         model[bad] = 1.0
         return (data / model)
@@ -300,8 +302,8 @@ class ResidImage(Image):
     def __str__(self):
         y = self.y
         if self.y is not None:
-            y = numpy.array2string(self.y, separator=',', precision=4,
-                                   suppress_small=False)
+            y = np.array2string(self.y, separator=',', precision=4,
+                                suppress_small=False)
         return (('name   = %s\n' % self.name) +
                 ('y      = %s\n' % y) +
                 ('eqpos  = %s\n' % self.eqpos) +
