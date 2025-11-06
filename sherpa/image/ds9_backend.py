@@ -24,12 +24,19 @@ from sherpa.utils.err import DS9Err
 
 from . import DS9
 
-imager = DS9.DS9Win(DS9._DefTemplate, False)
+
+imager = DS9.DS9Win(template=DS9._DefTemplate, doOpen=False)
 
 
-# TODO: the except blocks would ideally catch explicit errors; the present
-#       catch-anything approach means that we lose potentially-useful
-#       information on the type of error.
+# The except blocks would ideally catch explicit errors; the present
+# catch-anything approach means that we lose potentially-useful
+# information on the type of error. To reduce the loss of information
+# the new exceptions are linked to the original exception.
+#
+# For now the try/except blocks have been made to catch BaseException
+# rather than Exception, since things like "ds9 being killed" is
+# probably something we either want to catch or users are already
+# relying on.
 #
 
 def close():
@@ -42,9 +49,9 @@ def delete_frames():
         raise DS9Err('open')
     try:
         imager.xpaset("frame delete all")
-        return imager.xpaset("frame new")
-    except:
-        raise DS9Err('delframe')
+        imager.xpaset("frame new")
+    except BaseException as exc:
+        raise DS9Err('delframe') from exc
 
 
 def get_region(coord):
@@ -58,46 +65,42 @@ def get_region(coord):
             else:
                 regionfmt = 'saoimage'
 
-            regionstr = "regions -format {} ".format(regionfmt) + \
-                        "-strip yes -system {}".format(coord)
+            regionstr = f"regions -format {regionfmt} " + \
+                        f"-strip yes -system {coord}"
 
-        regionstr = imager.xpaget(regionstr)
-        return regionstr
+        return imager.xpaget(regionstr)
 
-    except:
-        raise DS9Err('retreg')
+    except BaseException as exc:
+        raise DS9Err('retreg') from exc
 
 
 def image(arr, newframe=False, tile=False):
     if not imager.isOpen():
         imager.doOpen()
-    # Create a new frame if the user requested it, *or* if
-    # there happen to be no DS9 frames.
-    if newframe or imager.xpaget("frame all") == "\n":
-        try:
+
+    try:
+        # Create a new frame if the user requested it, *or* if
+        # there happen to be no DS9 frames.
+        if newframe or imager.xpaget("frame all") == "\n":
             imager.xpaset("frame new")
             imager.xpaset("frame last")
-        except:
-            raise DS9Err('newframe')
-    try:
+
         if tile:
             imager.xpaset("tile yes")
         else:
             imager.xpaset("tile no")
-    except:
-        raise DS9Err('settile')
-    time.sleep(1)
-    try:
-        imager.showArray(arr)
-    except:
-        raise DS9Err('noimage')
 
+        time.sleep(1)
+        imager.showArray(arr)
+
+    except BaseException as exc:
+        raise DS9Err('newframe') from exc
 
 def _set_wcs(keys):
     eqpos, sky, name = keys
 
     phys = ''
-    wcs = "OBJECT = '%s'\n" % name
+    wcs = f"OBJECT = '{name}'\n"
 
     if eqpos is not None:
         wcrpix = eqpos.crpix
@@ -112,13 +115,13 @@ def _set_wcs(keys):
         # join together all strings with a '\n' between each
         phys = '\n'.join(["WCSNAMEP = 'PHYSICAL'",
                           "CTYPE1P = 'x       '",
-                          'CRVAL1P = %.14E' % pcrval[0],
-                          'CRPIX1P = %.14E' % pcrpix[0],
-                          'CDELT1P = %.14E' % pcdelt[0],
+                          f'CRVAL1P = {pcrval[0]:.14E}',
+                          f'CRPIX1P = {pcrpix[0]:.14E}',
+                          f'CDELT1P = {pcdelt[0]:.14E}',
                           "CTYPE2P = 'y       '",
-                          'CRVAL2P = %.14E' % pcrval[1],
-                          'CRPIX2P = %.14E' % pcrpix[1],
-                          'CDELT2P = %.14E' % pcdelt[1]])
+                          f'CRVAL2P = {pcrval[1]:.14E}',
+                          f'CRPIX2P = {pcrpix[1]:.14E}',
+                          f'CDELT2P = {pcdelt[1]:.14E}'])
 
         if eqpos is not None:
             wcdelt = wcdelt * pcdelt
@@ -128,13 +131,13 @@ def _set_wcs(keys):
         # join together all strings with a '\n' between each
         wcs = wcs + '\n'.join(["RADECSYS = 'ICRS    '",
                                "CTYPE1  = 'RA---TAN'",
-                               'CRVAL1  = %.14E' % wcrval[0],
-                               'CRPIX1  = %.14E' % wcrpix[0],
-                               'CDELT1  = %.14E' % wcdelt[0],
+                               f'CRVAL1  = {wcrval[0]:.14E}',
+                               f'CRPIX1  = {wcrpix[0]:.14E}',
+                               f'CDELT1  = {wcdelt[0]:.14E}',
                                "CTYPE2  = 'DEC--TAN'",
-                               'CRVAL2  = %.14E' % wcrval[1],
-                               'CRPIX2  = %.14E' % wcrpix[1],
-                               'CDELT2  = %.14E' % wcdelt[1]])
+                               f'CRVAL2  = {wcrval[1]:.14E}',
+                               f'CRPIX2  = {wcrpix[1]:.14E}',
+                               f'CDELT2  = {wcdelt[1]:.14E}'])
 
     # join the wcs and physical with '\n' between them and at the end
     return ('\n'.join([wcs, phys]) + '\n')
@@ -150,8 +153,8 @@ def wcs(keys):
     try:
         # use stdin to pass the WCS info
         imager.xpaset('wcs replace', info)
-    except:
-        raise DS9Err('setwcs')
+    except BaseException as exc:
+        raise DS9Err('setwcs') from exc
 
 
 def open():
@@ -164,7 +167,7 @@ def set_region(reg, coord):
     try:
         # Assume a region file defines everything correctly
         if access(reg, R_OK):
-            imager.xpaset("regions load " + "'" + reg + "'")
+            imager.xpaset(f"regions load '{reg}'")
         else:
             # Assume region string has to be in CIAO format
             regions = reg.split(";")
@@ -177,8 +180,8 @@ def set_region(reg, coord):
 
                     imager.xpaset("regions", data=data)
 
-    except:
-        raise DS9Err('badreg', str(reg))
+    except BaseException as exc:
+        raise DS9Err('badreg', str(reg)) from exc
 
 
 def xpaget(arg):
@@ -190,4 +193,4 @@ def xpaget(arg):
 def xpaset(arg, data=None):
     if not imager.isOpen():
         raise DS9Err('open')
-    return imager.xpaset(arg, data)
+    imager.xpaset(arg, data)
