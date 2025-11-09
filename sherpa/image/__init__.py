@@ -148,10 +148,8 @@ class Image(NoNewAttributesAfterInit):
         return backend.xpaget(arg)
 
     @staticmethod
-    def xpaset(arg: str, data=None) -> str:
-        """Return the result of an XPA call to the image viewer.
-
-        Send a command to the image viewer.
+    def xpaset(arg: str, data=None) -> None:
+        """Send a command to the image viewer via XPA.
 
         Parameters
         ----------
@@ -161,7 +159,7 @@ class Image(NoNewAttributesAfterInit):
            The data for the command.
 
         """
-        return backend.xpaset(arg, data=None)
+        backend.xpaset(arg, data=None)
 
 
 class DataImage(Image):

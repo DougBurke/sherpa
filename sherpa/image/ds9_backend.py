@@ -1,5 +1,6 @@
 #
-#  Copyright (C) 2007, 2016, 2017, 2021  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2007, 2016, 2017, 2021, 2025
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -32,12 +33,12 @@ imager = DS9.DS9Win(DS9._DefTemplate, False)
 #       information on the type of error.
 #
 
-def close():
+def close() -> None:
     if imager.isOpen():
         imager.xpaset("quit")
 
 
-def delete_frames():
+def delete_frames() -> None:
     if not imager.isOpen():
         raise DS9Err('open')
     try:
@@ -47,7 +48,7 @@ def delete_frames():
         raise DS9Err('delframe')
 
 
-def get_region(coord):
+def get_region(coord: str) -> str:
     if not imager.isOpen():
         raise DS9Err('open')
     try:
@@ -61,14 +62,16 @@ def get_region(coord):
             regionstr = "regions -format {} ".format(regionfmt) + \
                         "-strip yes -system {}".format(coord)
 
-        regionstr = imager.xpaget(regionstr)
-        return regionstr
+        return imager.xpaget(regionstr)
 
     except:
         raise DS9Err('retreg')
 
 
-def image(arr, newframe=False, tile=False):
+def image(arr,
+          newframe: bool = False,
+          tile: bool = False
+          ) -> None:
     if not imager.isOpen():
         imager.doOpen()
     # Create a new frame if the user requested it, *or* if
@@ -93,7 +96,7 @@ def image(arr, newframe=False, tile=False):
         raise DS9Err('noimage')
 
 
-def _set_wcs(keys):
+def _set_wcs(keys) -> str:
     eqpos, sky, name = keys
 
     phys = ''
@@ -140,7 +143,7 @@ def _set_wcs(keys):
     return ('\n'.join([wcs, phys]) + '\n')
 
 
-def wcs(keys):
+def wcs(keys) -> None:
 
     if not imager.isOpen():
         raise DS9Err('open')
@@ -154,11 +157,11 @@ def wcs(keys):
         raise DS9Err('setwcs')
 
 
-def open():
+def open() -> None:
     imager.doOpen()
 
 
-def set_region(reg, coord):
+def set_region(reg: str, coord: str) -> None:
     if not imager.isOpen():
         raise DS9Err('open')
     try:
@@ -181,13 +184,13 @@ def set_region(reg, coord):
         raise DS9Err('badreg', str(reg))
 
 
-def xpaget(arg):
+def xpaget(arg: str) -> str:
     if not imager.isOpen():
         raise DS9Err('open')
     return imager.xpaget(arg)
 
 
-def xpaset(arg, data=None):
+def xpaset(arg: str, data=None) -> None:
     if not imager.isOpen():
         raise DS9Err('open')
-    return imager.xpaset(arg, data)
+    imager.xpaset(arg, data)

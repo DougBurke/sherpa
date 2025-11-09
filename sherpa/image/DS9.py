@@ -1,6 +1,6 @@
 #
 #  Copyright (C) 2006-2010, 2016-2021, 2025
-#     Smithsonian Astrophysical Observatory
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -130,11 +130,13 @@ History:
 2008-11-25 Stephen Doe  Search PATH for access to application, rather than shell out to use 'which' -- PATH sometimes not correctly inherited by shell via Popen, for csh on some Mac, Solaris machines.
 """
 
+from collections.abc import Mapping
 import os
 import sys
 import time
 import warnings
 import subprocess
+from typing import Any
 
 import numpy as np
 
@@ -143,7 +145,7 @@ from sherpa.utils.err import RuntimeErr, TypeErr
 __all__ = ["setup", "xpaget", "xpaset", "DS9Win"]
 
 
-def _addToPATH(newPath):
+def _addToPATH(newPath: str) -> None:
     """Add newPath to the PATH environment variable.
     Do nothing if newPath already in PATH.
     """
@@ -159,7 +161,7 @@ def _addToPATH(newPath):
     os.environ["PATH"] = pathStr
 
 
-def _findUnixApp(appName):
+def _findUnixApp(appName: str) -> str:
     """Search PATH to find first directory that has the application.
     Return the path if found.
     Raise RuntimeError if not found.
@@ -180,7 +182,7 @@ def _findUnixApp(appName):
     return appPath
 
 
-def _findDS9AndXPA():
+def _findDS9AndXPA() -> tuple[str, str]:
     """Locate ds9 and xpa, and add to PATH if not already there.
 
     Returns:
@@ -196,7 +198,9 @@ def _findDS9AndXPA():
     return (ds9Dir, xpaDir)
 
 
-def setup(doRaise=True, debug=False):
+def setup(doRaise: bool = True,
+          debug: bool = False
+          ) -> str | None:
     """Search for xpa and ds9 and set globals accordingly.
     Return None if all is well, else return an error string.
     The return value is also saved in global variable _SetupError.
@@ -249,7 +253,10 @@ _OpenCheckInterval = 0.2  # seconds
 _MaxOpenTime = 60.0  # seconds
 
 
-def xpaget(cmd, template=_DefTemplate, doRaise=True):
+def xpaget(cmd,
+           template: str = _DefTemplate,
+           doRaise: bool = True
+           ) -> str:
     """Executes a simple xpaget command:
             xpaset -p <template> <cmd>
     returning the reply.
@@ -289,8 +296,11 @@ def xpaget(cmd, template=_DefTemplate, doRaise=True):
             p.stderr.close()
 
 
-def xpaset(cmd, data=None, dataFunc=None, template=_DefTemplate,
-           doRaise=True):
+def xpaset(cmd,
+           data=None,
+           dataFunc=None,
+           template: str = _DefTemplate,
+           doRaise: bool = True) -> None:
     """Executes a simple xpaset command:
             xpaset -p <template> <cmd>
     or else feeds data to:
@@ -376,7 +386,9 @@ _FloatTypes = (np.float32, np.float64)
 _ComplexTypes = (np.complex64, np.complex128)
 
 
-def _expandPath(fname, extraArgs=""):
+def _expandPath(fname: str,
+                extraArgs: str = ""
+                ) -> str:
     """Expand a file path and protect it such that spaces are allowed.
     Inputs:
     - fname                file path to expand
@@ -390,7 +402,7 @@ def _expandPath(fname, extraArgs=""):
     return "{%s%s}" % (filepath, extraArgs)
 
 
-def _formatOptions(kargs):
+def _formatOptions(kargs: Mapping[str, Any]) -> str:
     """Returns a string: "key1=val1,key2=val2,..."
     (where keyx and valx are string representations)
     """
@@ -426,16 +438,17 @@ class DS9Win:
                     Note: doOpen always raises RuntimeError on failure!
     """
     def __init__(self,
-                 template=_DefTemplate,
-                 doOpen=True,
-                 doRaise=True):
+                 template: str = _DefTemplate,
+                 doOpen: bool = True,
+                 doRaise: bool = True
+                 ) -> None:
         self.template = str(template)
         self.doRaise = bool(doRaise)
         self.alreadyOpen = self.isOpen()
         if doOpen:
             self.doOpen()
 
-    def doOpen(self):
+    def doOpen(self) -> None:
         """Open the ds9 window (if necessary).
 
         Raise OSError or RuntimeError on failure, even if doRaise is False.
@@ -467,7 +480,7 @@ class DS9Win:
             if time.time() - startTime > _MaxOpenTime:
                 raise RuntimeErr('nowin', self.template)
 
-    def isOpen(self):
+    def isOpen(self) -> bool:
         """Return True if this ds9 window is open
         and available for communication, False otherwise.
         """
@@ -477,7 +490,7 @@ class DS9Win:
         except RuntimeErr:
             return False
 
-    def showArray(self, arr, **kargs):
+    def showArray(self, arr, **kargs) -> None:
         """Display a 2-d or 3-d grayscale integer numarray arrays.
         3-d images are displayed as data cubes, meaning one can
         view a single z at a time or play through them as a movie,
@@ -595,7 +608,7 @@ class DS9Win:
 #                for keyValue in kargs.iteritems():
 #                        self.xpaset(cmd=' '.join(keyValue))
 
-    def showFITSFile(self, fname, **kargs):
+    def showFITSFile(self, fname: str, **kargs) -> None:
         """Display a fits file in ds9.
 
         Inputs:
@@ -615,7 +628,7 @@ class DS9Win:
         for keyValue in kargs.items():
             self.xpaset(cmd=' '.join(keyValue))
 
-    def xpaget(self, cmd):
+    def xpaget(self, cmd: str) -> str:
         """Execute a simple xpaget command and return the reply.
 
         The command is of the form:
@@ -632,7 +645,11 @@ class DS9Win:
             doRaise=self.doRaise,
         )
 
-    def xpaset(self, cmd, data=None, dataFunc=None):
+    def xpaset(self,
+               cmd: str,
+               data=None,
+               dataFunc=None
+               ) -> None:
         """Executes a simple xpaset command:
                 xpaset -p <template> <cmd>
         or else feeds data to:
@@ -648,7 +665,7 @@ class DS9Win:
 
         Raises RuntimeError if anything is written to stdout or stderr.
         """
-        return xpaset(
+        xpaset(
             cmd=cmd,
             data=data,
             dataFunc=dataFunc,
