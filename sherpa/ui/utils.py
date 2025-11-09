@@ -7813,11 +7813,9 @@ class Session(NoNewAttributesAfterInit):
                          dstype=Data1D,
                          sep: str = ' ',
                          comment: str = '#'
-                         ) -> tuple[np.ndarray | None, np.ndarray | None]:
+                         ) -> tuple[np.ndarray | None, np.ndarray]:
         """Read in the data."""
 
-        x = None
-        y = None
         try:
             data = self.unpack_data(filename, ncols, colkeys,
                                     dstype, sep, comment)
@@ -7827,14 +7825,14 @@ class Session(NoNewAttributesAfterInit):
         except TypeError:
             # we have to check for the case of a *single* column in the file
             # extract the single array from the read and bypass the dataset
+            x = None
             y = sherpa.io.get_ascii_data(filename, ncols=1, colkeys=colkeys,
                                          sep=sep, dstype=dstype,
                                          comment=comment)[1].pop()
 
-        # y is expected to be set, but for now this is not guaranteed
-        # so leave the return value as "ndarray | None".
-        #
-        return (x, y)
+        # y must contain at least 1 element, thanks to how sherpa.io
+        # works, but the types do not know this, hence the cast.
+        return (x, cast(np.ndarray, y))
 
     # DOC-TODO: I am not sure I have the data format correct.
     # DOC-TODO: description of template interpolation needs a lot of work.
