@@ -53,7 +53,7 @@ The following data - where ``x`` is the independent axis and
     >>> err_true = 0.2
     >>> y = ampl_true * np.exp(-0.5 * (x - pos_true)**2 / sigma_true**2)
     >>> y += np.random.normal(0., err_true, x.shape)
-    >>> out = plt.plot(x, y, 'ko')
+    >>> _ = plt.plot(x, y, 'ko')
 
 .. image:: _static/quick/data1d.png
 
@@ -105,10 +105,13 @@ The steps taken are normally:
 
 3. and then call the :py:meth:`~sherpa.plot.DataPlot.plot` method.
 
-Sherpa has one plotting backend, :term:`matplotlib`, which is used
-to display plots. There is limited support for customizing these
-plots - such as always drawing the Y axis with a logarithmic
-scale - but extensive changes will require calling the plotting back-end
+The standard plotting backend for Sherpa is :term:`matplotlib` - and
+this is used in the examples in this documentation unless explicitly
+mentioned otherwise - although it is also possible to use
+:term:`bokeh`, which can provide extra functionality when using Sherpa
+in a Jupyter notebook.  There is limited support for customizing these
+plots - such as always drawing the Y axis with a logarithmic scale -
+but extensive changes will require calling the plotting back-end
 directly.
 
 As an example of the :py:class:`~sherpa.plot.DataPlot` output::
@@ -229,6 +232,15 @@ so we start with it (the optimiser can be changed and the data re-fit):
     factor   = 100.0
     numcores = 1
     verbose  = 0
+
+.. note::
+   Sherpa comes with four optimisers in :py:mod:`sherpa.optmethods`:
+   :py:class:`~sherpa.optmethods.NelderMead`,
+   :py:class:`~sherpa.optmethods.LevMar`,
+   :py:class:`~sherpa.optmethods.MonCar`,
+   and :py:class:`~sherpa.optmethods.GridSearch`. If you have
+   :term:`SciPy` or :term:`optimagic` installed then you will
+   also have access to extra optimizers provided by those packages.
 
 .. _quick-gauss1d-fit:
     
@@ -384,6 +396,8 @@ have been changed by the fit::
     default_val = 0.0
     default_min = -3.4028234663852886e+38
     default_max = 3.4028234663852886e+38
+    >>> print(g.pos.val)
+    1.2743015983545247
 
 .. _quick-gauss1d-errors:
     
