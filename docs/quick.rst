@@ -600,7 +600,7 @@ how the error surface changes with the position of the gaussian. The
 :py:meth:`~sherpa.plot.IntervalProjection.prepare` method are given
 the range over which to vary the parameter (the range is chosen to
 be close to the three-sigma limit from the confidence analysis above,
-ahd the dotted line is added to indicate the three-sigma
+and the dotted line is added to indicate the three-sigma
 limit above the best-fit for a single parameter)::
 
    >>> from sherpa.plot import IntervalProjection
