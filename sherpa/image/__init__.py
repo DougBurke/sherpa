@@ -99,6 +99,7 @@ class Image(NoNewAttributesAfterInit):
         """
         return backend.get_region(coord)
 
+    # This version could be a staticmethod but derived classes can not be.
     def image(self,
               array,
               shape=None,
@@ -133,7 +134,8 @@ class Image(NoNewAttributesAfterInit):
         """Start the image viewer."""
         backend.open()
 
-    def set_wcs(self, keys):
+    @staticmethod
+    def set_wcs(keys):
         """Send the WCS informatiom to the image viewer.
 
         Parameters
@@ -382,7 +384,7 @@ class PSFKernelImage(DataImage):
         self.name = 'PSF_Kernel'
 
 
-class ComponentSourceImage(ModelImage):
+class ComponentSourceImage(SourceImage):
     """The unconvolved source component."""
 
     def prepare_image(self, data, model):
