@@ -52,7 +52,7 @@ except Exception as e:
     from . import dummy_backend as backend
 
 
-__all__ = ('Image', 'DataImage', 'ModelImage', 'RatioImage',
+__all__ = ('Image', 'BaseImage', 'DataImage', 'ModelImage', 'RatioImage',
            'ResidImage', 'PSFImage', 'PSFKernelImage', 'SourceImage',
            'ComponentModelImage', 'ComponentSourceImage')
 
@@ -67,9 +67,6 @@ __all__ = ('Image', 'DataImage', 'ModelImage', 'RatioImage',
 #
 class Image(NoNewAttributesAfterInit):
     """Base class for sending image data to an external viewer."""
-
-    def __init__(self):
-        NoNewAttributesAfterInit.__init__(self)
 
     @staticmethod
     def close():
@@ -163,9 +160,9 @@ class Image(NoNewAttributesAfterInit):
 
     @staticmethod
     def xpaget(arg):
-        """Return the result of an XPA call to the image viewer.
+        """Query the image viewer via XPA.
 
-        Send a query to the image viewer.
+        Retrieve the results of a query to the image viewer.
 
         Parameters
         ----------
@@ -181,7 +178,7 @@ class Image(NoNewAttributesAfterInit):
 
     @staticmethod
     def xpaset(arg, data=None):
-        """Return the result of an XPA call to the image viewer.
+        """Send the image viewer a command via XPA.
 
         Send a command to the image viewer.
 
@@ -196,39 +193,85 @@ class Image(NoNewAttributesAfterInit):
         backend.xpaset(arg, data=None)
 
 
-class DataImage(Image):
-    """Image data.
+# This is intended as an internal class. However it is exposed to
+# users in an attempt to let them understand the class structure when
+# viewing the documentation.
+#
+class BaseImage(Image):
+    """Store the image data to display.
 
-    Attributes
-    ----------
-    name : str
-    y : array_like
-       The image data (pixel values) as a 2D array.
-    eqpos :
-       Coordinate transform to the "world" system.
-    sky :
-       Coordinate transform to the "physical" system.
+    This is used to separate the base `Image` support from the derived
+    user classes like `DataImage` and `ModelImage`.
 
     """
 
+    name = "undefined"
+    """The name of the image"""
+
     def __init__(self):
         self.y = None
+        """The pixel values to display (as a 2D array) or None."""
+
         self.eqpos = None
+        """Optional coordinate transform to the "world" system."""
+
         self.sky = None
-        self.name = 'Data'
-        Image.__init__(self)
+        """Optional coordinate transform to the "physical" system."""
+
+        super().__init__()
 
     def __str__(self):
         y = self.y
         if self.y is not None:
             y = np.array2string(self.y, separator=',', precision=4,
                                 suppress_small=False)
-        return (('name   = %s\n' % self.name) +
-                ('y      = %s\n' % y) +
-                ('eqpos  = %s\n' % self.eqpos) +
-                ('sky    = %s\n' % self.sky))
+        return (f'name   = {self.name}\n'
+                f'y      = {y}\n'
+                f'eqpos  = {self.eqpos}\n'
+                f'sky    = {self.sky}\n')
+
+    # As this class is not derived from ABCMeta we can not mark this
+    # with @abstractmethod. The reason for defining it here is that it
+    # makes it easier to use BaseImage as a type to indicate an image
+    # object that provides prepare_image.
+    #
+    def prepare_image(self, data, *args, **kwargs):
+        """Extract and store the pixel values to display."""
+        raise NotImplementedError()
+
+    def image(self,
+              shape=None,
+              newframe=False,
+              tile=False
+              ):
+        """Send the data to the image viewer to display.
+
+        Parameters
+        ----------
+        shape
+           The shape of the data (optional).
+        newframe
+           Should the pixels be displayed in a new frame?
+        tile
+           Should the display be tiled?
+
+        """
+
+        if self.y is None:
+            raise DS9Err("prepare_image has not been called")
+
+        super().image(self.y, shape, newframe, tile)
+        self.set_wcs((self.eqpos, self.sky, self.name))
+
+
+class DataImage(BaseImage):
+    """Image data."""
+
+    name = "Data"
 
     def prepare_image(self, data):
+        """Extract and store the pixel values to display."""
+
         self.y = data.get_img()
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
@@ -238,82 +281,49 @@ class DataImage(Image):
             if obj is not None:
                 self.name = str(obj).replace(" ", "_")
 
-    def image(self, shape=None, newframe=False, tile=False):
-        Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
 
-
-class ModelImage(Image):
+class ModelImage(BaseImage):
     """Model data."""
 
-    def __init__(self):
-        self.name = 'Model'
-        self.y = None
-        self.eqpos = None
-        self.sky = None
-        Image.__init__(self)
-
-    def __str__(self):
-        y = self.y
-        if self.y is not None:
-            y = np.array2string(self.y, separator=',', precision=4,
-                                suppress_small=False)
-        return (('name   = %s\n' % self.name) +
-                ('y      = %s\n' % y) +
-                ('eqpos  = %s\n' % self.eqpos) +
-                ('sky    = %s\n' % self.sky))
+    name = "Model"
 
     def prepare_image(self, data, model):
-        self.y = data.get_img(model)
-        self.y = self.y[1]
+        """Extract and store the pixel values to display."""
+
+        y = data.get_img(model)
+        self.y = y[1]
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
-
-    def image(self, shape=None, newframe=False, tile=False):
-        Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
 
 
 class SourceImage(ModelImage):
     """The source model (before convolution) data."""
 
-    def __init__(self):
-        ModelImage.__init__(self)
-        self.name = 'Source'
+    name = "Source"
 
     def prepare_image(self, data, model):
-        # self.y = data.get_img(model)
-        # self.y = self.y[1]
+        """Extract and store the pixel values to display."""
 
-        self.y = data.eval_model(model)
+        # _check_shape ensures that data.shape is not None,
+        # which implies that data.eval_model(model) will not
+        # be None.
+        #
         data._check_shape()
-        self.y = self.y.reshape(*data.shape)
+        y = data.eval_model(model)
+        self.y = y.reshape(*data.shape)
 
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
 
 
-class RatioImage(Image):
+class RatioImage(BaseImage):
     """The data divide by the model."""
 
-    def __init__(self):
-        self.name = 'Ratio'
-        self.y = None
-        self.eqpos = None
-        self.sky = None
-        Image.__init__(self)
+    name = "Ratio"
 
-    def __str__(self):
-        y = self.y
-        if self.y is not None:
-            y = np.array2string(self.y, separator=',', precision=4,
-                                suppress_small=False)
-        return (('name   = %s\n' % self.name) +
-                ('y      = %s\n' % y) +
-                ('eqpos  = %s\n' % self.eqpos) +
-                ('sky    = %s\n' % self.sky))
-
-    def _calc_ratio(self, ylist):
+    def _calc_ratio(self,
+                    ylist
+                    ):
         data = np.array(ylist[0])
         model = np.asarray(ylist[1])
         bad = np.where(model == 0.0)
@@ -322,81 +332,63 @@ class RatioImage(Image):
         return (data / model)
 
     def prepare_image(self, data, model):
-        self.y = data.get_img(model)
-        self.y = self._calc_ratio(self.y)
+        """Extract and store the pixel values to display."""
+
+        y = data.get_img(model)
+        self.y = self._calc_ratio(y)
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
 
-    def image(self, shape=None, newframe=False, tile=False):
-        Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
 
-
-class ResidImage(Image):
+class ResidImage(BaseImage):
     """The data - model image."""
 
-    def __init__(self):
-        self.name = 'Residual'
-        self.y = None
-        self.eqpos = None
-        self.sky = None
-        Image.__init__(self)
+    name = "Residual"
 
-    def __str__(self):
-        y = self.y
-        if self.y is not None:
-            y = np.array2string(self.y, separator=',', precision=4,
-                                suppress_small=False)
-        return (('name   = %s\n' % self.name) +
-                ('y      = %s\n' % y) +
-                ('eqpos  = %s\n' % self.eqpos) +
-                ('sky    = %s\n' % self.sky))
-
-    def _calc_resid(self, ylist):
+    def _calc_resid(self,
+                    ylist
+                    ):
         return ylist[0] - ylist[1]
 
     def prepare_image(self, data, model):
-        self.y = data.get_img(model)
-        self.y = self._calc_resid(self.y)
+        """Extract and store the pixel values to display."""
+
+        y = data.get_img(model)
+        self.y = self._calc_resid(y)
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
-
-    def image(self, shape=None, newframe=False, tile=False):
-        Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
 
 
 class PSFImage(DataImage):
     """The PSF image."""
 
     def prepare_image(self, psf, data=None):
+        """Extract and store the pixel values to display."""
+
         psfdata = psf.get_kernel(data, False)
-        DataImage.prepare_image(self, psfdata)
+        super().prepare_image(psfdata)
         self.name = psf.kernel.name
 
 
 class PSFKernelImage(DataImage):
     """The PSF kernel image."""
 
+    name = "PSF_Kernel"
+
     def prepare_image(self, psf, data=None):
+        """Extract and store the pixel values to display."""
+
         psfdata = psf.get_kernel(data)
-        DataImage.prepare_image(self, psfdata)
-        self.name = 'PSF_Kernel'
+        super().prepare_image(psfdata)
 
 
 class ComponentSourceImage(SourceImage):
     """The unconvolved source component."""
 
-    def prepare_image(self, data, model):
-        ModelImage.prepare_image(self, data, model)
-        # self.name = "Source component '%s'" % model.name
-        self.name = "Source_component"
+    name = "Source_component"
 
 
 class ComponentModelImage(ModelImage):
     """The model component."""
 
-    def prepare_image(self, data, model):
-        ModelImage.prepare_image(self, data, model)
-        # self.name = "Model component '%s'" % model.name
-        self.name = "Model_component"
+    name = "Model_component"
