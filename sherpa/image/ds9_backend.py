@@ -1,5 +1,6 @@
 #
-#  Copyright (C) 2007, 2016, 2017, 2021  Smithsonian Astrophysical Observatory
+#  Copyright (C) 2007, 2016, 2017, 2021, 2025
+#  Smithsonian Astrophysical Observatory
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -17,8 +18,8 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-import time
 from os import access, R_OK
+import time
 
 from sherpa.utils.err import DS9Err
 
@@ -40,11 +41,13 @@ imager = DS9.DS9Win(template=DS9._DefTemplate, doOpen=False)
 #
 
 def close():
+    """Stop the image viewer."""
     if imager.isOpen():
         imager.xpaset("quit")
 
 
 def delete_frames():
+    """Delete all the frames open in the image viewer."""
     if not imager.isOpen():
         raise DS9Err('open')
     try:
@@ -55,6 +58,20 @@ def delete_frames():
 
 
 def get_region(coord):
+    """Return the region defined in the image viewer.
+
+    Parameters
+    ----------
+    coord : str
+       The name of the coordinate system (the empty string means
+       to use the current system).
+
+    Returns
+    -------
+    region : str
+       The region, or regions, or the empty string.
+
+    """
     if not imager.isOpen():
         raise DS9Err('open')
     try:
@@ -74,7 +91,22 @@ def get_region(coord):
         raise DS9Err('retreg') from exc
 
 
-def image(arr, newframe=False, tile=False):
+def image(arr,
+          newframe=False,
+          tile=False
+          ):
+    """Send the data to the image viewer to display.
+
+    Parameters
+    ----------
+    array
+       The pixel values
+    newframe
+       Should the pixels be displayed in a new frame?
+    tile
+       Should the display be tiled?
+
+    """
     if not imager.isOpen():
         imager.doOpen()
 
@@ -96,11 +128,13 @@ def image(arr, newframe=False, tile=False):
     except BaseException as exc:
         raise DS9Err('newframe') from exc
 
-def _set_wcs(keys):
-    eqpos, sky, name = keys
+def _set_wcs(eqpos, sky, name):
+    """Convert the settings into a string to send via XPA"""
 
-    phys = ''
-    wcs = f"OBJECT = '{name}'\n"
+    # DS9 can be very particular about the WCS settings, so attempt to
+    # set everything to avoid problems with ds9 preference settings.
+    #
+    out = [f"OBJECT = '{name}'"]
 
     if eqpos is not None:
         wcrpix = eqpos.crpix
@@ -112,43 +146,52 @@ def _set_wcs(keys):
         pcrval = sky.crval
         pcdelt = sky.cdelt
 
-        # join together all strings with a '\n' between each
-        phys = '\n'.join(["WCSNAMEP = 'PHYSICAL'",
-                          "CTYPE1P = 'x       '",
-                          f'CRVAL1P = {pcrval[0]:.14E}',
-                          f'CRPIX1P = {pcrpix[0]:.14E}',
-                          f'CDELT1P = {pcdelt[0]:.14E}',
-                          "CTYPE2P = 'y       '",
-                          f'CRVAL2P = {pcrval[1]:.14E}',
-                          f'CRPIX2P = {pcrpix[1]:.14E}',
-                          f'CDELT2P = {pcdelt[1]:.14E}'])
+        out.extend(["WCSAXESP = 2",
+                    "WCSNAMEP = 'PHYSICAL'",
+                    "CTYPE1P = 'x       '",
+                    "CTYPE2P = 'y       '",
+                    f'CRVAL1P = {pcrval[0]:.14E}',
+                    f'CRPIX1P = {pcrpix[0]:.14E}',
+                    f'CDELT1P = {pcdelt[0]:.14E}',
+                    f'CRVAL2P = {pcrval[1]:.14E}',
+                    f'CRPIX2P = {pcrpix[1]:.14E}',
+                    f'CDELT2P = {pcdelt[1]:.14E}'])
 
         if eqpos is not None:
             wcdelt = wcdelt * pcdelt
             wcrpix = (wcrpix - pcrval) / pcdelt + pcrpix
 
     if eqpos is not None:
-        # join together all strings with a '\n' between each
-        wcs = wcs + '\n'.join(["RADECSYS = 'ICRS    '",
-                               "CTYPE1  = 'RA---TAN'",
-                               f'CRVAL1  = {wcrval[0]:.14E}',
-                               f'CRPIX1  = {wcrpix[0]:.14E}',
-                               f'CDELT1  = {wcdelt[0]:.14E}',
-                               "CTYPE2  = 'DEC--TAN'",
-                               f'CRVAL2  = {wcrval[1]:.14E}',
-                               f'CRPIX2  = {wcrpix[1]:.14E}',
-                               f'CDELT2  = {wcdelt[1]:.14E}'])
+        out.extend(["WCSAXES = 2",
+                    "RADECSYS = 'ICRS    '",
+                    # f"EQUINOX = {eqpos.equinox}",
+                    "CTYPE1  = 'RA---TAN'",
+                    "CTYPE2  = 'DEC--TAN'",
+                    f'CRVAL1  = {wcrval[0]:.14E}',
+                    f'CRPIX1  = {wcrpix[0]:.14E}',
+                    f'CDELT1  = {wcdelt[0]:.14E}',
+                    f'CRVAL2  = {wcrval[1]:.14E}',
+                    f'CRPIX2  = {wcrpix[1]:.14E}',
+                    f'CDELT2  = {wcdelt[1]:.14E}'])
 
-    # join the wcs and physical with '\n' between them and at the end
-    return ('\n'.join([wcs, phys]) + '\n')
+    # Ensure the string ends with a new-line.
+    return ('\n'.join(out) + '\n')
 
 
 def wcs(keys):
+    """Send the WCS informatiom to the image viewer.
+
+    Parameters
+    ----------
+    keys
+       The eqpos and sky transforms, and the name of the display.
+
+    """
 
     if not imager.isOpen():
         raise DS9Err('open')
 
-    info = _set_wcs(keys)
+    info = _set_wcs(keys[0], keys[1], keys[2])
 
     try:
         # use stdin to pass the WCS info
@@ -158,10 +201,22 @@ def wcs(keys):
 
 
 def open():
+    """Start the image viewer."""
     imager.doOpen()
 
 
 def set_region(reg, coord):
+    """Set the region to display in the image viewer.
+
+    Parameters
+    ----------
+    reg : str
+       The region to display.
+    coord : str
+       The name of the coordinate system (the empty string means
+       to use the current system).
+
+    """
     if not imager.isOpen():
         raise DS9Err('open')
     try:
@@ -185,12 +240,38 @@ def set_region(reg, coord):
 
 
 def xpaget(arg):
+    """Query the image viewer via XPA.
+
+    Retrieve the results of a query to the image viewer.
+
+    Parameters
+    ----------
+    arg : str
+       A command to send to the image viewer via XPA.
+
+    Returns
+    -------
+    returnval : str
+
+    """
     if not imager.isOpen():
         raise DS9Err('open')
     return imager.xpaget(arg)
 
 
 def xpaset(arg, data=None):
+    """Send the image viewer a command via XPA.
+
+    Send a command to the image viewer.
+
+    Parameters
+    ----------
+    arg : str
+       A command to send to the image viewer via XPA.
+    data : optional
+       The data for the command.
+
+    """
     if not imager.isOpen():
         raise DS9Err('open')
     imager.xpaset(arg, data)
