@@ -33,10 +33,16 @@ References
 """
 
 import logging
+from typing import cast
 
 import numpy as np
 
+from sherpa.astro.io.wcs import WCS
+from sherpa.data import Data2D
+from sherpa.instrument import PSFModel
+from sherpa.models.model import Model
 from sherpa.utils import NoNewAttributesAfterInit, bool_cast
+
 
 warning = logging.getLogger(__name__).warning
 
@@ -69,17 +75,17 @@ class Image(NoNewAttributesAfterInit):
     """Base class for sending image data to an external viewer."""
 
     @staticmethod
-    def close():
+    def close() -> None:
         """Stop the image viewer."""
         backend.close()
 
     @staticmethod
-    def delete_frames():
+    def delete_frames() -> None:
         """Delete all the frames open in the image viewer."""
         backend.delete_frames()
 
     @staticmethod
-    def get_region(coord):
+    def get_region(coord: str) -> str:
         """Return the region defined in the image viewer.
 
         Parameters
@@ -98,11 +104,11 @@ class Image(NoNewAttributesAfterInit):
 
     # This version could be a staticmethod but derived classes can not be.
     def image(self,
-              array,
-              shape=None,
-              newframe=False,
-              tile=False
-              ):
+              array: np.ndarray,
+              shape: tuple[int, ...] | None = None,
+              newframe: bool = False,
+              tile: bool = False
+              ) -> None:
         """Send the data to the image viewer to display.
 
         Parameters
@@ -127,12 +133,12 @@ class Image(NoNewAttributesAfterInit):
         backend.image(vals, newframe, tile)
 
     @staticmethod
-    def open():
+    def open() -> None:
         """Start the image viewer."""
         backend.open()
 
     @staticmethod
-    def set_wcs(keys):
+    def set_wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
         """Send the WCS informatiom to the image viewer.
 
         Parameters
@@ -144,7 +150,7 @@ class Image(NoNewAttributesAfterInit):
         backend.wcs(keys)
 
     @staticmethod
-    def set_region(reg, coord):
+    def set_region(reg: str, coord: str) -> None:
         """Set the region to display in the image viewer.
 
         Parameters
@@ -159,7 +165,7 @@ class Image(NoNewAttributesAfterInit):
         backend.set_region(reg, coord)
 
     @staticmethod
-    def xpaget(arg):
+    def xpaget(arg: str) -> str:
         """Query the image viewer via XPA.
 
         Retrieve the results of a query to the image viewer.
@@ -177,7 +183,7 @@ class Image(NoNewAttributesAfterInit):
         return backend.xpaget(arg)
 
     @staticmethod
-    def xpaset(arg, data=None):
+    def xpaset(arg: str, data: str | bytes | None = None) -> None:
         """Send the image viewer a command via XPA.
 
         Send a command to the image viewer.
@@ -205,22 +211,22 @@ class BaseImage(Image):
 
     """
 
-    name = "undefined"
+    name: str = "undefined"
     """The name of the image"""
 
-    def __init__(self):
-        self.y = None
+    def __init__(self) -> None:
+        self.y: np.ndarray | None = None
         """The pixel values to display (as a 2D array) or None."""
 
-        self.eqpos = None
+        self.eqpos: WCS | None = None
         """Optional coordinate transform to the "world" system."""
 
-        self.sky = None
+        self.sky: WCS | None = None
         """Optional coordinate transform to the "physical" system."""
 
         super().__init__()
 
-    def __str__(self):
+    def __str__(self) -> str:
         y = self.y
         if self.y is not None:
             y = np.array2string(self.y, separator=',', precision=4,
@@ -235,15 +241,15 @@ class BaseImage(Image):
     # makes it easier to use BaseImage as a type to indicate an image
     # object that provides prepare_image.
     #
-    def prepare_image(self, data, *args, **kwargs):
+    def prepare_image(self, data: Data2D, *args, **kwargs) -> None:
         """Extract and store the pixel values to display."""
         raise NotImplementedError()
 
     def image(self,
-              shape=None,
-              newframe=False,
-              tile=False
-              ):
+              shape: tuple[int, ...] | None = None,
+              newframe: bool = False,
+              tile: bool = False
+              ) -> None:
         """Send the data to the image viewer to display.
 
         Parameters
@@ -267,9 +273,9 @@ class BaseImage(Image):
 class DataImage(BaseImage):
     """Image data."""
 
-    name = "Data"
+    name: str = "Data"
 
-    def prepare_image(self, data):
+    def prepare_image(self, data: Data2D) -> None:
         """Extract and store the pixel values to display."""
 
         self.y = data.get_img()
@@ -285,9 +291,9 @@ class DataImage(BaseImage):
 class ModelImage(BaseImage):
     """Model data."""
 
-    name = "Model"
+    name: str = "Model"
 
-    def prepare_image(self, data, model):
+    def prepare_image(self, data: Data2D, model: Model) -> None:
         """Extract and store the pixel values to display."""
 
         y = data.get_img(model)
@@ -299,9 +305,9 @@ class ModelImage(BaseImage):
 class SourceImage(ModelImage):
     """The source model (before convolution) data."""
 
-    name = "Source"
+    name: str = "Source"
 
-    def prepare_image(self, data, model):
+    def prepare_image(self, data: Data2D, model: Model) -> None:
         """Extract and store the pixel values to display."""
 
         # _check_shape ensures that data.shape is not None,
@@ -309,8 +315,8 @@ class SourceImage(ModelImage):
         # be None.
         #
         data._check_shape()
-        y = data.eval_model(model)
-        self.y = y.reshape(*data.shape)
+        y = cast(np.ndarray, data.eval_model(model))
+        self.y = y.reshape(*cast(tuple[int, ...], data.shape))
 
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
@@ -319,11 +325,11 @@ class SourceImage(ModelImage):
 class RatioImage(BaseImage):
     """The data divide by the model."""
 
-    name = "Ratio"
+    name: str = "Ratio"
 
     def _calc_ratio(self,
-                    ylist
-                    ):
+                    ylist: tuple[np.ndarray, np.ndarray]
+                    ) -> np.ndarray:
         data = np.array(ylist[0])
         model = np.asarray(ylist[1])
         bad = np.where(model == 0.0)
@@ -331,7 +337,7 @@ class RatioImage(BaseImage):
         model[bad] = 1.0
         return (data / model)
 
-    def prepare_image(self, data, model):
+    def prepare_image(self, data: Data2D, model: Model) -> None:
         """Extract and store the pixel values to display."""
 
         y = data.get_img(model)
@@ -343,14 +349,14 @@ class RatioImage(BaseImage):
 class ResidImage(BaseImage):
     """The data - model image."""
 
-    name = "Residual"
+    name: str = "Residual"
 
     def _calc_resid(self,
-                    ylist
-                    ):
+                    ylist: tuple[np.ndarray, np.ndarray]
+                    ) -> np.ndarray:
         return ylist[0] - ylist[1]
 
-    def prepare_image(self, data, model):
+    def prepare_image(self, data: Data2D, model: Model) -> None:
         """Extract and store the pixel values to display."""
 
         y = data.get_img(model)
@@ -362,7 +368,7 @@ class ResidImage(BaseImage):
 class PSFImage(DataImage):
     """The PSF image."""
 
-    def prepare_image(self, psf, data=None):
+    def prepare_image(self, psf: PSFModel, data=None) -> None:
         """Extract and store the pixel values to display."""
 
         psfdata = psf.get_kernel(data, False)
@@ -373,9 +379,9 @@ class PSFImage(DataImage):
 class PSFKernelImage(DataImage):
     """The PSF kernel image."""
 
-    name = "PSF_Kernel"
+    name: str = "PSF_Kernel"
 
-    def prepare_image(self, psf, data=None):
+    def prepare_image(self, psf: PSFModel, data=None) -> None:
         """Extract and store the pixel values to display."""
 
         psfdata = psf.get_kernel(data)
@@ -385,10 +391,10 @@ class PSFKernelImage(DataImage):
 class ComponentSourceImage(SourceImage):
     """The unconvolved source component."""
 
-    name = "Source_component"
+    name: str = "Source_component"
 
 
 class ComponentModelImage(ModelImage):
     """The model component."""
 
-    name = "Model_component"
+    name: str = "Model_component"
