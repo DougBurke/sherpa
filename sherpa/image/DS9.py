@@ -175,7 +175,6 @@ def xpaget(cmd: str,  # do not try to type the "this can be a list" version
 
 def xpaset(cmd: str,
            data: str | bytes | None = None,
-           dataFunc=None,
            template: str = _DefTemplate,
            doRaise: bool = True
            ) -> None:
@@ -188,11 +187,8 @@ def xpaset(cmd: str,
 
     Inputs:
     - cmd                command to execute
-    - data                data to write to xpaset's stdin; ignored if dataFunc specified.
+    - data                data to write to xpaset's stdin
                             If data[-1] is not \n then a final \n is appended.
-    - dataFunc        a function that takes one argument, a file-like object,
-                            and writes data to that file. If specified, data is ignored.
-                            Warning: if a final \n is needed, dataFunc must supply it.
     - template        xpa template; can be the ds9 window title
                             (as specified in the -title command-line option)
                             host:port, etc.
@@ -203,7 +199,7 @@ def xpaset(cmd: str,
     if anything is written to stdout or stderr.
     """
     # Would be better to make a sequence rather than have to quote arguments
-    if data or dataFunc:
+    if data:
         fullCmd = f'xpaset {template} "{cmd}"'
     else:
         fullCmd = f'xpaset -p {template} "{cmd}"'
@@ -465,8 +461,7 @@ class DS9Win:
 
     def xpaset(self,
                cmd: str,
-               data: str | bytes | None = None,
-               dataFunc=None
+               data: str | bytes | None = None
                ) -> None:
         """Executes a simple xpaset command:
                 xpaset -p <template> <cmd>
@@ -477,16 +472,13 @@ class DS9Win:
 
         Inputs:
         - cmd                command to execute
-        - data                data to write to xpaset's stdin; ignored if dataFunc specified
-        - dataFunc        a function that takes one argument, a file-like object,
-                                and writes data to that file. If specified, data is ignored.
+        - data                data to write to xpaset's stdin
 
         Raises RuntimeError if anything is written to stdout or stderr.
         """
         xpaset(
             cmd=cmd,
             data=data,
-            dataFunc=dataFunc,
             template=self.template,
             doRaise=self.doRaise,
         )
