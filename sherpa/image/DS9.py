@@ -129,25 +129,26 @@ _OpenCheckInterval = 0.2  # seconds
 _MaxOpenTime = 60.0  # seconds
 
 
-def xpaget(cmd: str,  # do not try to type the "this can be a list" version
-           template: str = _DefTemplate,
-           doRaise: bool = True
+def xpaget(cmd: str,
+           template: str = _DefTemplate
            ) -> str:
-    """Executes a simple xpaget command:
-            xpaset -p <template> <cmd>
-    returning the reply.
+    """Executes a simple xpaget command, returning the reply.
 
-    Inputs:
-    - cmd                command to execute; may be a string or a list
-    - template        xpa template; can be the ds9 window title
-                            (as specified in the -title command-line option)
-                            host:port, etc.
-    - doRaise        if True, raise RuntimeError if there is a communications error,
-                            else issue a UserWarning warning
+    Parameters
+    ----------
+    cmd
+       The XPA command.
+    template
+       The target of the XPA call. It can be the ds9 window title,
+       a string giving "host:port", or other supported forms.
 
-    Raises RuntimeError or issues a warning (depending on doRaise)
-    if anything is written to stderr.
+    Returns
+    -------
+    response
+       The respose from DS9 to the query.
+
     """
+
     # Would be better to make a sequence rather than have to quote arguments
     fullCmd = f'xpaget {template} "{cmd}"'
 
@@ -161,10 +162,7 @@ def xpaget(cmd: str,  # do not try to type the "this can be a list" version
             errMsg = p.stderr.read()
             if errMsg:
                 fullErrMsg = f"{repr(fullCmd)} failed: {errMsg}"
-                if doRaise:
-                    raise RuntimeErr('cmdfail', fullCmd, errMsg)
-                else:
-                    warnings.warn(fullErrMsg)
+                raise RuntimeErr('cmdfail', fullCmd, errMsg)
 
             return p.stdout.read().decode()
 
@@ -175,28 +173,21 @@ def xpaget(cmd: str,  # do not try to type the "this can be a list" version
 
 def xpaset(cmd: str,
            data: str | bytes | None = None,
-           template: str = _DefTemplate,
-           doRaise: bool = True
+           template: str = _DefTemplate
            ) -> None:
-    """Executes a simple xpaset command:
-            xpaset -p <template> <cmd>
-    or else feeds data to:
-            xpaset <template> <cmd>
+    """Executes a single xpaset command.
 
-    The command must not return any output for normal completion.
+    Parameters
+    ----------
+    cmd
+       The XPA command.
+    data
+       Extra data to send via stdout (a trailing new-line character is
+       added if needed).
+    template
+       The target of the XPA call. It can be the ds9 window title,
+       a string giving "host:port", or other supported forms.
 
-    Inputs:
-    - cmd                command to execute
-    - data                data to write to xpaset's stdin
-                            If data[-1] is not \n then a final \n is appended.
-    - template        xpa template; can be the ds9 window title
-                            (as specified in the -title command-line option)
-                            host:port, etc.
-    - doRaise        if True, raise RuntimeError if there is a communications error,
-                            else issue a UserWarning warning
-
-    Raises RuntimeError or issues a warning (depending on doRaise)
-    if anything is written to stdout or stderr.
     """
     # Would be better to make a sequence rather than have to quote arguments
     if data:
@@ -224,10 +215,7 @@ def xpaset(cmd: str,
             if reply:
                 errMsg = reply.strip()
                 fullErrMsg = f"{repr(fullCmd)} failed: {errMsg}"
-                if doRaise:
-                    raise RuntimeErr('cmdfail', fullCmd, errMsg)
-                else:
-                    warnings.warn(fullErrMsg)
+                raise RuntimeErr('cmdfail', fullCmd, errMsg)
 
         finally:
             p.stdin.close()  # redundant
@@ -294,17 +282,12 @@ class DS9Win:
                     MacOS X warning: opening ds9 requires ds9 to be on your PATH;
                     this may not be true by default;
                     see the module documentation above for workarounds.
-    - doRaise        if True, raise RuntimeError if there is a communications error,
-                    else issue a UserWarning warning.
-                    Note: doOpen always raises RuntimeError on failure!
     """
     def __init__(self,
                  template: str = _DefTemplate,
-                 doOpen: bool = True,
-                 doRaise: bool = True
+                 doOpen: bool = True
                  ) -> None:
         self.template = str(template)
-        self.doRaise = bool(doRaise)
         self.alreadyOpen = self.isOpen()
         if doOpen:
             self.doOpen()
@@ -346,7 +329,7 @@ class DS9Win:
         and available for communication, False otherwise.
         """
         try:
-            xpaget('mode', template=self.template, doRaise=True)
+            _ = xpaget('mode', template=self.template)
             return True
         except RuntimeErr:
             return False
@@ -455,8 +438,7 @@ class DS9Win:
         """
         return xpaget(
             cmd=cmd,
-            template=self.template,
-            doRaise=self.doRaise,
+            template=self.template
         )
 
     def xpaset(self,
@@ -479,8 +461,7 @@ class DS9Win:
         xpaset(
             cmd=cmd,
             data=data,
-            template=self.template,
-            doRaise=self.doRaise,
+            template=self.template
         )
 
 
