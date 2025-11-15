@@ -62,7 +62,7 @@ def _findUnixApp(appName: str) -> None:
         raise RuntimeErr('notonpath', appName)
 
 
-def setup(doRaise: bool = True) -> str | None:
+def setup() -> str | None:
     """Search for xpa and ds9 and set globals accordingly.
     Return None if all is well, else return an error string.
     The return value is also saved in global variable _SetupError.
@@ -90,11 +90,10 @@ def setup(doRaise: bool = True) -> str | None:
     if _SetupError:
         class _Popen(subprocess.Popen):
             def __init__(self, *args, **kargs):
-                setup(doRaise=True)
+                setup()
                 super().__init__(*args, **kargs)
 
-        if doRaise:
-            raise RuntimeErr('badwin', _ex)
+        raise RuntimeErr('badwin', _ex)
 
     else:
         _Popen = subprocess.Popen
