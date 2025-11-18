@@ -280,6 +280,7 @@ def xpaget(cmd: str,  # Do not try to type the "this can be a list" version
             p.stdin.close()
             errMsg = p.stderr.read()
             if errMsg:
+                errMsg = errMsg.decode()
                 fullErrMsg = f"{repr(fullCmd)} failed: {errMsg}"
                 if doRaise:
                     raise RuntimeErr('cmdfail', fullCmd, errMsg)
@@ -346,7 +347,7 @@ def xpaset(cmd: str,
             p.stdin.close()
             reply = p.stdout.read()
             if reply:
-                errMsg = reply.strip()
+                errMsg = reply.strip().decode()
                 fullErrMsg = f"{repr(fullCmd)} failed: {errMsg}"
                 if doRaise:
                     raise RuntimeErr('cmdfail', fullCmd, errMsg)

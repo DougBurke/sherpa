@@ -237,12 +237,12 @@ def test_get_data_image_dataimg_repeated():
     _ = s.get_data_image()
 
     d = example_data()
-    d.header = None
+    d.header = {"NOT_OBJ": "foo"}
     s.set_data(d)
 
     # What is the name field now?
     obj = s.get_data_image()
-    assert obj.name == 'A_big_blob'  # ideally this would be "Data"
+    assert obj.name == 'Data'
 
 
 @requires_ds9
