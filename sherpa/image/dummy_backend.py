@@ -26,6 +26,10 @@ from sherpa.astro.io.wcs import WCS
 imager = None
 """The DS9 window, or None"""
 
+# If this file is xxx_backend.py then 'name = "xxx"'.
+name: str = "dummy"
+"""The name of the backend."""
+
 
 def close() -> None:
     """Stop the image viewer."""

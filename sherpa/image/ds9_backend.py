@@ -31,6 +31,8 @@ from . import DS9
 
 imager = DS9.DS9Win(template=DS9._DefTemplate, doOpen=False)
 
+name: str = "ds9"
+
 
 # The except blocks would ideally catch explicit errors; the present
 # catch-anything approach means that we lose potentially-useful
