@@ -282,10 +282,16 @@ class DataImage(BaseImage):
         self.eqpos = getattr(data, 'eqpos', None)
         self.sky = getattr(data, 'sky', None)
         header = getattr(data, 'header', None)
-        if header is not None:
-            obj = header.get('OBJECT')
-            if obj is not None:
-                self.name = str(obj).replace(" ", "_")
+
+        # Clear out any previous version.
+        self.name = "Data"
+
+        if header is None:
+            return
+
+        obj = header.get('OBJECT')
+        if obj is not None:
+            self.name = str(obj).replace(" ", "_")
 
 
 class ModelImage(BaseImage):
@@ -386,6 +392,8 @@ class PSFKernelImage(DataImage):
 
         psfdata = psf.get_kernel(data)
         super().prepare_image(psfdata)
+        # What is the best name here?
+        self.name = "PSF_Kernel"
 
 
 class ComponentSourceImage(SourceImage):
