@@ -116,6 +116,8 @@ dependent axis (``y``) then filter to select only those values between
 
 """
 
+from __future__ import annotations
+
 from abc import ABCMeta
 from collections.abc import Callable, Sequence
 import logging
@@ -224,7 +226,10 @@ class DataSpace1D(EvaluationSpace1D):
     evaluated over data spaces, data spaces can be considered evaluation spaces themselves. However this "is-a"
     relationship is in the code mostly for convenience and could be removed in future versions.
     """
-    def __init__(self, filter, x):
+    def __init__(self,
+                 filter: Filter,
+                 x: ArrayType | None
+                 ) -> None:
         """
         Parameters
         ----------
@@ -238,7 +243,7 @@ class DataSpace1D(EvaluationSpace1D):
 
     def get(self,
             filter: bool = False
-            ):
+            ) -> DataSpace1D:
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -289,7 +294,11 @@ class IntegratedDataSpace1D(EvaluationSpace1D):
     """
     Same as DataSpace1D, but for supporting integrated data sets.
     """
-    def __init__(self, filter, xlo, xhi):
+    def __init__(self,
+                 filter: Filter,
+                 xlo: ArrayType | None,
+                 xhi: ArrayType | None
+                 ) -> None:
         """
         Parameters
         ----------
@@ -315,7 +324,7 @@ class IntegratedDataSpace1D(EvaluationSpace1D):
 
     def get(self,
             filter: bool = False
-            ):
+            ) -> IntegratedDataSpace1D:
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -385,7 +394,11 @@ class DataSpace2D:
 
     """
 
-    def __init__(self, filter, x0, x1):
+    def __init__(self,
+                 filter: Filter,
+                 x0: ArrayType | None,
+                 x1: ArrayType | None
+                 ) -> None:
         x0 = _check_nomask(x0)
         x1 = _check_nomask(x1)
 
@@ -397,7 +410,7 @@ class DataSpace2D:
 
     def get(self,
             filter: bool = False
-            ):
+            ) -> Dataspace2D:
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -420,7 +433,7 @@ class DataSpace2D:
         return DataSpace2D(self.filter, *data)
 
     @property
-    def grid(self):
+    def grid(self) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
         """The grid representation of this dataset.
 
         The x0 and x1 arrays in the grid are one-dimensional representations of the meshgrid obtained
@@ -436,12 +449,12 @@ class DataSpace2D:
     # Should these be deprecated now that the code attempts to mimic EvaluationSpace2D?
     #
     @property
-    def x0(self):
+    def x0(self) -> np.ndarray | None:
         """Return the first axis."""
         return self.x_axis.x
 
     @property
-    def x1(self):
+    def x1(self) -> np.ndarray | None:
         """Return the second axis."""
         return self.y_axis.x
 
@@ -459,7 +472,13 @@ class IntegratedDataSpace2D:
 
     """
 
-    def __init__(self, filter, x0lo, x1lo, x0hi, x1hi):
+    def __init__(self,
+                 filter: Filter,
+                 x0lo: ArrayType | None,
+                 x1lo: ArrayType | None,
+                 x0hi: ArrayType | None,
+                 x1hi: ArrayType | None
+                 ) -> None:
         x0lo = _check_nomask(x0lo)
         x1lo = _check_nomask(x1lo)
         x0hi = _check_nomask(x0hi)
@@ -473,7 +492,7 @@ class IntegratedDataSpace2D:
 
     def get(self,
             filter: bool = False
-            ):
+            ) -> IntegratedDataSpace2D:
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -496,7 +515,7 @@ class IntegratedDataSpace2D:
         return IntegratedDataSpace2D(self.filter, *data)
 
     @property
-    def grid(self):
+    def grid(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | tuple[None, None, None, None]:
         """The grid representation of this dataset.
 
         The x0 and x1 arrays in the grid are one-dimensional representations of the meshgrid obtained
@@ -513,22 +532,22 @@ class IntegratedDataSpace2D:
     # Should these be deprecated now that the code attempts to mimic EvaluationSpace2D?
     #
     @property
-    def x0lo(self):
+    def x0lo(self) -> np.ndarray | None:
         """Return the first axis (low edge)"""
         return self.x_axis.lo
 
     @property
-    def x0hi(self):
+    def x0hi(self) -> np.ndarray | None:
         """Return the first axis (high edge)."""
         return self.x_axis.hi
 
     @property
-    def x1lo(self):
+    def x1lo(self) -> np.ndarray | None:
         """Return the second axis (low edge)."""
         return self.y_axis.lo
 
     @property
-    def x1hi(self):
+    def x1hi(self) -> np.ndarray | None:
         """Return the second axis (high edge)."""
         return self.y_axis.hi
 
@@ -546,13 +565,17 @@ class DataSpaceND:
 
     """
 
-    def __init__(self, filter, indep):
+    def __init__(self,
+                 filter: Filter,
+                 indep: Sequence[ArrayType | None]
+                 ) -> None:
         self.filter = filter
+        # TODO: should this check that indep is either all unset or set?
         self.indep = tuple(_check_nomask(d) for d in indep)
 
     def get(self,
             filter: bool = False
-            ):
+            ) -> DataSpaceND:
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -573,7 +596,7 @@ class DataSpaceND:
         return DataSpaceND(self.filter, data)
 
     @property
-    def grid(self):
+    def grid(self) -> tuple[np.ndarray | None, ...]:
         """
         Return the grid representation of this dataset.
 
@@ -906,7 +929,7 @@ class Data(NoNewAttributesAfterInit, BaseData):
         self._ylabel = 'y'
         NoNewAttributesAfterInit.__init__(self)
 
-    def _check_data_space(self, dataspace):
+    def _check_data_space(self, dataspace) -> None:
         """Check that the data space has the correct size.
 
         Note that this also sets the size of the data object if it has

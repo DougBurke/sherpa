@@ -326,7 +326,7 @@ def make_metadata(header, items):
     return meta
 
 
-def _extract_fields(obj, summary):
+def _extract_fields(obj: Data, summary: str) -> str:
     """Extract the "column" fields.
 
     Write out the _fields values (that are not None) for the Data
@@ -359,7 +359,7 @@ def _extract_fields(obj, summary):
                                    open_block=True)
 
 
-def html_pha(pha):
+def html_pha(pha: DataPHA) -> str:
     """HTML representation: PHA"""
 
     from sherpa.astro.plot import DataPHAPlot
@@ -454,7 +454,7 @@ def html_pha(pha):
     return formatting.html_from_sections(pha, ls)
 
 
-def _calc_erange(elo, ehi):
+def _calc_erange(elo: np.ndarray, ehi: np.ndarray) -> str:
     """Create the energy range information.
 
     Parameters
@@ -494,7 +494,7 @@ def _calc_erange(elo, ehi):
     return erange
 
 
-def _calc_wrange(wlo, whi):
+def _calc_wrange(wlo: np.ndarray, whi: np.ndarray) -> str:
     """Create the wavelength range information.
 
     Parameters
@@ -532,7 +532,7 @@ def _calc_wrange(wlo, whi):
     return wrange
 
 
-def html_arf(arf):
+def html_arf(arf: DataARF) -> str:
     """HTML representation: ARF"""
 
     # Unlike the string representation, this provides extra
@@ -601,7 +601,7 @@ def html_arf(arf):
     return formatting.html_from_sections(arf, ls)
 
 
-def html_rmf(rmf):
+def html_rmf(rmf) -> str:
     """HTML representation: RMF"""
 
     # See _html_arf for general comments
@@ -670,7 +670,7 @@ def html_rmf(rmf):
     return formatting.html_from_sections(rmf, ls)
 
 
-def html_img(img):
+def html_img(img: DataIMG):
     """HTML representation: IMG
 
     Special-case of the Data2D handling. It would be nice to reuse
@@ -787,7 +787,12 @@ class DataOgipResponse(Data1DInt):
     # The shift to creating a warning message instead of raising an
     # error has made this messier.
     #
-    def _validate_energy_ranges(self, label, elo, ehi, ethresh):
+    def _validate_energy_ranges(self,
+                                label: str,
+                                elo: np.ndarray,
+                                ehi: np.ndarray,
+                                ethresh: float | None
+                                ) -> tuple[np.ndarray, np.ndarray]:
         """Check the lo/hi values are > 0, handling common error case.
 
         Several checks are made, to make sure the parameters follow
@@ -804,7 +809,7 @@ class DataOgipResponse(Data1DInt):
         elo, ehi : numpy.ndarray
             The input ENERG_LO and ENERG_HI arrays. They are assumed
             to be one-dimensional and have the same number of elements.
-        ethresh : None or float, optional
+        ethresh : None or float
             If None, then elo must be greater than 0. When set, the
             start bin can have a low-energy edge of 0; it is replaced
             by ethresh. If set, ethresh must be greater than 0.
@@ -898,7 +903,9 @@ class DataOgipResponse(Data1DInt):
 
         return elo, ehi
 
-    def _get_data_space(self, filter=False):
+    def _get_data_space(self,
+                        filter: bool = False
+                        ) -> EvaluationSpace1D:
         # TODO: the class has no _lo/_hi attributes so what is this
         #       meant to do?
         return EvaluationSpace1D(self._lo, self._hi)
@@ -958,8 +965,20 @@ class DataARF(DataOgipResponse):
 
     specresp = property(_get_specresp, _set_specresp)
 
-    def __init__(self, name, energ_lo, energ_hi, specresp, bin_lo=None,
-                 bin_hi=None, exposure=None, header=None, ethresh=None):
+    def __init__(self,
+                 name: str,
+                 energ_lo: np.ndarray,  # TODO: check sizes match
+                 energ_hi: np.ndarray,
+                 specresp: np.ndarray,
+                 bin_lo=None,, optional
+                 bin_hi=None,
+                 exposure=None,
+                 header: Mapping[str, Any] | None = None,
+                 ethresh: float | None = None
+                 ) -> None:
+
+        assert specresp is not None  we have one test of this which is just checking this behaviour
+
         self.specresp = specresp
         # Keep these fields for now, but they are unused.
         self.bin_lo = None
@@ -1023,7 +1042,7 @@ class DataARF(DataOgipResponse):
 
     def get_dep(self,
                 filter: bool = False
-                ):
+                ) -> np.ndarray | None:
         return self._rsp
 
     def get_ylabel(self, yfunc=None) -> str:
@@ -1248,12 +1267,12 @@ class DataRMF(DataOgipResponse):
 
     def get_indep(self,
                   filter: bool = False
-                  ):
+                  ) -> tuple[np.ndarray, ...] | tuple[None, ...]:
         return (self._lo, self._hi)
 
     def get_dep(self,
                 filter: bool = False
-                ):
+                ) -> np.ndarray | None:
         return self.apply_rmf(np.ones(self.energ_lo.shape, SherpaFloat))
 
 
@@ -2979,7 +2998,7 @@ It is an integer or string.
 
     def get_background_scale(self,
                              bkg_id: IdType = 1,
-                             units='counts',
+                             units: RateType = 'counts',
                              group: bool = True,
                              filter: bool = False
                              ):
@@ -3206,7 +3225,10 @@ It is an integer or string.
                      groupfunc: Callable) -> np.ndarray:
         ...
 
-    def apply_filter(self, data, groupfunc=np.sum):
+    def apply_filter(self,
+                     data: ArrayType | None,
+                     groupfunc: Callable = np.sum
+                     ) -> np.ndarray | None:
         """Group and filter the supplied data to match the data set.
 
         Parameters
@@ -3363,7 +3385,10 @@ It is an integer or string.
                        groupfunc: Callable) -> np.ndarray:
         ...
 
-    def apply_grouping(self, data, groupfunc=np.sum):
+    def apply_grouping(self,
+                       data: ArrayType | None,
+                       groupfunc: Callable = np.sum
+                       ) -> np.ndarray | None:
         """Apply the grouping scheme of the data set to the supplied data.
 
         Parameters
@@ -3631,7 +3656,10 @@ It is an integer or string.
         self.group()
         self._original_groups = False
 
-    def group_bins(self, num, tabStops=None) -> None:
+    def group_bins(self,
+                   num,
+                   tabStops=None
+                   ) -> None:
         """Group into a fixed number of bins.
 
         Combine the data so that there `num` equal-width bins (or
@@ -3680,7 +3708,10 @@ It is an integer or string.
         self._dynamic_group("grpNumBins", len(self.channel), num,
                             tabStops=tabStops)
 
-    def group_width(self, val, tabStops=None) -> None:
+    def group_width(self,
+                    val,
+                    tabStops=None
+                    ) -> None:
         """Group into a fixed bin width.
 
         Combine the data so that each bin contains `num` channels.
@@ -3728,7 +3759,11 @@ It is an integer or string.
         self._dynamic_group("grpBinWidth", len(self.channel), val,
                             tabStops=tabStops)
 
-    def group_counts(self, num, maxLength=None, tabStops=None) -> None:
+    def group_counts(self,
+                     num,
+                     maxLength=None,
+                     tabStops=None
+                     ) -> None:
         """Group into a minimum number of counts per bin.
 
         Combine the data so that each bin contains `num` or more
@@ -3799,7 +3834,12 @@ It is an integer or string.
                             maxLength=maxLength, tabStops=tabStops)
 
     # DOC-TODO: see discussion in astro.ui.utils regarding errorCol
-    def group_snr(self, snr, maxLength=None, tabStops=None, errorCol=None) -> None:
+    def group_snr(self,
+                  snr,
+                  maxLength=None,
+                  tabStops=None,
+                  errorCol=None
+                  ) -> None:
         """Group into a minimum signal-to-noise ratio.
 
         Combine the data so that each bin has a signal-to-noise ratio
@@ -3859,7 +3899,11 @@ It is an integer or string.
                             maxLength=maxLength, tabStops=tabStops,
                             errorCol=errorCol)
 
-    def group_adapt(self, minimum, maxLength=None, tabStops=None) -> None:
+    def group_adapt(self,
+                    minimum,
+                    maxLength=None,
+                    tabStops=None
+                    ) -> None:
         """Adaptively group to a minimum number of counts.
 
         Combine the data so that each bin contains `num` or more
@@ -3915,8 +3959,12 @@ It is an integer or string.
                             maxLength=maxLength, tabStops=tabStops)
 
     # DOC-TODO: see discussion in astro.ui.utils regarding errorCol
-    def group_adapt_snr(self, minimum, maxLength=None, tabStops=None,
-                        errorCol=None) -> None:
+    def group_adapt_snr(self,
+                        minimum,
+                        maxLength=None,
+                        tabStops=None,
+                        errorCol=None
+                        ) -> None:
         """Adaptively group to a minimum signal-to-noise ratio.
 
         Combine the data so that each bin has a signal-to-noise ratio
