@@ -236,7 +236,9 @@ class DataSpace1D(EvaluationSpace1D):
         self.filter = filter
         super().__init__(_check_nomask(x))
 
-    def get(self, filter=False):
+    def get(self,
+            filter: bool = False
+            ):
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -311,7 +313,9 @@ class IntegratedDataSpace1D(EvaluationSpace1D):
         self.filter = filter
         super().__init__(xlo, xhi)
 
-    def get(self, filter=False):
+    def get(self,
+            filter: bool = False
+            ):
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -391,7 +395,9 @@ class DataSpace2D:
         if self.x_axis.size != self.y_axis.size:
             raise DataErr("mismatchn", "x0", "x1", self.x_axis.size, self.y_axis.size)
 
-    def get(self, filter=False):
+    def get(self,
+            filter: bool = False
+            ):
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -465,7 +471,9 @@ class IntegratedDataSpace2D:
         if self.x_axis.size != self.y_axis.size:
             raise DataErr("mismatchn", "x0", "x1", self.x_axis.size, self.y_axis.size)
 
-    def get(self, filter=False):
+    def get(self,
+            filter: bool = False
+            ):
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -542,7 +550,9 @@ class DataSpaceND:
         self.filter = filter
         self.indep = tuple(_check_nomask(d) for d in indep)
 
-    def get(self, filter=False):
+    def get(self,
+            filter: bool = False
+            ):
         """
         Get a filtered representation of this data set. If `filter` is `False` this object is returned.
 
@@ -1389,7 +1399,7 @@ class Data(NoNewAttributesAfterInit, BaseData):
 
     def get_error(self,
                   filter: bool = False,
-                  staterrfunc: Callable | None = None
+                  staterrfunc: StatErrFunc | None = None
                   ) -> np.ndarray | None:
         """Return the total error on the dependent variable.
 
@@ -1419,7 +1429,10 @@ class Data(NoNewAttributesAfterInit, BaseData):
         return calc_total_error(self.get_staterror(filter, staterrfunc),
                                 self.get_syserror(filter))
 
-    def get_yerr(self, filter=False, staterrfunc=None):
+    def get_yerr(self,
+                 filter: bool = False,
+                 staterrfunc: StatErrFunc | None = None
+                 ) -> np.ndarray | None:
         """Return errors in dependent axis in N-D view of dependent variable.
 
         Parameters
@@ -2155,7 +2168,10 @@ class Data1DAsymmetricErrs(Data1D):
 
     # TODO: should we change get_error and get_staterror?
     #
-    def get_yerr(self, filter=False, staterrfunc=None):
+    def get_yerr(self,
+                 filter: bool = False,
+                 staterrfunc: StatErrFunc | None = None
+                 ) -> tuple[ArrayType | None, ArrayType | None]:
         """Return the y error.
 
         The staterrfunc argument is currently ignored.
@@ -2521,10 +2537,14 @@ class Data2D(Data):
         self._check_data_space(ds)
         return ds
 
-    def get_x0(self, filter: bool = False) -> np.ndarray | None:
+    def get_x0(self,
+               filter: bool = False
+               ) -> np.ndarray | None:
         return self._data_space.get(filter).x0
 
-    def get_x1(self, filter: bool = False) -> np.ndarray | None:
+    def get_x1(self,
+               filter: bool = False
+               ) -> np.ndarray | None:
         return self._data_space.get(filter).x1
 
     def get_x0label(self) -> str:
@@ -2644,7 +2664,9 @@ class Data2D(Data):
     # For images, only need y-array
     # Also, we do not filter, as imager needs M x N (or
     # L x M x N) array
-    def get_img(self, yfunc=None):
+    def get_img(self,
+                yfunc=None
+                ) -> np.ndarray | tuple[np.ndarray,np.ndarray]:
         """Return the dependent axis as a 2D array.
 
         The data is not filtered.
@@ -2671,7 +2693,7 @@ class Data2D(Data):
         return (y_img[0].reshape(*self.shape),
                 y_img[1].reshape(*self.shape))
 
-    def get_imgerr(self):
+    def get_imgerr(self) -> np.ndarray:
         self._check_shape()
         err = self.get_error()
         if err is None:
@@ -2679,7 +2701,11 @@ class Data2D(Data):
 
         return err.reshape(*self.shape)
 
-    def to_contour(self, yfunc=None):
+    def to_contour(self,
+                   yfunc=None
+                   ) -> tuple[np.ndarray, np.ndarray,
+                              np.ndarray | tuple[np.ndarray, np.ndarray],
+                              str, str]:
         return (self.get_x0(True),
                 self.get_x1(True),
                 self.get_y(True, yfunc),
@@ -2818,13 +2844,17 @@ class Data2DInt(Data2D):
         self._check_data_space(ds)
         return ds
 
-    def get_x0(self, filter: bool = False) -> np.ndarray | None:
+    def get_x0(self,
+               filter: bool = False
+               ) -> np.ndarray | None:
         if self.size is None:
             return None
         indep = self._data_space.get(filter)
         return (indep.x0lo + indep.x0hi) / 2.0
 
-    def get_x1(self, filter=False) -> np.ndarray | None:
+    def get_x1(self,
+               filter: bool = False
+               ) -> np.ndarray | None:
         if self.size is None:
             return None
         indep = self._data_space.get(filter)
