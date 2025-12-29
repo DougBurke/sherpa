@@ -374,8 +374,10 @@ class Session(sherpa.ui.utils.Session):
 
         self._plot_types['bkg'] = [sherpa.astro.plot.BkgDataPlot()]
         self._plot_types['bkg_model'] = [sherpa.astro.plot.BkgModelHistogram()]
+        self._plot_types['bkg_model_component'] = [sherpa.astro.plot.BkgComponentModelPlot()]
         self._plot_types['bkg_fit'] = [sherpa.astro.plot.BkgFitPlot()]
         self._plot_types['bkg_source'] = [sherpa.astro.plot.BkgSourcePlot()]
+        self._plot_types['bkg_source_component'] = [sherpa.astro.plot.BkgComponentSourcePlot()]
         self._plot_types['bkg_ratio'] = [sherpa.astro.plot.BkgRatioPlot()]
         self._plot_types['bkg_resid'] = [sherpa.astro.plot.BkgResidPlot()]
         self._plot_types['bkg_delchi'] = [sherpa.astro.plot.BkgDelchiPlot()]
@@ -11933,6 +11935,108 @@ class Session(sherpa.ui.utils.Session):
 
         return plotobj
 
+    def get_bkg_model_component_plot(self,
+                                     id,
+                                     model=None,
+                                     bkg_id: Optional[int] = None,
+                                     recalc: bool = True):
+        """Return the data used to create the background model-component plot.
+
+        The response model is automatically added by the routine
+        unless the model contains a response.
+
+        Parameters
+        ----------
+        id : int or str, optional
+           The data set that provides the data. If not given then the
+           default identifier is used, as returned by `get_default_id`.
+        model : str or sherpa.models.model.Model instance
+           The component to use (the name, if a string).
+        bkg_id : int or str, optional
+           Identify the background component to use, if there are
+           multiple ones associated with the data set.
+        recalc : bool, optional
+           If ``False`` then the results from the last call to
+           `plot_bkg_model_component` (or `get_bkg_model_component_plot`)
+           are returned, otherwise the data is re-generated.
+
+        Returns
+        -------
+        instance
+           An object representing the data used to create the plot by
+           `plot_bkg_model_component`.
+
+        See Also
+        --------
+XXX
+        get_model_plot : Return the data used to create the model plot.
+        plot_model : Plot the model for a data set.
+        plot_model_component : Plot a component of the model for a data set.
+
+        Notes
+        -----
+        The function does not follow the normal Python standards for
+        parameter use, since it is designed for easy interactive use.
+        When called with a single un-named argument, it is taken to be
+        the `model` parameter. If given two un-named arguments, then
+        they are interpreted as the `id` and `model` parameters,
+        respectively.
+
+        Examples
+        --------
+
+XXX
+
+        Return the plot data for the ``pl`` component used in the
+        default data set:
+
+        >>> cplot = get_model_component_plot(pl)
+
+        Return the full source model (``fplot``) and then for the
+        components ``gal * pl`` and ``gal * gline``, for the data set
+        'jet':
+
+        >>> fmodel = xsphabs.gal * (powlaw1d.pl + gauss1d.gline)
+        >>> set_source('jet', fmodel)
+        >>> fit('jet')
+        >>> fplot = get_model_plot('jet')
+        >>> plot1 = get_model_component_plot('jet', pl*gal)
+        >>> plot2 = get_model_component_plot('jet', gline*gal)
+
+        For PHA data sets the response is automatically added, but it
+        can also be manually specified. In the following plot1 and
+        plot2 contain the same data:
+
+        >>> plot1 = get_model_component_plot(pl)
+        >>> rsp = get_response()
+        >>> plot2 = get_model_component_plot(rsp(pl))
+
+        """
+
+        plotobj = self._plot_types["bkg_model_component"][0]
+        if not recalc:
+            return plotobj
+
+        if model is None:
+            id, model = model, id
+        model = self._check_model(model)
+
+        # Ensure bkg_id is set for the _get_pha_data call
+        idval = self._fix_id(id)
+        bkg_id = 1 if bkg_id is None else bkg_id
+
+        data = self._get_pha_data(idval, bkg_id)
+        if not has_pha_response(model):
+            try:
+                rsp = self.get_response(id, bkg_id=bkg_id)
+                model = rsp(model)
+            except DataErr:
+                # no response
+                pass
+
+        plotobj.prepare(data, model, self.get_stat())
+        return plotobj
+
     def get_bkg_plot(self, id=None, bkg_id=None, recalc=True):
         """Return the data used by plot_bkg.
 
@@ -13031,6 +13135,68 @@ class Session(sherpa.ui.utils.Session):
         """
 
         plotobj = self.get_bkg_model_plot(id, bkg_id, recalc=not replot)
+        self._plot(plotobj, overplot=overplot, clearwindow=clearwindow,
+                   **kwargs)
+
+    def plot_bkg_model_component(self, id, model=None, bkg_id=None,
+                                 replot=False, overplot=False,
+                                 clearwindow=True, **kwargs):
+        """Plot the model for the background of a PHA data set.
+
+        This function plots the model for the background of a PHA data
+        set, which includes any instrument response (the
+        ARF and RMF).
+
+XXX
+
+        Parameters
+        ----------
+        id : int or str, optional
+           The data set that provides the data. If not given then the
+           default identifier is used, as returned by `get_default_id`.
+        bkg_id : int or str, optional
+           Identify the background component to use, if there are
+           multiple ones associated with the data set.
+        replot : bool, optional
+           Set to ``True`` to use the values calculated by the last
+           call to `plot_bkg_model`. The default is ``False``.
+        overplot : bool, optional
+           If ``True`` then add the data to an existing plot, otherwise
+           create a new plot. The default is ``False``.
+        clearwindow : bool, optional
+           Should the existing plot area be cleared before creating this
+           new plot (e.g. for multi-panel plots)?
+
+        Raises
+        ------
+        sherpa.utils.err.ArgumentErr
+           If the data set does not contain PHA data.
+        sherpa.utils.err.IdentifierErr
+           If the ``bkg_id`` parameter is invalid.
+        sherpa.utils.err.ModelErr
+           If no model expression has been created for the background
+           data.
+
+        See Also
+        --------
+        get_bkg_model_plot : Return the data used by plot_bkg_model.
+        plot_bkg_source : Plot the model expression for the background of a PHA data set.
+        set_bkg_model : Set the background model expression for a PHA data set.
+
+        Examples
+        --------
+
+XXX
+        >>> plot_bkg_model()
+
+        >>> plot_bkg('jet')
+        >>> plot_bkg_model('jet', bkg_id=1, overplot=True)
+        >>> plot_bkg_model('jet', bkg_id=2, overplot=True)
+
+        """
+
+        plotobj = self.get_bkg_model_component_plot(id, model, bkg_id,
+                                                    recalc=not replot)
         self._plot(plotobj, overplot=overplot, clearwindow=clearwindow,
                    **kwargs)
 

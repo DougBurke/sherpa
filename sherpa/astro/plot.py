@@ -45,6 +45,7 @@ __all__ = ('DataPHAPlot', 'ModelPHAHistogram', 'ModelHistogram',
            'RatioPHAPlot', 'ResidPHAPlot', 'DelchiPHAPlot', 'ChisqrPHAPlot',
            'ARFPlot', 'RMFPlot',
            'BkgDataPlot', 'BkgModelPHAHistogram', 'BkgModelHistogram',
+           'BkgComponentModelPlot', 'BkgComponentSourcePlot',
            'BkgFitPlot', 'BkgDelchiPlot', 'BkgResidPlot', 'BkgRatioPlot',
            'BkgChisqrPlot', 'BkgSourcePlot',
            'OrderPlot',
@@ -797,6 +798,30 @@ class BkgModelHistogram(ModelHistogram):
     def __init__(self):
         super().__init__()
         self.title = 'Background Model Contribution'
+
+
+class BkgComponentModelPlot(ComponentModelPlot):
+    """The component model for background DataPHA data.
+
+    .. versionadded:: 4.17.0
+
+    """
+
+    def prepare(self, data, model, stat=None) -> None:
+        super().prepare(data=data, model=model, stat=stat)
+        self.title = f'Background Model component: {model.name}'
+
+
+class BkgComponentSourcePlot(ComponentSourcePlot):
+    """The component source for background DataPHA data.
+
+    .. versionadded:: 4.17.0
+
+    """
+
+    def prepare(self, data, model, stat=None) -> None:
+        super().prepare(data=data, model=model, stat=stat)
+        self.title = f'Background Source component: {model.name}'
 
 
 class BkgFitPlot(shplot.FitPlot):
