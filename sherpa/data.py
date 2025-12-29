@@ -1632,24 +1632,25 @@ class DataSimulFit(NoNewAttributesAfterInit):
         # This should be true by construction.
         assert len(self.datasets) > 0
 
-        def combine(a: np.ndarray, b: np.ndarray | None) -> np.ndarray:
-            if b is None:
-                raise DataErr("axis is not set")
-            return np.append(a, b)
+        # It is not clear what is best to do with a None value, so
+        # error out.
+        #
+        def validate(guess: tuple[np.ndarray | None, ...]) -> tuple[np.ndarray, ...]:
+            for ax in guess:
+                if ax is None:
+                    raise DataErr("axis is not set")
 
-        out = self.datasets[0].to_guess()
-        for axis in out:
-            if axis is None:
-                raise DataErr("axis is not set")
+            return guess
 
+        out = validate(self.datasets[0].to_guess())
         for data in self.datasets[1:]:
             # The assumption here is that each dataset has the same
-            # number of independent axes as the first dataset.
-            dout = data.to_guess()
+            # number of independent axes.
+            dout = validate(data.to_guess())
             if len(dout) != len(out):
                 raise DataErr("Unable to create guess when number of independent axes varies")
 
-            out = (combine(a, b) for a, b in zip(out, dout))
+            out = (np.append(a, b) for a, b in zip(out, dout))
 
         return out
 

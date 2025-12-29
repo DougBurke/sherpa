@@ -2779,6 +2779,22 @@ def test_datasimulfit_to_guess_axis_difference():
         _ = d.to_guess()
 
 
+@pytest.mark.parametrize("args",
+                         [([1, 2, 3], None, [4, 5], [9, 8]),
+                          ([4, 5], [9, 8], [1, 2, 3], None),
+                          (None, None, None, None)])
+def test_datasimulfit_to_guess_missing_axis(args):
+    """If an axis is unset what happens?"""
+
+    d1 = Data1D("a", args[0], args[1])
+    d2 = Data1D("b", args[2], args[3])
+
+    d = DataSimulFit("example", [d1, d2])
+    with pytest.raises(DataErr,
+                       match="^axis is not set$"):
+        _ = d.to_guess()
+
+
 def test_datasimulfit_to_guess():
     """Very basic check"""
 
