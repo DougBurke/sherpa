@@ -41,7 +41,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
   "pytest>=8.0",
-  "pytest-doctestplus",
+  # "pytest-doctestplus",    skip until understand https://github.com/sherpa/sherpa/issues/2421
 ]
 
 # This is not a complete list, but that's because the doc build
