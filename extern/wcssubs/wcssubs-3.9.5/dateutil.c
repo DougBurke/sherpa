@@ -1,5 +1,5 @@
 /*** File libwcs/dateutil.c
- *** May 2, 2017
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1999-2017
@@ -313,11 +313,11 @@
 #include "wcs.h"
 #include "fitsfile.h"
 
-static double suntl();
-static void fixdate();
-static int caldays();
-static double dint();
-static double dmod();
+static double suntl(double, double, double, int);
+static void fixdate(int *, int *, int *, int *, int *, double *, int);
+static int caldays(int, int);
+static double dint(double);
+static double dmod(double, double);
 
 static double longitude = 0.0;	/* longitude of observatory in degrees (+=west) */
 void
@@ -4555,4 +4555,7 @@ double	dnum, dm;
  * Oct 19 2012	Unused l0 dropped from jd2lst(); ts2ss from jd2mst()
  *
  * May  2 2017	Allocate new output string for fd2ofd() and fd2oft()
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

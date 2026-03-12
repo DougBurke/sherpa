@@ -1,5 +1,5 @@
 /*** File libwcs/wcs.c
- *** June 24, 2016
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1994-2016
@@ -89,8 +89,8 @@
 
 static char wcserrmsg[80];
 static char wcsfile[256]={""};
-static void wcslibrot();
-void wcsrotset();
+static void wcslibrot(struct WorldCoor *);
+void wcsrotset(struct WorldCoor *);
 static int wcsproj0 = 0;
 static int izpix = 0;
 static double zpix = 0.0;
@@ -2123,7 +2123,7 @@ double	*xpos,*ypos;	/* RA and Dec in degrees (returned) */
 {
     double	xpi, ypi, xp, yp;
     double	eqin, eqout;
-    int wcspos();
+    int wcspos(double, double, struct WorldCoor *, double *, double *);
 
     if (nowcs (wcs))
 	return;
@@ -2246,7 +2246,7 @@ int	*offscl;	/* 0 if within bounds, else off scale */
     double xp, yp, xpi, ypi;
     double eqin, eqout;
     int sysin;
-    int wcspix();
+    int wcspix(double, double, struct WorldCoor *, double *, double *);
 
     if (nowcs (wcs))
 	return;
@@ -2351,7 +2351,7 @@ double  *ypos;           /* y (dec) coordinate (deg) */
 {
     int offscl;
     int i;
-    int wcsrev();
+    int wcsrev(const char ctype[][16], struct wcsprm *, const double pixcrd[], struct linprm *, double imgcrd[], struct prjprm *, double *, double *, const double crval[], struct celprm *, double world[]);
     double wcscrd[4], imgcrd[4], pixcrd[4];
     double phi, theta;
     
@@ -2392,7 +2392,7 @@ double  *ypix;          /* y pixel number  (dec or lat without rotation) */
 
 {
     int offscl;
-    int wcsfwd();
+    int wcsfwd(const char ctype[][16], struct wcsprm *, const double world[], const double crval[], struct celprm *, double *, double *, struct prjprm *, double imgcrd[], struct linprm *, double pixcrd[]);
     double wcscrd[4], imgcrd[4], pixcrd[4];
     double phi, theta;
 
@@ -3015,4 +3015,7 @@ char *cwcs;	/* Keyword suffix character for output WCS */
  * Jun  8 2016	Increase ctype, ctype1, and ctype2 to 16 characters for distortion
  * Jun 23 2016	Set initial allocation of keyword arrays to MAXNKWD instead of 100 in cpwcs()
  * Jun 24 2016	wcs->ptype contains only 3-letter projection code
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

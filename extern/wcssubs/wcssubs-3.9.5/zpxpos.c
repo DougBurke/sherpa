@@ -1,5 +1,5 @@
 /*** File wcslib/zpxpos.c
- *** October 31, 2012
+ *** March 12. 2026
  *** By Frank Valdes, valdes@noao.edu
  *** Modified from tnxpos.c by Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
@@ -50,7 +50,7 @@
 
 #define	max_niter	500
 #define	SZ_ATSTRING	2000
-static void wf_gsclose();
+static void wf_gsclose(struct IRAFsurface *);
 
 /* zpxinit -- initialize the zenithal/azimuthal polynomial forward or
  * inverse transform. initialization for this transformation consists of,
@@ -81,10 +81,10 @@ const char *header;	/* FITS header */
 struct WorldCoor *wcs;	/* pointer to WCS structure */
 {
     int i, j;
-    struct IRAFsurface *wf_gsopen();
+    struct IRAFsurface *wf_gsopen(char *);
     char key[8], *str1, *str2, *lngstr, *latstr, *header1;
     double zd1, d1, zd2,d2, zd, d, r;
-    extern void wcsrotset();
+    extern void wcsrotset(struct WorldCoor *);
 
     /* allocate space for the attribute strings */
     str1 = malloc (SZ_ATSTRING);
@@ -252,7 +252,7 @@ double	*xpos, *ypos;	/*o world coordinates (ra, dec) */
     double colatp, coslatp, sinlatp, longp;
     double xs, ys, ra, dec, xp, yp;
     double a, b, c, d, zd, zd1, zd2, r1, r2, rt, lambda;
-    double wf_gseval();
+    double wf_gseval(struct IRAFsurface *, double, double);
 
     /* Convert from pixels to image coordinates */
     xpix = xpix - wcs->crpix[0];
@@ -520,7 +520,7 @@ double	*xpix, *ypix;	/*o physical coordinates (x, y) */
     double s, r, dphi, z, dpi, dhalfpi, twopi, tx;
     double xm, ym, f, fx, fy, g, gx, gy, denom, dx, dy;
     double colatp, coslatp, sinlatp, longp, sphtol;
-    double wf_gseval(), wf_gsder();
+    double wf_gseval(struct IRAFsurface *, double, double), wf_gsder(struct IRAFsurface *, double, double, int, int);
 
     /* get the axis numbers */
     if (wcs->coorflip) {
@@ -732,4 +732,7 @@ struct IRAFsurface *sf;	/* the surface descriptor */
  * Mar  8 2011  Created from tnxpos.c and wfzpx.x
  *
  * Oct 31 2012	End comment on line 346 after pole; fix code thereafter
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

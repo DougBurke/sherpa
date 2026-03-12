@@ -1,5 +1,5 @@
 /*** File libwcs/hput.c
- *** September 9, 2011
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1995-2011
@@ -58,7 +58,7 @@
 
 static int verbose=0;	/* Set to 1 to print error messages and other info */
 
-static void fixnegzero();
+static void fixnegzero(char *);
 
 
 /*  HPUTI4 - Set int keyword = ival in FITS header string */
@@ -1313,4 +1313,7 @@ int	ndec;		/* Number of decimal places in degree string */
  * Aug 22 2007	If closing quote not found, make one up
  *
  * Sep  9 2011	Always initialize q2 and lroot
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

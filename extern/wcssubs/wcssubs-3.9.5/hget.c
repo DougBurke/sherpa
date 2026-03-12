@@ -1,5 +1,5 @@
 /*** File libwcs/hget.c
- *** November 6, 2015
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1994-2015
@@ -74,7 +74,7 @@
 static int use_saolib=0;
 #endif
 
-char *hgetc ();
+char *hgetc (const char *, const char *);
 
 static char val[VLENGTH+1];
 static int multiline = 0;
@@ -1920,4 +1920,7 @@ int	dropzero;	/* If nonzero, drop trailing zeroes */
  * Nov  6 2015	In isnum(), add return of 4 for yyyy-mm-dd dates
  *
  * Jun  9 2016	Fix isnum() tests for added coloned times and dashed dates
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

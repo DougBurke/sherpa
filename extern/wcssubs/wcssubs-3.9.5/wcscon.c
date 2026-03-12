@@ -1,5 +1,5 @@
 /*** File wcscon.c
- *** June 9, 2016
+ *** March 12, 2026
  *** Doug Mink, Harvard-Smithsonian Center for Astrophysics
  *** Some subroutines are based on Starlink subroutines by Patrick Wallace
  *** Copyright (C) 1995-2016
@@ -73,10 +73,10 @@
 #include <string.h>
 #include "wcs.h"
 
-void fk524(), fk524e(), fk524m(), fk524pv();
-void fk425(), fk425e(), fk425m(), fk425pv();
-void fk42gal(), fk52gal(), gal2fk4(), gal2fk5();
-void fk42ecl(), fk52ecl(), ecl2fk4(), ecl2fk5();
+void fk524(double *, double *), fk524e(double *, double *, double), fk524m(double *, double *, double *, double *), fk524pv(double *, double *, double *, double *, double *, double *);
+void fk425(double *, double *), fk425e(double *, double *, double), fk425m(double *, double *, double *, double *), fk425pv(double *, double *, double *, double *, double *, double *);
+void fk42gal(double *, double *), fk52gal(double *, double *), gal2fk4(double *, double *), gal2fk5(double *, double *);
+void fk42ecl(double *, double *, double), fk52ecl(double *, double *, double), ecl2fk4(double *, double *, double), ecl2fk5(double *, double *, double);
 
 /* Convert from coordinate system sys1 to coordinate system sys2, converting
    proper motions, too, and adding them if an epoch is specified */
@@ -100,7 +100,7 @@ double	*pphi;	/* Latitude or declination proper motion in Dec degrees/year
 		   Input in sys1, returned in sys2 */
 
 {
-    void fk5prec(), fk4prec();
+    void fk5prec(double, double, double *, double *), fk4prec(double, double, double *, double *);
 
     /* Set equinoxes if 0.0 */
     if (eq1 == 0.0) {
@@ -306,7 +306,7 @@ double	*px;	/* Parallax in arcseconds */
 double	*rv;	/* Radial velocity in km/sec */
 
 {
-    void fk5prec(), fk4prec();
+    void fk5prec(double, double, double *, double *), fk4prec(double, double, double *, double *);
 
     /* Set equinoxes if 0.0 */
     if (eq1 == 0.0) {
@@ -510,7 +510,7 @@ double	*dphi;	/* Latitude or declination in degrees
 double	epoch;	/* Besselian epoch in years */
 
 {
-    void fk5prec(), fk4prec();
+    void fk5prec(double, double, double *, double *), fk4prec(double, double, double *, double *);
 
     /* Set equinoxes if 0.0 */
     if (eq1 == 0.0) {
@@ -1441,9 +1441,9 @@ double *dphi;	/* B1950.0 FK4 declination in degrees
     Reference: Blaauw et al, MNRAS,121,123 (1960) */
 {
     double pos[3],pos1[3],r,dl,db,rl,rb,rra,rdec,dra,ddec;
-    void v2s3(),s2v3();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]);
     int i;
-    char *eqcoor, *eqstrn();
+    char *eqcoor, *eqstrn(double, double);
 
     dra = *dtheta;
     ddec = *dphi;
@@ -1499,8 +1499,8 @@ double *dphi;	/* Galactic latitude (b2) in degrees
 
 {
     double pos[3],pos1[3],r,dl,db,rl,rb,rra,rdec,dra,ddec;
-    void v2s3(),s2v3();
-    char *eqcoor, *eqstrn();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]);
+    char *eqcoor, *eqstrn(double, double);
     int i;
 
     /*  spherical to cartesian */
@@ -1574,8 +1574,8 @@ double *dphi;	/* J2000 declination in degrees
     Reference: Blaauw et al, MNRAS,121,123 (1960) */
 {
     double pos[3],pos1[3],r,dl,db,rl,rb,rra,rdec,dra,ddec;
-    void v2s3(),s2v3();
-    char *eqcoor, *eqstrn();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]);
+    char *eqcoor, *eqstrn(double, double);
     int i;
 
     /*  Spherical to cartesian */
@@ -1627,9 +1627,9 @@ double *dphi;	/* Galactic latitude (b2) in degrees
 
 {
     double pos[3],pos1[3],r,dl,db,rl,rb,rra,rdec,dra,ddec;
-    void v2s3(),s2v3();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]);
     int i;
-    char *eqcoor, *eqstrn();
+    char *eqcoor, *eqstrn(double, double);
 
     /*  Spherical to Cartesian */
     dl = *dtheta;
@@ -1727,7 +1727,7 @@ double *dphi;	/* B1950 declination in degrees
 double	epoch;	/* Besselian epoch in years */
 
 {
-    void fk425e(), fk52ecl();
+    /** void fk425e(), fk52ecl(); **/
 
     /* Convert from B1950 to J2000 coordinates */
     fk425e (dtheta, dphi, epoch);
@@ -1755,7 +1755,7 @@ double	epoch;	/* Besselian epoch in years */
     double v1[3], v2[3], r;
     double rmat[9], *rmati;	/* Rotation matrix  */
 
-    void rotmat(), v2s3(), s2v3(), fk5prec();
+    void rotmat(int, double, double, double, double *), v2s3(double pos[3], double *, double *, double *), s2v3(double, double, double, double pos[3]), fk5prec(double, double, double *, double *);
 
     /* Precess coordinates from J2000 to epoch */
     if (epoch != 2000.0)
@@ -1810,7 +1810,7 @@ double *dphi;	/* Galactic latitude (b2) in degrees
 double	epoch;	/* Besselian epoch in years */
 
 {
-    void ecl2fk5(), fk524e();
+    /** void ecl2fk5(), fk524e(); **/
 
     /* Convert from ecliptic to J2000 coordinates */
     ecl2fk5 (dtheta, dphi, epoch);
@@ -1839,7 +1839,7 @@ double	epoch;	/* Besselian epoch in years */
     double rtheta, rphi, v1[3], v2[3];
     double t, eps0, r;
     double rmat[9];	/* Rotation matrix */
-    void v2s3(),s2v3(), fk5prec(), rotmat();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]), fk5prec(double, double, double *, double *), rotmat(int, double, double, double, double *);
 
     rtheta = degrad (*dtheta);
     rphi = degrad (*dphi);
@@ -1902,7 +1902,7 @@ double *dec;	/* Dec in degrees mean equator & equinox of epoch ep0
 {
     int i, j;
     double pm[9], *pmi, v1[3], v2[3], rra, rdec, r;
-    void v2s3(),s2v3(), mprecfk4();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]), mprecfk4(double, double, double rmatp[9]);
 
     rra = degrad (*ra);
     rdec = degrad (*dec);
@@ -1950,7 +1950,7 @@ double *dec;	/* Dec in degrees mean equator & equinox of epoch ep0
 {
     int i, j;
     double pm[9], *pmi, v1[3], v2[3], rra, rdec, r;
-    void v2s3(),s2v3(), mprecfk5();
+    void v2s3(double pos[3], double *, double *, double *),s2v3(double, double, double, double pos[3]), mprecfk5(double, double, double rmatp[9]);
 
     rra = degrad (*ra);
     rdec = degrad (*dec);
@@ -2003,7 +2003,7 @@ double rmatp[9];	/* 3x3 Precession matrix (returned) */
 */
 {
     double bigt, t, tas2r, w, zeta, z, theta;
-    void rotmat();
+    void rotmat(int, double, double, double, double *);
  
     /* Interval between basic epoch B1850.0 and beginning epoch in TC */
     bigt  = ( bep0 - 1850.0 ) / 100.0;
@@ -2047,7 +2047,7 @@ double rmatp[9];	/* 3x3 Precession matrix (returned) */
 */
 {
     double t0, t, tas2r, w, zeta, z, theta;
-    void rotmat();
+    void rotmat(int, double, double, double, double *);
  
     /* Interval between basic epoch J2000.0 and beginning epoch (JC) */
     t0 = ( ep0 - 2000.0 ) / 100.0;
@@ -2327,4 +2327,7 @@ double *r;	/* Distance to object in same units as pos (returned) */
  * Mar 30 2010	Drop ep1 assignment after line 178 in wcsconp()
  *
  * Jun  9 2016	Fix isnum() tests for added coloned times and dashed dates
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

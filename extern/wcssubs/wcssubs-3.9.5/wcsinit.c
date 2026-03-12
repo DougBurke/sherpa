@@ -1,5 +1,5 @@
 /*** File libwcs/wcsinit.c
- *** July 24, 2016
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1998-2016
@@ -47,11 +47,11 @@
 #include <stdlib.h>
 #endif
 
-static void wcseq();
-static void wcseqm();
-static void wcsioset();
-void wcsrotset();
-char wcschar();
+static void wcseq(char *, struct WorldCoor *);
+static void wcseqm(char *, struct WorldCoor *, char *);
+static void wcsioset(struct WorldCoor *);
+void wcsrotset(struct WorldCoor *);
+char wcschar(const char *, const char*);
 
 /* set up a WCS structure from a FITS image header lhstring bytes long 
  * for a specified WCS name */
@@ -242,11 +242,11 @@ char *wchar;		/* Suffix character for one of multiple WCS */
     double ut;
     int nax;
     int twod;
-    extern int tnxinit();
-    extern int zpxinit();
-    extern int platepos();
-    extern int dsspos();
-    void invert_wcs();
+    extern int tnxinit(const char *, struct WorldCoor *);
+    extern int zpxinit(const char *, struct WorldCoor *);
+    extern int platepos(double, double, struct WorldCoor *, double *, double *);
+    extern int dsspos(double, double, struct WorldCoor *, double *, double *);
+    void invert_wcs(struct WorldCoor *);
 
     wcs = (struct WorldCoor *) calloc (1, sizeof(struct WorldCoor));
 
@@ -1614,4 +1614,7 @@ char	*mchar;		/* Suffix character for one of multiple WCS */
  * Jul 25 2013	Initialize n=0 when checking for SCAMP distortion terms (fix from Martin Kuemmel)
  *
  * Jun 24 2016	wcs->ptype contains only 3-letter projection code
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

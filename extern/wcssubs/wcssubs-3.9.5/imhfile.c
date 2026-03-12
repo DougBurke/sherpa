@@ -1,5 +1,5 @@
 /*** File imhfile.c
- *** March 27, 2012
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1996-2012
@@ -148,27 +148,27 @@
 #define LEN_FITSHDR	11520
 
 int check_immagic();
-int irafgeti4();
-float irafgetr4();
-char *irafgetc2();
-char *irafgetc();
-char *iraf2str();
-static char *same_path();
-static void irafputr4();
-static void irafputi4();
-static void irafputc2();
-static void irafputc();
-static void str2iraf();
+int irafgeti4(char *, int);
+float irafgetr4(char *, int);
+char *irafgetc2(char *, int, int);
+char *irafgetc(char *, int, int);
+char *iraf2str(char *, int);
+static char *same_path(char *, char *);
+static void irafputr4(char *, int, float);
+static void irafputi4(char *, int, int);
+static void irafputc2(char *, char *, int, int);
+static void irafputc(char *, char *, int, int);
+static void str2iraf(char *, char *, int);
 static int headswap=-1;	/* =1 to swap data bytes of foreign IRAF file */
-static void irafswap();
-static void irafswap2();
-static void irafswap4();
-static void irafswap8();
-int head_version ();
-int pix_version ();
-int irafncmp ();
+static void irafswap(int, char *,  int);
+static void irafswap2(char *, int);
+static void irafswap4(char *, int);
+static void irafswap8(char *, int);
+int head_version (char *);
+int pix_version (char *);
+int irafncmp (char *, char *, int);
 static int machswap();
-static int irafsize();
+static int irafsize(FILE *);
 
 #define SECONDS_1970_TO_1980    315532800L
 
@@ -1938,4 +1938,7 @@ FILE *diskfile;		/* Descriptor of file for which to find size */
  * May 20 2011	Free newpixname, not pixname in irafwimage()
  *
  * Mar 27 2012	Fix pixname's appending to newpixname to avoid overflow
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */

@@ -1,5 +1,5 @@
 /*** File libwcs/iget.c
- *** January 4, 2007
+ *** March 12, 2026
  *** By Jessica Mink, jmink@cfa.harvard.edu
  *** Harvard-Smithsonian Center for Astrophysics
  *** Copyright (C) 1998-2007
@@ -52,7 +52,7 @@
 
 #define MAX_LVAL 2000
 
-static char *isearch();
+static char *isearch(const char *, const char *);
 static char val[30];
 
 /* Extract long value for variable from IRAF multiline keyword value */
@@ -528,4 +528,7 @@ const char *keyword;	/* character string containing the name of the variable
  * Feb 26 2004	Make igetc() accessible from outside this file
  *
  * Jan  4 2007	Declare header, keyword to be const
+
+ * Mar 12 2026  Minimal change to support -std=c23
+
  */
