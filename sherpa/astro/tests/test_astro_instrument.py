@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2017, 2020 - 2025
+#  Copyright (C) 2017, 2020-2026
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -33,7 +33,7 @@ from numpy.testing import assert_allclose
 import pytest
 
 from sherpa.astro import hc, io
-from sherpa.astro.data import DataPHA, DataRMF, DataIMG
+from sherpa.astro.data import DataARF, DataPHA, DataRMF, DataIMG
 from sherpa.astro.instrument import ARF1D, ARFModelNoPHA, ARFModelPHA, \
     Response1D, MultipleResponse1D, RMF1D, RMFModelNoPHA, RMFModelPHA, \
     RSPModelNoPHA, RSPModelPHA, PSFModel, RMFMatrix, \
@@ -1534,6 +1534,223 @@ def test_rsp_multi_2_filtered(analysis, arfexp, phaexp):
 
     expected2 = expected[[3, 4]]
     assert out == pytest.approx(2 * expected2)
+
+
+def create_xrism_like_responses() -> tuple[DataRMF,
+                                           DataRMF,
+                                           DataARF,
+                                           DataPHA]:
+    """Create two RMF and one ARF to emulate XRISM multi-RMF file.
+
+    This is primarily to test whether MultipleResponse1D and
+    MultiResponseSumModel can handle this case. Unlike the
+    multiple-order grating case, the ARF is expected to be the same
+    but the individual RMF grids have different energy scales.
+
+    """
+
+    # First block is "perfect" and the second adds a "blob"
+    # component.
+    #
+    egrid = np.linspace(0.1, 2.1, 21)
+    elo = egrid[:-1]
+    ehi = egrid[1:]
+    rmf1 = create_delta_rmf(elo, ehi, e_min=elo, e_max=ehi,
+                            name="perfect")
+    rmf1.header["TESTBLCK"] = 1
+
+    # reduce the "energy" resolution of the second block.
+    #
+    e4grid = np.linspace(0.1, 2.1, 6)
+    e4lo = e4grid[:-1]
+    e4hi = e4grid[1:]
+    matrix = np.zeros((5, 4), dtype=np.float32)
+    blur = [0.1, 0.3, 0.4, 0.2]
+    for i in range(5):
+        matrix[i] = blur
+
+    rmf2 = DataRMF("blob", detchans=rmf1.detchans,
+                   energ_lo=e4lo, energ_hi=e4hi,
+                   n_grp=np.ones(5, dtype=np.int32),
+                   f_chan=np.asarray([2, 4, 6, 8, 10], dtype=np.int32),
+                   n_chan=4 * np.ones(5, dtype=np.int32),
+                   matrix=matrix.flatten(),
+                   e_min=elo, e_max=ehi,
+                   header={"TESTBLCK": 2})
+
+    specresp = np.full(elo.size, 20.0)
+    specresp[12:] = 15.0
+    arf = DataARF("arfy", energ_lo=elo, energ_hi=ehi,
+                  specresp=specresp)
+
+    chans = np.arange(1, 21, dtype=np.int16)
+    pha = DataPHA("ex", chans, np.zeros(20, dtype=np.int16))
+    pha.exposure = 100.0
+
+    return (rmf1, rmf2, arf, pha)
+
+
+def create_xrism_like_model():
+    """A common model"""
+
+    pl = PowLaw1D()
+    line = Gauss1D()
+    pl.ampl = 2
+    pl.gamma = 2
+    line.fwhm = 0.4
+    line.pos = 0.6
+    line.ampl = 1
+    return pl + line
+
+
+def eval_xrism_like_model_rmf1():
+    """What is the expected value?
+
+    This is multiplied by the PHA exposure time
+    """
+
+    # These values were created by running the code with CIAO 4.18,
+    # rather than calculating them directly from knowledge of the
+    # model and responses.
+    #
+    return np.asarray([20006.50887613, 6691.72203773, 3402.16404438,
+                       2134.98603532, 1522.35747977, 1141.40509882,
+                       849.27174961, 624.3862666, 469.49981551,
+                       370.14523977, 304.23651655, 256.56964413,
+                       164.84642229, 142.857898, 125.00003606,
+                       110.29411887, 98.03921572, 87.71929825,
+                       78.94736842, 71.42857143])
+
+
+def eval_xrism_like_model_rmf2():
+    """What is the expected value?
+
+    This is multiplied by the PHA exposure time
+    """
+
+    # These values were created by running the code with CIAO 4.18,
+    # rather than calculating them directly from knowledge of the
+    # model and responses.
+    #
+    return np.asarray([0., 3223.53814739, 9670.61468234,
+                       13307.8946552, 7688.30252254, 1795.01338626,
+                       1247.61951277, 614.48034306, 442.9897964,
+                       250.81283921, 209.44003681, 134.45378353,
+                       67.22689176, 0., 0., 0, 0, 0, 0, 0])
+
+
+def test_rspmodelpha_rmf1_arf_mismatch():
+    """Can we handle the ARF and RMF grids being different?"""
+
+    rmf1, _, arf, pha = create_xrism_like_responses()
+
+    src = create_xrism_like_model()
+
+    # This does *not* include the exposure time.
+    rsp = RSPModelPHA(arf=arf, rmf=rmf1, pha=pha, model=src)
+    y = rsp(pha.channel)
+
+    expected = eval_xrism_like_model_rmf1() / pha.exposure
+    assert y == pytest.approx(expected)
+
+
+def test_rspmodelpha_rmf2_arf_mismatch():
+    """Can we handle the ARF and RMF grids being different?"""
+
+    _, rmf2, arf, pha = create_xrism_like_responses()
+
+    src = create_xrism_like_model()
+
+    # This does *not* include the exposure time.
+    rsp = RSPModelPHA(arf=arf, rmf=rmf2, pha=pha, model=src)
+    y = rsp(pha.channel)
+
+    expected = eval_xrism_like_model_rmf2() / pha.exposure
+    assert y == pytest.approx(expected)
+
+
+def test_rspmodelnopha_rmf1_arf_mismatch():
+    """Can we handle the ARF and RMF grids being different?"""
+
+    rmf1, _, arf, pha = create_xrism_like_responses()
+
+    src = create_xrism_like_model()
+
+    # This does *not* include the exposure time.
+    rsp = RSPModelNoPHA(arf=arf, rmf=rmf1, model=src)
+    y = rsp(pha.channel)
+
+    expected = eval_xrism_like_model_rmf1() / pha.exposure
+    assert y == pytest.approx(expected)
+
+
+def test_rspmodelnopha_rmf2_arf_mismatch():
+    """Can we handle the ARF and RMF grids being different?"""
+
+    _, rmf2, arf, pha = create_xrism_like_responses()
+
+    src = create_xrism_like_model()
+
+    # This does *not* include the exposure time.
+    rsp = RSPModelNoPHA(arf=arf, rmf=rmf2, model=src)
+
+    # This is known to fail, so make sure we know how it fails.
+    #
+    with pytest.raises(TypeError,
+                       match="^Mismatched filter between ARF and RMF or PHA and RMF$"):
+        y = rsp(pha.channel)
+
+    # expected = eval_xrism_like_model_rmf2() / pha.exposure
+    # assert y == pytest.approx(expected)
+
+
+def test_multi_response_xrism_like():
+    """Can we handle XRISM-like responses as separate objects?
+
+    This is currently a regression test, as the answer is no,
+    so we just check we fail as expected.
+    """
+
+    rmf1, rmf2, arf, pha = create_xrism_like_responses()
+    src = create_xrism_like_model()
+
+    # Evaluate the model with each of the RMFs.
+    #
+    pha.set_response(arf, rmf1, id=1)
+    resp_1 = pha.get_full_response()
+    model_1 = resp_1(src)
+
+    pha.set_response(arf, rmf2, id=1)
+    resp_2 = pha.get_full_response()
+    model_2 = resp_2(src)
+
+    # Combine the responses.
+    #
+    pha.set_response(arf, rmf1, id=1)
+    pha.set_response(arf, rmf2, id=2)
+    resp_c = pha.get_full_response()
+    model_c = resp_c(src)
+
+    expected_1 = eval_xrism_like_model_rmf1()
+    expected_2 = eval_xrism_like_model_rmf2()
+    expected = expected_1 + expected_2
+
+    # Check we get the expected values. Note that unlike the
+    # test_rspmodel[no]pha_rmf[12]_arf_mismatch case, the exposure
+    # time is included in this model evaluation.
+    #
+    y_1 = model_1(pha.channel)
+    y_2 = model_2(pha.channel)
+    assert y_1 == pytest.approx(expected_1)
+    assert y_2 == pytest.approx(expected_2)
+
+    # This is known to fail, so make sure we know how it fails.
+    #
+    with pytest.raises(TypeError,
+                       match="^input array sizes do not match, source: 5 vs effarea: 20$"):
+        y_c = model_c(pha.channel)
+
+    # assert y_c == pytest.approx(expected)
 
 
 class MyPowLaw1D(PowLaw1D):
