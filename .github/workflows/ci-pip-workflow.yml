@@ -81,6 +81,24 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Install FFTW
+      run: |
+        # Do not worry about the latest version
+        sudo apt install libfftw3-dev pkg-config
+        # drop the leading -I/...
+        fftw3_inc_path=`pkg-config --cflags-only-I fftw3 | awk '{print(substr($0, 3));}' -`
+        fftw3_libs_path=`pkg-config --libs-only-L fftw3 | awk '{print(substr($0, 3));}' -`
+        fftw3_name=`pkg-config --libs-only-l fftw3 | awk '{print(substr($0, 3));}' -`
+        # Edit the configuration
+        sed -i.orig "s|#fftw=local|fftw=local|" setup.cfg
+        sed -i.orig "s|#fftw_include_dirs=build/include|fftw_include_dirs=${fftw3_inc_path}|" setup.cfg
+        sed -i.orig "s|#fftw_lib_dirs=build/lib|fftw_lib_dirs=${fftw3_libs_path}|" setup.cfg
+        sed -i.orig "s|#fftw_libraries=fftw3|fftw_libraries=${fftw3_name}|" setup.cfg
+        #
+        echo "* START setup.cfg"
+        git diff setup.cfg
+        echo "* END   setup.cfg"
+
     - name: Pip Testing Setup - Dependencies
       env:
         NUMPYVER: ${{ matrix.numpy-pkg }}
