@@ -49,10 +49,25 @@ if [ -n "${XSPECVER}" ];
  then export XSPEC="xspec-modelsonly=${XSPECVER}";
 fi
 
-echo "dependencies: ${MATPLOTLIB} ${BOKEH} ${NUMPY} ${XSPEC} ${FITSBUILD}"
+# Always use the conda-supplied FFTW.
+#
+FFTW=fftw
+
+echo "dependencies: ${MATPLOTLIB} ${BOKEH} ${NUMPY} ${XSPEC} ${FITSBUILD} ${FFTW}"
 echo "compilers:    ${compilers}"
 
 # Create and activate conda build environment
-conda create --yes -n build python"=${PYTHONVER}.*=*cpython*" pip ${MATPLOTLIB} ${BOKEH} ${NUMPY} ${XSPEC} ${FITSBUILD} ${compilers}
+conda create --yes -n build python"=${PYTHONVER}.*=*cpython*" pip ${MATPLOTLIB} ${BOKEH} ${NUMPY} ${XSPEC} ${FITSBUILD} ${FFTW} ${compilers}
 
 conda activate build
+
+# Update setup.cfg to use the installed FFTW rather than the one from extern.
+#
+sed -i.orig "s|#fftw=local|fftw=local|" setup.cfg
+sed -i.orig "s|#fftw_include_dirs=build/include|fftw_include_dirs=${CONDA_PREFIX}/include|" setup.cfg
+sed -i.orig "s|#fftw_lib_dirs=build/lib|fftw_lib_dirs=${CONDA_PREFIX}/lib|" setup.cfg
+sed -i.orig "s|#fftw_libraries=fftw3|fftw_libraries=fftw3|" setup.cfg
+
+echo "* START setup.cfg"
+git diff setup.cfg
+echo "* END   setup.cfg"
