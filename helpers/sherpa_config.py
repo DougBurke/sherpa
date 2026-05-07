@@ -33,9 +33,10 @@ version = f'{sys.version_info[0]}.{sys.version_info[1]}'
 class sherpa_config(Command):
     description = "Configure Sherpa build options. If in doubt, ignore this command and stick to defaults. See setup.cfg for more information."
     user_options = [
-                    ('fftw', None, "Whether Sherpa should build the embedded fftw3 library, which is the default behavior: set to 'local' to make Sherpa link against existing libraries on the system.)"),
-                    ('fftw_include_dirs', None, "Where the fftw3 headers are located, if fftw is 'local'"),
-                    ('fftw_lib_dirs', None, "Where the fftw3 libraries are located, if fftw is 'local'"),
+                    ('disable_fftw', None, "Disable the use of the FFTW3 library"),
+                    ('fftw', None, "This setting is deprecated. Sherpa no-longer provides the embedded fftw3 libraries (so treats this as being set to 'local')."),
+                    ('fftw_include_dirs', None, "Where the fftw3 headers are located, if disable_fftw is False"),
+                    ('fftw_lib_dirs', None, "Where the fftw3 libraries are located, if disable_fftw is False"),
                     ('fftw_libraries', None, "Name of the libraries that should be linked as fftw3"),
                     ('disable_region', None, "Disable the use of the region library"),
                     ('region', None, "Whether Sherpa should build the embedded region library, which is the default behavior: set to 'local' to make Sherpa link against existing libraries on the system.)"),
@@ -86,11 +87,12 @@ class sherpa_config(Command):
         incdir = os.path.join(self.install_dir, 'include')
         libdir = os.path.join(self.install_dir, 'lib')
 
-        if self.fftw_include_dirs is None:
-            self.fftw_include_dirs = incdir
+        if not self.disable_fftw:
+            if self.fftw_include_dirs is None:
+                self.fftw_include_dirs = incdir
 
-        if self.fftw_lib_dirs is None:
-            self.fftw_lib_dirs = libdir
+            if self.fftw_lib_dirs is None:
+                self.fftw_lib_dirs = libdir
 
         if not self.disable_region:
             if self.region_include_dirs is None:
@@ -146,7 +148,10 @@ class sherpa_config(Command):
             regext = build_ext(self, 'region', define_macros=region_macros)
             self.distribution.ext_modules.append(regext)
 
-        # Do not build the psf module if FFT support is disabled.
+        # Do not build the psf module if FFT support is disabled.  Is
+        # it worth it to automate this decision (i.e. allow the build
+        # to drop this module if there is no FFTw?)?
+        #
         if not self.disable_fftw:
             psfext = build_ext(self, 'psf', 'fftw')
             self.distribution.ext_modules.append(psfext)
@@ -162,10 +167,6 @@ class sherpa_config(Command):
             configure.append(f'GROUP_CFLAGS="{self.group_cflags}"')
         if self.configure != 'None':
             configure.extend(self.configure.split(' '))
-
-        # Is the FFTW library built?
-        if not self.disable_fftw and self.fftw != 'local':
-            configure.append('--enable-fftw')
 
         if not self.disable_region and self.region != 'local':
             configure.append('--enable-region')
