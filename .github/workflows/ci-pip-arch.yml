@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: (github.repository == 'sherpa/sherpa' && (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'CI arch')))
 
     strategy:
@@ -25,7 +25,7 @@ jobs:
       matrix:
         include:
           - arch: aarch64
-          - arch: ppc64le
+          # - arch: ppc64le  this is very slow
 
           # We currently do not have any user requests for this
           # architecture.
@@ -40,12 +40,13 @@ jobs:
       # with:
       #   submodules: 'True'
 
+    # ubuntu_latest does not provide g++ < 15.0 so pick an older version
     - name: Build and test
-      uses: uraimo/run-on-arch-action@v2
+      uses: uraimo/run-on-arch-action@v3
       with:
         arch: ${{ matrix.arch }}
         # use the latest LTS version
-        distro: ubuntu_latest
+        distro: ubuntu24.04
 
         shell: /bin/bash
 
@@ -54,11 +55,11 @@ jobs:
           apt-get update -q -y
           apt-get install -q -y \
                                 g++ \
-                                gfortran \
                                 flex \
                                 bison \
                                 make \
                                 file \
+                                libfftw3-dev \
                                 pkg-config \
                                 python3 \
                                 python3-dev \
@@ -79,6 +80,20 @@ jobs:
           # not be the actual problem).
           #
           sed -i.orig "s|#configure=None|configure=--disable-maintainer-mode --enable-stuberrorlib --disable-shared --enable-shared=libgrp,stklib --disable-dependency-tracking|" setup.cfg
+
+          # use the apt instaled fftw3
+          fftw3_inc_path=`pkg-config --cflags-only-I fftw3 | awk '{print(substr($0, 3));}' -`
+          fftw3_libs_path=`pkg-config --libs-only-L fftw3 | awk '{print(substr($0, 3));}' -`
+          fftw3_name=`pkg-config --libs-only-l fftw3 | awk '{print(substr($0, 3));}' -`
+          # Edit the configuration
+          sed -i.orig "s|#fftw=local|fftw=local|" setup.cfg
+          sed -i.orig "s|#fftw_include_dirs=build/include|fftw_include_dirs=${fftw3_inc_path}|" setup.cfg
+          sed -i.orig "s|#fftw_lib_dirs=build/lib|fftw_lib_dirs=${fftw3_libs_path}|" setup.cfg
+          sed -i.orig "s|#fftw_libraries=fftw3|fftw_libraries=${fftw3_name}|" setup.cfg
+          #
+          echo "* START setup.cfg"
+          grep fftw setup.cfg
+          echo "* END   setup.cfg"
 
           pip3 install -e .[test]
           python3 -m pytest
