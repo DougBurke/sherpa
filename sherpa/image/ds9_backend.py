@@ -21,6 +21,9 @@
 from os import access, R_OK
 import time
 
+import numpy as np
+
+from sherpa.astro.io.wcs import WCS
 from sherpa.utils.err import DS9Err
 
 from . import DS9
@@ -40,13 +43,13 @@ imager = DS9.DS9Win(template=DS9._DefTemplate, doOpen=False)
 # relying on.
 #
 
-def close():
+def close() -> None:
     """Stop the image viewer."""
     if imager.isOpen():
         imager.xpaset("quit")
 
 
-def delete_frames():
+def delete_frames() -> None:
     """Delete all the frames open in the image viewer."""
     if not imager.isOpen():
         raise DS9Err('open')
@@ -57,7 +60,7 @@ def delete_frames():
         raise DS9Err('delframe') from exc
 
 
-def get_region(coord):
+def get_region(coord: str) -> str:
     """Return the region defined in the image viewer.
 
     Parameters
@@ -91,10 +94,10 @@ def get_region(coord):
         raise DS9Err('retreg') from exc
 
 
-def image(arr,
-          newframe=False,
-          tile=False
-          ):
+def image(arr: np.ndarray,
+          newframe: bool = False,
+          tile: bool = False
+          ) -> None:
     """Send the data to the image viewer to display.
 
     Parameters
@@ -132,18 +135,13 @@ def image(arr,
         raise DS9Err('noimage') from exc
 
 
-def _set_wcs(eqpos, sky, name):
+def _set_wcs(eqpos: WCS | None, sky: WCS | None, name: str) -> str:
     """Convert the settings into a string to send via XPA"""
 
     # DS9 can be very particular about the WCS settings, so attempt to
     # set everything to avoid problems with ds9 preference settings.
     #
     out = [f"OBJECT = '{name}'"]
-
-    if eqpos is not None:
-        wcrpix = eqpos.crpix
-        wcrval = eqpos.crval
-        wcdelt = eqpos.cdelt
 
     if sky is not None:
         pcrpix = sky.crpix
@@ -161,11 +159,18 @@ def _set_wcs(eqpos, sky, name):
                     f'CRPIX2P = {pcrpix[1]:.14E}',
                     f'CDELT2P = {pcdelt[1]:.14E}'])
 
-        if eqpos is not None:
-            wcdelt = wcdelt * pcdelt
-            wcrpix = (wcrpix - pcrval) / pcdelt + pcrpix
-
     if eqpos is not None:
+
+        wcrval = eqpos.crval
+        
+        if sky is not None:
+            wcdelt = eqpos.cdelt * sky.cdelt
+            wcrpix = (eqpos.crpix - sky.crval) / sky.cdelt + sky.crpix
+
+        else:
+            wcdelt = eqpos.cdelt
+            wcrpix = eqpos.crpix
+        
         out.extend(["WCSAXES = 2",
                     "RADECSYS = 'ICRS    '",
                     # f"EQUINOX = {eqpos.equinox}",
@@ -182,7 +187,7 @@ def _set_wcs(eqpos, sky, name):
     return ('\n'.join(out) + '\n')
 
 
-def wcs(keys):
+def wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
     """Send the WCS informatiom to the image viewer.
 
     Parameters
@@ -204,12 +209,12 @@ def wcs(keys):
         raise DS9Err('setwcs') from exc
 
 
-def open():
+def open() -> None:
     """Start the image viewer."""
     imager.doOpen()
 
 
-def set_region(reg, coord):
+def set_region(reg: str, coord: str) -> None:
     """Set the region to display in the image viewer.
 
     Parameters
@@ -243,7 +248,7 @@ def set_region(reg, coord):
         raise DS9Err('badreg', str(reg)) from exc
 
 
-def xpaget(arg):
+def xpaget(arg: str) -> str:
     """Query the image viewer via XPA.
 
     Retrieve the results of a query to the image viewer.
@@ -263,7 +268,7 @@ def xpaget(arg):
     return imager.xpaget(arg)
 
 
-def xpaset(arg, data=None):
+def xpaset(arg: str, data: str | bytes | None = None) -> None:
     """Send the image viewer a command via XPA.
 
     Send a command to the image viewer.
