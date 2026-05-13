@@ -41,6 +41,7 @@ jobs:
             matplotlib-version: 3
             bokeh-version: 3
             xspec-version: 12.14.0i
+            skip-ds9: "true"
 
           - name: MacOS ARM Full Build (Python 3.11)
             os: macos-14
@@ -140,11 +141,14 @@ jobs:
     # been tied to XSPEC, which is why this rule checks for XSPEC
     # support.
     #
-    # The DS9 tests have been shown to be problematic on macOS/GitHub
-    # so we do not install DS9 on this platform.
+    # The DS9 tests are not run on macOS intel, and it is easiest to
+    # do this with a check on a matrix value. For macOS the environment
+    # must contain XPA_METHOD=local. This setting should not affect any
+    # other tests, so we always set it for the tests (even if not macOS
+    # or DS9 tests are not being run).
     #
     - name: Conda Setup (DS9)
-      if: matrix.xspec-version != '' && runner.os != 'macOS'
+      if: matrix.xspec-version != '' && matrix.skip-ds9 != 'true'
       run: |
         source ${conda_loc}/etc/profile.d/conda.sh
         conda activate build
@@ -196,23 +200,26 @@ jobs:
       env:
         XSPECVER: ${{ matrix.xspec-version }}
         FITS: ${{ matrix.fits }}
+        SKIPDS9: ${{ matrix.skip-ds9 }}
       run: |
-        if [ -n "${XSPECVER}" ]; then XSPECTEST="-x -d"; fi
+        # XSPEC testing also means DS9 testing, apart from
+        # for macOS/Intel.
+        #
+        if [ -n "${XSPECVER}" ]; then
+          if [ "$SKIPDS9" == "true" ]; then
+            XSPECTEST="-x";
+          else
+            XSPECTEST="-x -d";
+          fi
+        fi
         if [ -n "${FITS}" ] ; then FITSTEST="-f ${FITS}"; fi
         smokevars="${XSPECTEST} ${FITSTEST} -v 3"
-
-        # special case the macOS build as we currently do not
-        # include DS9; as we know the XSPECVER/FITS sittings for
-        # this it is hard-coded
-        if [ "$RUNNER_OS" == "macOS" ]; then
-          smokevars="-x -f ${FITS} -v 3"
-        fi
 
         echo "** smoke test: ${smokevars}"
         source ${conda_loc}/etc/profile.d/conda.sh
         conda activate build
         cd /home
-        sherpa_smoke ${smokevars}
+        XPA_METHOD=local sherpa_smoke ${smokevars}
 
     - name: Internal check
       if: matrix.test-data == 'submodule' && matrix.install-type != 'develop'
@@ -246,7 +253,7 @@ jobs:
         source ${conda_loc}/etc/profile.d/conda.sh
         conda activate build
         conda install -yq pytest-cov
-        pytest --pyargs sherpa --cov sherpa --cov-report xml:${{ github.workspace }}/coverage.xml
+        XPA_METHOD=local pytest --pyargs sherpa --cov sherpa --cov-report xml:${{ github.workspace }}/coverage.xml
 
     - name: sherpa_test Tests
       if: matrix.test-data == 'package' || matrix.test-data == 'none'
@@ -255,7 +262,7 @@ jobs:
         conda activate build
         conda install -yq pytest-cov
         cd $HOME
-        sherpa_test --cov sherpa --cov-report xml:${{ github.workspace }}/coverage.xml
+        XPA_METHOD=local sherpa_test --cov sherpa --cov-report xml:${{ github.workspace }}/coverage.xml
 
     - name: upload coverage
       uses: codecov/codecov-action@v5
