@@ -47,7 +47,8 @@ import numpy as np
 
 from sherpa.utils.err import RuntimeErr, TypeErr
 
-__all__ = ["xpaget", "xpaset", "DS9Win"]
+#__all__ = ["xpaget", "xpaset", "DS9Win"]
+__all__ = ["DS9Win"]
 
 
 def _findUnixApp(appName: str) -> None:
@@ -87,9 +88,9 @@ _OpenCheckInterval: float = 0.2  # seconds
 _MaxOpenTime: float = 60.0  # seconds
 
 
-def xpaget(cmd: str,
-           template: str = _DefTemplate
-           ) -> str:
+def _xpaget(cmd: str,
+            template: str = _DefTemplate
+            ) -> str:
     """Executes a simple xpaget command, returning the reply.
 
     Parameters
@@ -128,10 +129,10 @@ def xpaget(cmd: str,
             p.stderr.close()
 
 
-def xpaset(cmd: str,
-           data: str | bytes | None = None,
-           template: str = _DefTemplate
-           ) -> None:
+def _xpaset(cmd: str,
+            data: str | bytes | None = None,
+            template: str = _DefTemplate
+            ) -> None:
     """Executes a single xpaset command.
 
     Parameters
@@ -266,7 +267,7 @@ class DS9Win:
         and available for communication, False otherwise.
         """
         try:
-            _ = xpaget('mode', template=self.template)
+            _ = self.xpaget('mode')
             return True
         except RuntimeErr:
             return False
@@ -356,7 +357,7 @@ class DS9Win:
 
         Raises RuntimeError if anything is written to stderr.
         """
-        return xpaget(
+        return _xpaget(
             cmd=cmd,
             template=self.template
         )
@@ -378,7 +379,7 @@ class DS9Win:
 
         Raises RuntimeError if anything is written to stdout or stderr.
         """
-        xpaset(
+        _xpaset(
             cmd=cmd,
             data=data,
             template=self.template
