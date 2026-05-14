@@ -89,7 +89,8 @@ _MaxOpenTime: float = 60.0  # seconds
 
 
 def _xpaget(cmd: str,
-            template: str = _DefTemplate
+            template: str = _DefTemplate,
+            method: str | None = None
             ) -> str:
     """Executes a simple xpaget command, returning the reply.
 
@@ -100,6 +101,8 @@ def _xpaget(cmd: str,
     template
        The target of the XPA call. It can be the ds9 window title,
        a string giving "host:port", or other supported forms.
+    method
+       The communication method (optional).
 
     Returns
     -------
@@ -108,7 +111,12 @@ def _xpaget(cmd: str,
 
     """
 
-    fullCmd = ['xpaget', template, cmd]
+    fullCmd = ['xpaget']
+    if method is not None:
+        fullCmd.extend(['-m', method])
+
+    fullCmd.extend([template, cmd])
+
     with subprocess.Popen(args=fullCmd,
                           shell=False,
                           stdin=subprocess.PIPE,
@@ -131,7 +139,8 @@ def _xpaget(cmd: str,
 
 def _xpaset(cmd: str,
             data: str | bytes | None = None,
-            template: str = _DefTemplate
+            template: str = _DefTemplate,
+            method: str | None = None
             ) -> None:
     """Executes a single xpaset command.
 
@@ -145,10 +154,15 @@ def _xpaset(cmd: str,
     template
        The target of the XPA call. It can be the ds9 window title,
        a string giving "host:port", or other supported forms.
+    method
+       The communication method (optional).
 
     """
 
     fullCmd = ['xpaset']
+    if method is not None:
+        fullCmd.extend(['-m', method])
+
     if not data:
         fullCmd.append('-p')
 
@@ -214,18 +228,40 @@ def _formatOptions(kargs: Mapping[str, Any]) -> str:
 class DS9Win:
     """An object that talks to a particular window on ds9
 
-    Inputs:
-    - template:        window name (see ds9 docs for talking to a remote ds9)
-    - doOpen: open ds9 using the desired template, if not already open;
-                    MacOS X warning: opening ds9 requires ds9 to be on your PATH;
-                    this may not be true by default;
-                    see the module documentation above for workarounds.
+    .. versionchanged:: 4.19.0
+       The XPA communication method now defaults to "local" unless the
+       XPA_METHOD environment variable is set when the class is
+       created.
+
+    Parameters
+    ----------
+    template
+       window name (see ds9 docs for talking to a remote ds9)
+    doOpen
+       open ds9 using the desired template, if not already open; MacOS
+       X warning: opening ds9 requires ds9 to be on your PATH; this
+       may not be true by default; see the module documentation above
+       for workarounds.
+
     """
     def __init__(self,
                  template: str = _DefTemplate,
                  doOpen: bool = True
                  ) -> None:
         self.template = str(template)
+
+        # What communication method to use? CIAO defaults to using the
+        # "local" method, so follow this (as there have been problems
+        # on macOS with the default method of "inet"). However, this
+        # is only done if the XPA_METHOD environment variable is not
+        # set (note there is no check whether the variable is set to
+        # anything sensible). This is cached because the same method
+        # needs to be used to start DS9 as is it is to communicate
+        # with it. This could cause problems when doOpen is False, but
+        # it is not clear what to do here.
+        #
+        self.xpa_method = None if "XPA_METHOD" in os.environ else "local"
+
         self.alreadyOpen = self.isOpen()
         if doOpen:
             self.doOpen()
@@ -234,9 +270,18 @@ class DS9Win:
         """Open the ds9 window (if necessary).
 
         Raise OSError or RuntimeError on failure, even if doRaise is False.
+
+        .. versionchanged:: 4.19.0
+           The communication method is set to "local" unless the
+           XPA_METHOD environment variable is set.
+
         """
         if self.isOpen():
             return
+
+        args = ['ds9', '-title', self.template, '-port', "0"]
+        if self.xpa_method is not None:
+            args.extend(["-xpa", self.xpa_method])
 
         # We want to fork ds9. This is possible with os.fork, but
         # it doesn't work on Windows. At present Sherpa does not
@@ -244,7 +289,7 @@ class DS9Win:
         # not clear if it is an acceptable, or sensible, option.
         #
         p = subprocess.Popen(
-            args=('ds9', '-title', self.template, '-port', "0"),
+            args=args,
             cwd=None,
             close_fds=True, stdin=None, stdout=None, stderr=None
         )
@@ -359,7 +404,8 @@ class DS9Win:
         """
         return _xpaget(
             cmd=cmd,
-            template=self.template
+            template=self.template,
+            method=self.xpa_method
         )
 
     def xpaset(self,
@@ -382,5 +428,6 @@ class DS9Win:
         _xpaset(
             cmd=cmd,
             data=data,
-            template=self.template
+            template=self.template,
+            method=self.xpa_method
         )
