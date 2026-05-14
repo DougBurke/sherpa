@@ -178,31 +178,27 @@ def xpaset(cmd: str,
             p.stdout.close()
 
 
-def _computeCnvDict():
-    """Compute array type conversion dict.
-    Each item is: unsupported type: type to which to convert.
+# What data types need to be converted before sending to DS9?
+# DS9 supports
+#
+#     Integer types     Floating-point types
+#     -------------     --------------------
+#     unsigned 8-bit          32 bit
+#              16-bit         64-bit
+#     unsigned 16-bit
+#              32-bit
+#              64-bit
+#
+_CnvDict = {
+    np.int8: np.int16,
+    np.uint16: np.int32,
+    np.uint32: np.int64,
+}
 
-    ds9 supports UInt8, Int16, Int32, Float32 and Float64.
-    """
+if hasattr(np, "uint64"):
+    _CnvDict[np.uint64] = np.float64
 
-    cnvDict = {
-        np.int8: np.int16,
-        np.uint16: np.int32,
-        np.uint32: np.float32,  # ds9 can't handle 64 bit integer data
-        np.int64: np.float64,
-    }
-
-    # TODO: should this check for 'uint64' since 'uint64=' is not a
-    #       valid attribute name
-    if hasattr(np, "uint64="):
-        cnvDict[np.uint64] = np.float64
-
-    return cnvDict
-
-
-_CnvDict = _computeCnvDict()
 _FloatTypes = (np.float32, np.float64)
-_ComplexTypes = (np.complex64, np.complex128)
 
 
 def _formatOptions(kargs: Mapping[str, Any]) -> str:
@@ -304,12 +300,9 @@ class DS9Win:
         if ndim not in (2, 3):
             raise RuntimeErr('only2d3d')
 
-        dimNames = ["z", "y", "x"][3 - ndim:]
-
         # if necessary, convert array type
         cnvType = _CnvDict.get(arr.dtype.type)
         if cnvType:
-            # print "converting array from %s to %s" % (arr.type(), cnvType)
             arr = arr.astype(cnvType)
 
         # determine byte order of array
@@ -329,7 +322,6 @@ class DS9Win:
         # compute bits/pix; ds9 uses negative values for floating values
         bitsPerPix = arr.itemsize * 8
 
-        # if np.issubclass_(arr.dtype.type, float):
         if arr.dtype.type in _FloatTypes:
             # array is float; use negative value
             bitsPerPix = -bitsPerPix
@@ -338,6 +330,7 @@ class DS9Win:
         # 2-d images are in order [y, x]
         # 3-d images are in order [z, y, x]
         arryDict = {}
+        dimNames = ["z", "y", "x"][3 - ndim:]
         for axis, size in zip(dimNames, arr.shape):
             arryDict[f"{axis}dim"] = size
 
