@@ -36,6 +36,7 @@ been simplified to only support the features that Sherpa needs.
 
 from collections.abc import Mapping
 import os
+import shlex
 import sys
 import time
 from typing import Any
@@ -106,11 +107,9 @@ def xpaget(cmd: str,
 
     """
 
-    # Would be better to make a sequence rather than have to quote arguments
-    fullCmd = f'xpaget {template} "{cmd}"'
-
+    fullCmd = ['xpaget', template, cmd]
     with subprocess.Popen(args=fullCmd,
-                          shell=True,
+                          shell=False,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE) as p:
@@ -119,7 +118,8 @@ def xpaget(cmd: str,
             errMsg = p.stderr.read()
             if errMsg:
                 errMsg = errMsg.decode()
-                raise RuntimeErr('cmdfail', fullCmd, errMsg)
+                cmdStr = shlex.join(fullCmd)
+                raise RuntimeErr('cmdfail', cmdStr, errMsg)
 
             return p.stdout.read().decode()
 
@@ -146,14 +146,14 @@ def xpaset(cmd: str,
        a string giving "host:port", or other supported forms.
 
     """
-    # Would be better to make a sequence rather than have to quote arguments
-    if data:
-        fullCmd = f'xpaset {template} "{cmd}"'
-    else:
-        fullCmd = f'xpaset -p {template} "{cmd}"'
 
+    fullCmd = ['xpaset']
+    if not data:
+        fullCmd.append('-p')
+
+    fullCmd.extend([template, cmd])
     with subprocess.Popen(args=fullCmd,
-                          shell=True,
+                          shell=False,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT) as p:
@@ -171,7 +171,8 @@ def xpaset(cmd: str,
             reply = p.stdout.read()
             if reply:
                 errMsg = reply.strip().decode()
-                raise RuntimeErr('cmdfail', fullCmd, errMsg)
+                cmdStr = shlex.join(fullCmd)
+                raise RuntimeErr('cmdfail', cmdStr, errMsg)
 
         finally:
             p.stdin.close()  # redundant
