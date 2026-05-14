@@ -24,7 +24,7 @@ Loosely based on XPA, by Andrew Williams, with the original code by
 ROwen 2004-2005 and then from the Sherpa team from 2006. This code has
 been simplified to only support the features that Sherpa needs.
 
-.. versionchanged:: 4.18.1
+.. versionchanged:: 4.19.0
 
    Functionality not used by Sherpa has been removed, including the
    setup process (supporting multiple options), the showFITSFile
@@ -387,7 +387,7 @@ class DS9Win:
         """Execute a simple xpaget command and return the reply.
 
         The command is of the form:
-                xpaset -p <template> <cmd>
+                xpaget <template> <cmd>
 
         Inputs:
         - cmd                command to execute
