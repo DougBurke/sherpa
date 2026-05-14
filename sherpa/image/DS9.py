@@ -29,6 +29,8 @@ been simplified to only support the features that Sherpa needs.
    Functionality not used by Sherpa has been removed, including the
    setup process (supporting multiple options), the showFITSFile
    method, and removing the unused dataFunc argument to `xpaset`.
+   XPA communication now defaults to the "local" method unless the
+   XPA_METHOD environment variable is set.
 
 """
 
@@ -119,7 +121,6 @@ def xpaget(cmd: str,
             errMsg = p.stderr.read()
             if errMsg:
                 errMsg = errMsg.decode()
-                fullErrMsg = f"{repr(fullCmd)} failed: {errMsg}"
                 raise RuntimeErr('cmdfail', fullCmd, errMsg)
 
             return p.stdout.read().decode()
@@ -172,7 +173,6 @@ def xpaset(cmd: str,
             reply = p.stdout.read()
             if reply:
                 errMsg = reply.strip().decode()
-                fullErrMsg = f"{repr(fullCmd)} failed: {errMsg}"
                 raise RuntimeErr('cmdfail', fullCmd, errMsg)
 
         finally:
