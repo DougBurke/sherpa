@@ -141,6 +141,9 @@ class Image(NoNewAttributesAfterInit):
     def set_wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
         """Send the WCS information to the image viewer.
 
+        .. versionchanged:: 4.19.0
+           This is now a static method.
+
         Parameters
         ----------
         keys
