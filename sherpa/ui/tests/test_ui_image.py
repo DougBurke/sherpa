@@ -156,7 +156,6 @@ def test_get_data_image(session):
                          [pytest.param(BaseSession, marks=pytest.mark.session),
                           AstroSession])
 def test_data_image_show(session, check_str):
-    from sherpa.image import DataImage
 
     s = session()
     s.set_data(Data2D('example', [1, 1, 1], [-5, -4, -3], [2, 3, 4],
@@ -168,7 +167,6 @@ def test_data_image_show(session, check_str):
                "y      = [[2,3,4]]",
                "eqpos  = None",
                "sky    = None",
-               ""
                ])
 
 
