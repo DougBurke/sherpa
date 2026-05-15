@@ -162,7 +162,7 @@ def _set_wcs(eqpos: WCS | None, sky: WCS | None, name: str) -> str:
     if eqpos is not None:
 
         wcrval = eqpos.crval
-        
+
         if sky is not None:
             wcdelt = eqpos.cdelt * sky.cdelt
             wcrpix = (eqpos.crpix - sky.crval) / sky.cdelt + sky.crpix
@@ -170,7 +170,7 @@ def _set_wcs(eqpos: WCS | None, sky: WCS | None, name: str) -> str:
         else:
             wcdelt = eqpos.cdelt
             wcrpix = eqpos.crpix
-        
+
         out.extend(["WCSAXES = 2",
                     "RADECSYS = 'ICRS    '",
                     # f"EQUINOX = {eqpos.equinox}",
@@ -188,7 +188,7 @@ def _set_wcs(eqpos: WCS | None, sky: WCS | None, name: str) -> str:
 
 
 def wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
-    """Send the WCS informatiom to the image viewer.
+    """Send the WCS information to the image viewer.
 
     Parameters
     ----------

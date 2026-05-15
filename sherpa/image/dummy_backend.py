@@ -75,7 +75,7 @@ def image(array: np.ndarray,
 
 
 def wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
-    """Send the WCS informatiom to the image viewer.
+    """Send the WCS information to the image viewer.
 
     Parameters
     ----------
