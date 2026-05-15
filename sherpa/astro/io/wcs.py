@@ -159,8 +159,9 @@ class WCS(NoNewAttributesAfterInit):
         >>> crpix = [5, 10]
         >>> cdelt = [2, 4]
         >>> c1 = WCS("physical", "LINEAR", crval, crpix, cdelt)
-        >>> c1.apply(5, 10)
-        (np.float64(200.0), np.float64(-100.0))
+        >>> x, y = c1.apply(5, 10)
+        >>> float(x), float(y)
+        (200.0, -100.0)
         >>> c1.apply([5, 10], [10, 2])
         (array([200., 210.]), array([-100., -132.]))
 
@@ -213,8 +214,9 @@ class WCS(NoNewAttributesAfterInit):
         >>> crpix = [5, 10]
         >>> cdelt = [2, 4]
         >>> c1 = WCS("physical", "LINEAR", crval, crpix, cdelt)
-        >>> c1.invert(200, -100)
-        (np.float64(5.0), np.float64(10.0))
+        >>> x, y = c1.invert(200, -100)
+        >>> float(x), float(y)
+        (5.0, 10.0)
         >>> c1.invert([200, 210], [-100, -132])
         (array([ 5., 10.]), array([10.,  2.]))
 
