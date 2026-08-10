@@ -52,22 +52,39 @@ static bool is_latest(const std::string &value)
 }
 
 
+// We do not track if the debug call fails.
+//
+static void call_debug1(PyObject *debug, const char* msg) {
+  // Assume the return value is None so we can ignore it.
+  (void) PyObject_CallFunction(debug, "s", msg);
+}
+
+// The assumption is that msg1 contains one %s to represent msg2
+static void call_debug2(PyObject *debug, const char* msg1, const char* msg2) {
+  // Assume the return value is None so we can ignore it.
+  (void) PyObject_CallFunction(debug, "ss", msg1, msg2);
+}
+
+
 template <const std::string &getfunc(),
           void setfunc(const std::string&)>
 static void set_if_latest(const std::map<std::string, std::string> versionMap,
                           const std::string &key,
-                          const std::string &def)
+                          const std::string &def,
+                          PyObject *debug)
 {
 
   if (!is_latest(getfunc())) {
     return;
   }
 
-  std::map<std::string, std::string>::const_iterator it =
-    versionMap.find(key);
+  call_debug2(debug, "setting latest for '%s'", key.c_str() );
+  auto it = versionMap.find(key);
   if (it == versionMap.end()) {
+    call_debug2(debug, "- guessing '%s'", def.c_str() );
     setfunc(def);
   } else {
+    call_debug2(debug, "- found '%s'", it->second.c_str() );
     setfunc(it->second);
   }
 }
@@ -117,12 +134,17 @@ static void set_if_latest(const std::map<std::string, std::string> versionMap,
 // is why there's a lot of "DIY" code here that hopefully matches
 // XSPEC.
 //
-static void validateVersions()
+static void validateVersions(PyObject *debug)
 {
 
   // Are any keywords set to "latest"?
   //
   bool foundLatest = false;
+#ifdef XSPEC_12_15_0
+  call_debug1(debug, "Checking for latest settings for atomdb/nei/spec");
+#else
+  call_debug1(debug, "Checking for latest settings for atomdb/nei");
+#endif
   foundLatest |= is_latest(FunctionUtility::atomdbVersion());
   foundLatest |= is_latest(FunctionUtility::neiVersion());
 #ifdef XSPEC_12_15_0
@@ -131,6 +153,7 @@ static void validateVersions()
   if (!foundLatest) {
     return;
   }
+  call_debug1(debug, "- at least one version is set to 'latest'");
 
   // Read in the versions from the latest file.
   // There appears to be no validity check, and
@@ -160,16 +183,62 @@ static void validateVersions()
   //
   set_if_latest<FunctionUtility::atomdbVersion,
                 FunctionUtility::atomdbVersion>
-    (versionMap, "ATOMDB", "3.1.3");
+    (versionMap, "ATOMDB", "3.1.3", debug);
   set_if_latest<FunctionUtility::neiVersion,
                 FunctionUtility::neiVersion>
-    (versionMap, "NEI", "3.1.3");
+    (versionMap, "NEI", "3.1.3", debug);
 #ifdef XSPEC_12_15_0
   set_if_latest<FunctionUtility::spexVersion,
                 FunctionUtility::spexVersion>
-    (versionMap, "SPEX", "3.08");
+    (versionMap, "SPEX", "3.08", debug);
 #endif
 
+}
+
+
+// Access the sherpa logging instance. Is the name sherpa.astro.xspec._xspec
+// going to be a valid logger at this point? If there is an error then
+// the Python error state will be set and NULL will be returned.
+//
+static PyObject *get_logging_debug() {
+
+  PyObject *get = PyImport_ImportModuleAttrString((const char*)"logging",
+						  (const char*)"getLogger"
+						  );
+  if (get == NULL) {
+    PyErr_SetString( PyExc_ImportError,
+		     (char*)"Unable to access logging.getLogger" );
+    return NULL;
+  }
+
+  PyObject *args = Py_BuildValue("(s)", "sherpa.astro.xspec._xspec");
+  if (args == NULL) {
+    Py_DECREF(get);
+    PyErr_SetString( PyExc_RuntimeError,
+		     (char*)"Unable to create argument for getLogger" );
+    return NULL;
+  }
+
+  PyObject *logger = PyObject_CallObject(get, args);
+  Py_DECREF(args);
+  if (logger == NULL) {
+    Py_DECREF(get);
+    PyErr_SetString( PyExc_RuntimeError,
+		     (char*)"Unable to call getLogger" );
+    return NULL;
+  }
+
+  // Access the debug stream from the logger.
+  //
+  PyObject *debug = PyObject_GetAttrString(logger, (const char*)"debug");
+  Py_DECREF(logger);
+  if (debug == NULL) {
+    PyErr_SetString( PyExc_ImportError,
+		     (char*)"Unable to access the debug logging method" );
+    return NULL;
+  }
+
+  return debug;
 }
 
 
@@ -198,6 +267,13 @@ static int _sherpa_init_xspec_library()
     return EXIT_FAILURE;
   }
 
+  // Access the debug method of the sherpa logging instance.
+  //
+  PyObject *debug = get_logging_debug();
+  if ( debug == NULL ) {
+    return EXIT_FAILURE;  // error message has already been created
+  }
+
   // Redirect the stdout channel for the duration of the FNINIT call.
   //
   std::ostream* outStream = IosHolder::outHolder();
@@ -209,17 +285,19 @@ static int _sherpa_init_xspec_library()
   try {
     // Initialize XSPEC model library.
     FNINIT();
+    call_debug1(debug, "Initialized XSPEC model library");
 
   } catch(...) {
     IosHolder::setStreams(IosHolder::inHolder(),
 			  outStream,
 			  IosHolder::errHolder());
 
-    // The contents of tmpStream could be inspected to see if it
-    // contains useful information for the user, but at this point of
-    // the initialization it is not obvious that it would provide any
-    // extra information.
+    // Add the contents of tmpStream to the debug log in case it is
+    // useful.
     //
+    call_debug2(debug, "initialization error: %s", tmpStream.str().c_str() );
+    Py_DECREF(debug);
+
     PyErr_SetString( PyExc_ImportError,
 		     (char*)"XSPEC initialization failed; "
 		     "check HEADAS environment variable" );
@@ -238,6 +316,7 @@ static int _sherpa_init_xspec_library()
   FunctionUtility::setH0( 70.0 );
   FunctionUtility::setq0( 0.0 );
   FunctionUtility::setlambda0( 0.73 );
+  call_debug1(debug, "Set up XSPEC cosmology");
 
   // Convert "latest" version numbers. Ideally this would only be done
   // if XSPEC 12.15.1 or later were in use, but users can have a XSPEC
@@ -247,7 +326,10 @@ static int _sherpa_init_xspec_library()
   //
   // but still be building against XSPEC 12.15.0 (or earlier).
   //
-  validateVersions();
+  validateVersions(debug);
+
+  call_debug1(debug, "Finalized XSPEC library");
+  Py_DECREF(debug);
 
   init = true;
   return EXIT_SUCCESS;
