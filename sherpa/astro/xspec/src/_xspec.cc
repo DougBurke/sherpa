@@ -63,8 +63,7 @@ static void set_if_latest(const std::map<std::string, std::string> versionMap,
     return;
   }
 
-  std::map<std::string, std::string>::const_iterator it =
-    versionMap.find(key);
+  auto it = versionMap.find(key);
   if (it == versionMap.end()) {
     setfunc(def);
   } else {
@@ -122,12 +121,13 @@ static void validateVersions()
 
   // Are any keywords set to "latest"?
   //
-  bool foundLatest = false;
-  foundLatest |= is_latest(FunctionUtility::atomdbVersion());
-  foundLatest |= is_latest(FunctionUtility::neiVersion());
+  bool foundLatest =
+    is_latest(FunctionUtility::atomdbVersion())
+    || is_latest(FunctionUtility::neiVersion())
 #ifdef XSPEC_12_15_0
-  foundLatest |= is_latest(FunctionUtility::spexVersion());
+    || is_latest(FunctionUtility::spexVersion())
 #endif
+    ;
   if (!foundLatest) {
     return;
   }
@@ -137,11 +137,17 @@ static void validateVersions()
   // the lines are expected to be
   //    <key>_VERSION: <version_str>
   //
-  const std::string versionPath(FunctionUtility::modelDataPath() +
-				"latest.txt");
+  // modelDataPath is not 100% guaranteed to end with a path separator.
+  // Assume this is a UNIX-like OS.
+  //
+  std::string versionPath(FunctionUtility::modelDataPath());
+  if (not versionPath.ends_with("/")) {
+    versionPath += "/";
+  }
+  versionPath += "latest.txt";
   std::map<std::string, std::string> versionMap;
 
-  std::ifstream versionFile(versionPath.c_str());
+  std::ifstream versionFile(versionPath);
   if (versionFile) {
     const std::string suffix = "_VERSION:";
     std::string lKey, lVersion;
