@@ -1098,7 +1098,7 @@ def check_bkg_fit(plotfunc, idval, isfit=True):
 
     # check plot basics
     for plot in [dplot, mplot]:
-        # assert plot.xlabel == xlabel  WAT
+        assert plot.xlabel == xlabel
         assert plot.ylabel == 'Counts/sec/channel'
 
     assert dplot.xlo == pytest.approx(_data_chan)
