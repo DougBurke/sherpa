@@ -56,7 +56,7 @@ With the ``meson-python`` backend, importing a module containing a
 compiled extension will cause the extension to automatically be
 rebuilt if the source code has been changed. If there is a compiler
 error then the error message is likely to hide any information and
-in this case the suggestion is to re-run the ``pip instal`` line.
+in this case the suggestion is to re-run the ``pip install`` line.
 
 After the installation ``pytest`` can run all the tests. In the sherpa
 root directory call::
@@ -320,7 +320,7 @@ Update the XSPEC bindings?
 --------------------------
 
 The :py:mod:`sherpa.astro.xspec` module currently supports
-:term:`XSPEC` versions 12.15.1, 12.15.0, 12.14.1, 12.14.0, 12.13.1, and 12.13.0.
+:term:`XSPEC` versions 13.0.0, 12.15.1, 12.15.0, 12.14.1, 12.14.0, 12.13.1, and 12.13.0.
 It should build against newer versions, but if it does it will not provide
 access to any new models in the release and if the function used to
 evaluate a model has changed then that model will be unusable.
@@ -337,7 +337,7 @@ in the parent directory of the ``HEADAS`` environment variable -
 defines the interface for the models. It is used to automatically
 generate the code needed to interface to the models that is used by
 the extension module ``sherpa.astro.xspec._xspec``. It is not used to
-generate the ``sherpa.astro.xspec`` Python module (see the discussion
+generate the `sherpa.astro.xspec` Python module (see the discussion
 at `issue #52 <https://github.com/sherpa/sherpa/issues/52>`_).
 
 .. note::
@@ -597,7 +597,7 @@ available.
    which give the XSPEC model name (first parameter), number of
    parameters (second parameter), two numbers which we ignore, the
    name of the function that evaluates the model, the type
-   (e.g. ``add``), and then 1 or more values which we ignore. Then
+   (e.g. ``add``), and a number of optional arguments. Then
    there are lines which define the model parameters (the number match
    the second argument of the first line), and then one or more blank
    lines. In the output above we see that the XSPEC ``agauss`` model

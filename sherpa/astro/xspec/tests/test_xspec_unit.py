@@ -36,6 +36,8 @@ from sherpa.models.parameter import Parameter
 from sherpa.utils.testing import requires_data, requires_fits
 from sherpa.utils.err import ArgumentErr, ParameterErr
 
+from sherpa.astro.utils.xspec import get_version
+
 # All these tests requre XSPEC so do the check once rather than
 # requiring each test to be labelled with @requires_xspec. Do not use
 # the pytest.importorskip routine as it changed behaviour during the
@@ -47,6 +49,8 @@ except ImportError:
     pytest.skip("could not import 'sherpa.astro.xspec'",
                 allow_module_level=True)
 
+
+xspec_version = get_version(xspec.get_xsversion())
 
 # It is hard to test many of the state routines, since it requires
 # a full understanding of how they are implemented; the simplest
@@ -2074,11 +2078,21 @@ def test_table_mod_add(make_data_path):
     elo = egrid[:-1]
     ehi = egrid[1:]
 
-    expected = [0, 0, 22.5, 6, 54, 56, 39.5, 0]
+    # The "invalid parameter range" value depents on the XSPEC
+    # version. The table model uses 0 for low and 5 for hi
+    # (LOELIMIT, HIELIMIT keywords).
+    #
+    # Why this is not scaled by the bin width is unclear as other
+    # cases it is.
+    #
+    null_lo = 0
+    null_hi = 0 if xspec_version < (13, 0, 0) else 5
+
+    expected = [null_lo, null_lo, 22.5, 6, 54, 56, 39.5, null_hi]
     assert tbl(elo, ehi) == pytest.approx(expected)
 
     tbl.lscale = 0
-    expected = [0, 0, 15, 12, 52, 48, 15, 0]
+    expected = [null_lo, null_lo, 15, 12, 52, 48, 15, null_hi]
     assert tbl(elo, ehi) == pytest.approx(expected)
 
 
@@ -2093,10 +2107,19 @@ def test_table_mod_add(make_data_path):
 # Note that this gives photon/cm^2/s/keV and model evaluation
 # gives photon/cm^2/s.
 #
-ADD_TABLE_BASIC = [0, 0, 0, 75, 150] + [15] * 4 + [100] * 4 + \
-    [140] * 5 + [375, 20, 0, 0, 0, 0]
-ADD_TABLE_Z1 = [0, 82.5, 15, 57.5, 100, 120, 140, 140, 197.5] + [0] * 15
-ADD_TABLE_E2 = [0] * 8 + [37.5] * 2 + [75] * 2 + [7.5] * 8 + [50] * 4
+# IN XSPEC 13.0.0, additive table models now use LOELIMIT/HIELIMIT
+# instead of 0 for out-of-band values. For the smodxxx tables
+# the lo limit is 0 and 5 for the hi limit.
+#
+ADD_NULL_LO = 0
+ADD_NULL_HI = 0 if xspec_version < (13, 0, 0) else 5
+
+ADD_TABLE_BASIC = [ADD_NULL_LO] * 3 + [75, 150] + [15] * 4 + [100] * 4 + \
+    [140] * 5 + [375, 20] + [ADD_NULL_HI / 0.1] * 4
+ADD_TABLE_Z1 = [ADD_NULL_LO] + [82.5, 15, 57.5, 100, 120, 140, 140, 197.5] + \
+    [ADD_NULL_HI / 0.1] * 15
+ADD_TABLE_E2 = [ADD_NULL_LO] * 8 + [37.5] * 2 + [75] * 2 + [7.5] * 8 + \
+    [50] * 4  # note: these "hi" values do not depend on XSPEC version
 
 
 @requires_data
