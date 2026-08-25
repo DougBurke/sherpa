@@ -1,5 +1,6 @@
 //
-//  Copyright (C) 2007, 2020, 2021  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2007, 2020, 2021, 2026
+//  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -25,6 +26,18 @@
 
 #include "Faddeeva.hh"
 
+#define SMP_MAX   sherpa::constants::smp_max< DataType >()
+#define PI        sherpa::constants::pi< DataType >()
+#define TWOPI     sherpa::constants::twopi< DataType >()
+#define SQRT_PI   sherpa::constants::sqrt_pi< DataType >()
+
+#define H_KEV     sherpa::constants::h_kev< DataType >()
+#define C_KM      sherpa::constants::c_km< DataType >()
+#define C_ANG     sherpa::constants::c_ang< DataType >()
+#define TWO_H_OVER_C_SQUARED \
+  sherpa::constants::two_h_over_c_squared< DataType >()
+#define H_OVER_K  sherpa::constants::h_over_k< DataType >()
+
 namespace sherpa { namespace astro { namespace models {
 
 
@@ -40,7 +53,7 @@ namespace sherpa { namespace astro { namespace models {
     double sigma = fwhm_g / std::sqrt(8 * log(2));
     std::complex<double> arg = (x - p[2]) + gamma * std::complex<double>(0,1);
     arg /= sigma * std::sqrt(2);
-    val = p[3] * Faddeeva::w(arg).real() / (sigma * std::sqrt(2 * PI));
+    val = p[3] * Faddeeva::w(arg).real() / (sigma * std::sqrt(TWOPI));
     return EXIT_SUCCESS;
 
   }

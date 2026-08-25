@@ -1,5 +1,6 @@
 //
-//  Copyright (C) 2007, 2020, 2021  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2007, 2020, 2021, 2026
+//  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -23,6 +24,14 @@
 #include <algorithm>
 #include <sherpa/utils.hh>
 #include <sherpa/constants.hh>
+
+#define SMP_MIN        sherpa::constants::smp_min< DataType >()
+#define PI             sherpa::constants::pi< DataType >()
+#define TWOPI          sherpa::constants::twopi< DataType >()
+#define SQRT_PI        sherpa::constants::sqrt_pi< DataType >()
+#define LOGTEN         sherpa::constants::logten< DataType >()
+#define GFACTOR        sherpa::constants::gfactor< DataType >()
+#define SQRT_GFACTOR   sherpa::constants::sqrt_gfactor< DataType >()
 
 namespace sherpa { namespace models {
 

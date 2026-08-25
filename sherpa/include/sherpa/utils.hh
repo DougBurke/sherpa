@@ -1,5 +1,6 @@
 //
-//  Copyright (C) 2008, 2021  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2008, 2021, 2026
+//  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -52,6 +53,7 @@
 #define SQRT(x)			std::sqrt(x)
 #define TAN(x)			std::tan(x)
 
+#define TWOPI   sherpa::constants::twopi< DataType >()
 
 namespace sherpa { namespace utils {
 
@@ -240,11 +242,11 @@ namespace sherpa { namespace utils {
     DataType deltaY = x1 - p[2];
     DataType p_four = p[4];
     if( p[3] != 0 ) {
-      while( p_four >= 2*PI ) {
-	p_four -= 2*PI;
+      while( p_four >= TWOPI ) {
+	p_four -= TWOPI;
       }
       while( p_four < 0.0 ) {
-	p_four += 2*PI;
+	p_four += TWOPI;
       }
       DataType cosTheta = COS(p_four);
       DataType sinTheta = SIN(p_four);
@@ -282,11 +284,11 @@ namespace sherpa { namespace utils {
       return EXIT_FAILURE;
     }
 
-    while( theta >= 2*PI ) {
-      theta -= 2*PI;
+    while( theta >= TWOPI ) {
+      theta -= TWOPI;
     }
     while( theta < 0.0 ) {
-      theta += 2*PI;
+      theta += TWOPI;
     }
     DataType cosTheta = COS(theta);
     DataType sinTheta = SIN(theta);
@@ -320,11 +322,11 @@ namespace sherpa { namespace utils {
   //   DataType deltaY = x1 - p[2];
   //   DataType p_four = p[4];
   //   if( p[3] != 0 ) {
-  //     while( p_four >= 2*PI ) {
-  // 	p_four -= 2*PI;
+  //     while( p_four >= TWOPI ) {
+  // 	p_four -= TWOPI;
   //     }
   //     while( p_four < 0.0 ) {
-  // 	p_four += 2*PI;
+  // 	p_four += TWOPI;
   //     }
   //     DataType cosTheta = COS(p_four);
   //     DataType sinTheta = SIN(p_four);
