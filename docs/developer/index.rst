@@ -439,10 +439,12 @@ Although the ``wdem`` model is included in the XSPEC models, here is
 how the ``add_xspec_model.py`` script can be used for those models
 noted as not being supported::
 
-  % ./scripts/add_xspec_model.py 12.13.0 ~/local/heasoft-6.31/spectral/manager/model.dat wdem
+  % ./scripts/add_xspec_model.py 12.13.0 ~/local/heasoft-6.31/spectral/manager/model.dat wdem --allow_exists
   # C++ code for sherpa/astro/xspec/src/_xspec.cc
 
   // Includes
+
+  #include "sherpa/astro/xspec_extension.hh"
 
   #include <iostream>
 
@@ -450,8 +452,6 @@ noted as not being supported::
   #include <XSFunctions/Utilities/funcType.h>
 
   #define XSPEC_12_13_0
-
-  #include "sherpa/astro/xspec_extension.hh"
 
   // Defines
 
@@ -554,26 +554,16 @@ The following steps are needed to update to a newer version, and
 assume that you have the new version of XSPEC, or its model library,
 available.
 
-#. Add a new version define in ``scripts/make_xspec_macros``.
+#. Add a new version define in ``scripts/xspec.py``.
 
-   Current version: `scripts/make_xspec_macros <https://github.com/sherpa/sherpa/blob/main/scripts/make_xspec_macros>`_.
+   Current version: `scripts/xspec.py <https://github.com/sherpa/sherpa/blob/main/scripts/xspec.py>`_.
 
-   When adding support for XSPEC 12.12.1, the top-level
-   ``SUPPORTED_VERSIONS`` list was changed to include the triple
-   ``(12, 12, 1)``::
-
-     SUPPORTED_VERSIONS = [(12, 12, 0), (12, 12, 1)]
-
-   This list is used to select which functions to include when
-   compiling the C++ interface code. For reference, the defines are
-   named ``XSPEC_<a>_<b>_<c>`` for each supported XSPEC release
-   ``<a>.<b>.<c>`` (the XSPEC patch level is not included).
-
-#. Add the new version to ``sherpa/astro/utils/xspec.py``
-
-   The ``models_to_compiled`` routine also contains a ``SUPPORTED_VERSIONS``
-   list which should be kept in sync with the version in
-   ``make_xspec_macros``.
+   Update the :py:attr:`~sherpa.astro.utils.xspec.SUPPORTED_VERSIONS` list
+   to include the latest version as a triple (e.g. ``(12, 15, 1)``).
+   Note that ``scripts/xspec.py`` is automatically copied to
+   ``sherpa/astro/utils/xspec.py`` by the build system (this is to
+   avoid a code mis-match while still allowing the code to be used to
+   build Sherpa).
 
 #. Attempt to build the XSPEC interface with::
 
