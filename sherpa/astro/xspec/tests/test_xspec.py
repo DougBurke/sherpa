@@ -27,7 +27,7 @@ from sherpa.models import Parameter
 from sherpa.utils.testing import requires_data, requires_fits
 from sherpa.utils.err import ParameterErr
 
-# All these tests requre XSPEC so do the check once rather than
+# All these tests require XSPEC so do the check once rather than
 # requiring each test to be labelled with @requires_xspec. Do not use
 # the pytest.importorskip routine as it changed behaviour during the
 # pytest 8.2 to 9.1 period relating to how import errors are handled.
