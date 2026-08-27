@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2007, 2016, 2018, 2020-2021, 2025
+//  Copyright (C) 2007, 2016, 2018, 2020-2021, 2025-2026
 //  Smithsonian Astrophysical Observatory
 //
 //
@@ -25,6 +25,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 extern "C" {
 
