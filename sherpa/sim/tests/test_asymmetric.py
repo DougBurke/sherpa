@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2019 - 2021, 2023, 2024
+#  Copyright (C) 2019-2021, 2023-2024, 2026
 #  Smithsonian Astrophysical Observatory
 #
 #
@@ -22,19 +22,17 @@ import logging
 import warnings
 
 import numpy as np
-
 import pytest
 
-from sherpa.fit import Fit
-from sherpa.data import Data1D, Data1DAsymmetricErrs, Data2D
-from sherpa.optmethods import LevMar
-from sherpa.utils.testing import requires_data, requires_fits
-from sherpa.models import Const1D, Const2D, PowLaw1D
-from sherpa.stats import Chi2Gehrels
-from sherpa.sim import ReSampleData
-from sherpa.utils.logging import SherpaVerbosity
 from sherpa.astro import ui
-
+from sherpa.data import Data1D, Data1DAsymmetricErrs, Data2D
+from sherpa.fit import Fit
+from sherpa.models import Const1D, Const2D, PowLaw1D
+from sherpa.optmethods import LevMar
+from sherpa.sim import ReSampleData
+from sherpa.stats import Chi2Gehrels
+from sherpa.utils.logging import SherpaVerbosity
+from sherpa.utils.testing import requires_data, requires_fits
 
 RESULTS_BENCH_AVG = {
     'rstat': 1.4361549916463103,
@@ -172,7 +170,7 @@ GRO_YHI = np.asarray(
 @requires_fits
 @pytest.mark.parametrize("filename, delta", [('gro.txt', False),
                                              ('gro_delta.txt', True)])
-def test_load_ascii(filename, delta, make_data_path):
+def test_load_ascii_basic(filename, delta, make_data_path):
     """Check the arrays get read in."""
     infile = make_data_path(filename)
     ui.load_ascii_with_errors(1, infile, delta=delta)
@@ -204,7 +202,7 @@ def test_load_ascii(filename, delta, make_data_path):
     infile = make_data_path(filename)
     ui.load_ascii_with_errors(1, infile, delta=delta)
     data = ui.get_data(1)
-    fit_asymmetric_err(RESULTS_BENCH_AVG, data)
+    _ = fit_asymmetric_err(RESULTS_BENCH_AVG, data)
 
 
 @requires_data
@@ -216,7 +214,7 @@ def test_load_ascii_defaultid(filename, delta, make_data_path):
     infile = make_data_path(filename)
     ui.load_ascii_with_errors(infile, delta=delta)
     data = ui.get_data()
-    fit_asymmetric_err(RESULTS_BENCH_AVG, data)
+    _ = fit_asymmetric_err(RESULTS_BENCH_AVG, data)
 
 
 @requires_data
@@ -227,7 +225,7 @@ def test_load_ascii_rms(filename, delta, make_data_path):
     infile = make_data_path(filename)
     ui.load_ascii_with_errors(1, infile, delta=delta, func=rms)
     data = ui.get_data(1)
-    fit_asymmetric_err(RESULTS_BENCH_RMS, data)
+    _ = fit_asymmetric_err(RESULTS_BENCH_RMS, data)
 
 
 @requires_data
@@ -238,7 +236,7 @@ def test_constructor_avg(make_data_path):
     base = ui.get_data(1)
     data = Data1DAsymmetricErrs(2, base.x, base.y, base.elo, base.ehi,
                                 base.staterror, base.syserror)
-    fit_asymmetric_err(RESULTS_BENCH_AVG, data)
+    _ = fit_asymmetric_err(RESULTS_BENCH_AVG, data)
 
 
 @requires_data
@@ -249,7 +247,7 @@ def test_constructor_rms(make_data_path):
     base = ui.get_data(1)
     data = Data1DAsymmetricErrs(2, base.x, base.y, base.elo, base.ehi,
                                 base.staterror, base.syserror)
-    fit_asymmetric_err(RESULTS_BENCH_RMS, data)
+    _ = fit_asymmetric_err(RESULTS_BENCH_RMS, data)
 
 
 @requires_data
@@ -330,7 +328,7 @@ def test_to_plot(make_data_path, clean_astro_ui):
     ui.load_ascii_with_errors(1, infile)
 
     data = ui.get_data()
-    (x, y, yerr, xerr, xlabel, ylabel) = data.to_plot()
+    (x, y, yerr, _, _, _) = data.to_plot()
 
     N = 61
     assert x.shape == (N,)
@@ -396,7 +394,7 @@ def test_to_plot_filtered(make_data_path, clean_astro_ui):
     ui.ignore(lo=0.005)
 
     data = ui.get_data()
-    (x, y, yerr, xerr, xlabel, ylabel) = data.to_plot()
+    (x, y, yerr, _, _, _) = data.to_plot()
 
     N = 54
     assert x.shape == (N,)
@@ -491,7 +489,6 @@ def test_zero_case():
     # Both approaches should give the same results (as setting
     # niter explicitly).
     #
-    # res = rd.call(niter=10, seed=47)
     res = rd(niter=10, seed=47,
              rng=np.random.RandomState(47))
 
@@ -521,9 +518,9 @@ def test_resample_supports_data1d(caplog, check_str):
     resampler = ReSampleData(orig, model)
 
     with SherpaVerbosity("INFO"):
-        # seed is unused of rng is set
-        res = resampler(niter=10, seed=None,
-                        rng=np.random.RandomState(123))
+        # seed is unused if rng is set
+        _ = resampler(niter=10, seed=None,
+                      rng=np.random.RandomState(123))
 
     assert len(caplog.records) == 1
     lname, lvl, msg = caplog.record_tuples[0]
@@ -540,4 +537,4 @@ def test_resample_fails_unsupported_data():
 
     with pytest.raises(NotImplementedError,
                        match="^ReSampleData is only implemented for 1D data, got <class 'sherpa.data.Data2D'> instead.$"):
-        ReSampleData(orig, model)
+        _ = ReSampleData(orig, model)
