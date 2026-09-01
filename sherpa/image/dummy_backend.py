@@ -72,11 +72,11 @@ def image(array: np.ndarray,
 
     Parameters
     ----------
-    array
+    array : np.ndarray
        The pixel values
-    newframe
+    newframe : bool, optional
        Should the pixels be displayed in a new frame?
-    tile
+    tile : bool, optional
        Should the display be tiled?
 
     """

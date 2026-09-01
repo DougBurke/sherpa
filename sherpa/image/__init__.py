@@ -120,24 +120,22 @@ class Image(NoNewAttributesAfterInit):
 
         Parameters
         ----------
-        array
+        array : np.ndarray
            The pixel values
-        shape
+        shape : tuple or None, optional
            The shape of the data (optional).
-        newframe
+        newframe : bool, optional
            Should the pixels be displayed in a new frame?
-        tile
+        tile : bool, optional
            Should the display be tiled?
 
         """
         newframe = bool_cast(newframe)
         tile = bool_cast(tile)
-        if shape is None:
-            vals = array
-        else:
-            vals = array.reshape(shape)
+        if shape is not None:
+            array = array.reshape(shape)
 
-        backend.image(vals, newframe, tile)
+        backend.image(array, newframe, tile)
 
     @staticmethod
     def open() -> None:
@@ -278,11 +276,11 @@ class DataImage(Image):
 
         Parameters
         ----------
-        shape
+        shape : tuple or None, optional
            The shape of the data (optional).
-        newframe
+        newframe : bool, optional
            Should the pixels be displayed in a new frame?
-        tile
+        tile : bool, optional
            Should the display be tiled?
 
         """
@@ -333,11 +331,11 @@ class ModelImage(Image):
 
         Parameters
         ----------
-        shape
+        shape : tuple or None, optional
            The shape of the data (optional).
-        newframe
+        newframe : bool, optional
            Should the pixels be displayed in a new frame?
-        tile
+        tile : bool, optional
            Should the display be tiled?
 
         """
@@ -429,11 +427,11 @@ class RatioImage(Image):
 
         Parameters
         ----------
-        shape
+        shape : tuple or None, optional
            The shape of the data (optional).
-        newframe
+        newframe : bool, optional
            Should the pixels be displayed in a new frame?
-        tile
+        tile : bool, optional
            Should the display be tiled?
 
         """
@@ -493,11 +491,11 @@ class ResidImage(Image):
 
         Parameters
         ----------
-        shape
+        shape : tuple or None, optional
            The shape of the data (optional).
-        newframe
+        newframe : bool, optional
            Should the pixels be displayed in a new frame?
-        tile
+        tile : bool, optional
            Should the display be tiled?
 
         """
