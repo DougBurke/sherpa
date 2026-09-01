@@ -18,6 +18,14 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+"""Communicate with DS9.
+
+.. versionchanged:: 4.19.0
+   Types have been added and the arguments sent to the `wcs` routine
+   have changed.
+
+"""
+
 from os import access, R_OK
 import time
 
@@ -195,20 +203,28 @@ def _set_wcs(eqpos: WCS | None, sky: WCS | None, name: str) -> str:
     return '\n'.join(out)
 
 
-def wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
+def wcs(eqpos: WCS | None,
+        sky: WCS | None,
+        name: str
+        ) -> None:
     """Send the WCS information to the image viewer.
+
+    .. versionchanged:: 4.19.0
+       The arguments have changed.
 
     Parameters
     ----------
-    keys
-       The eqpos and sky transforms, and the name of the display.
+    eqpos, sky : WCS | None
+       The transforms, if available.
+    name : str
+       The name to display.
 
     """
 
     if not imager.isOpen():
         raise DS9Err('open')
 
-    info = _set_wcs(keys[0], keys[1], keys[2])
+    info = _set_wcs(eqpos, sky, name)
 
     try:
         imager.xpaset('wcs replace', info)

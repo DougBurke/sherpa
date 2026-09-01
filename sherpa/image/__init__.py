@@ -145,19 +145,24 @@ class Image(NoNewAttributesAfterInit):
         backend.open()
 
     @staticmethod
-    def set_wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
+    def set_wcs(eqpos: WCS | None,
+                sky: WCS | None,
+                name: str
+                ) -> None:
         """Send the WCS information to the image viewer.
 
         .. versionchanged:: 4.19.0
-           This is now a static method.
+           This is now a static method and the arguments have changed.
 
         Parameters
         ----------
-        keys
-           The eqpos and sky transforms, and the name of the display.
+        eqpos, sky : WCS | None
+           The transforms, if available.
+        name : str
+           The name to display.
 
         """
-        backend.wcs(keys)
+        backend.wcs(eqpos, sky, name)
 
     @staticmethod
     def set_region(reg: str, coord: str) -> None:
@@ -282,7 +287,7 @@ class DataImage(Image):
 
         """
         Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
+        Image.set_wcs(self.eqpos, self.sky, self.name)
 
 
 class ModelImage(Image):
@@ -337,7 +342,7 @@ class ModelImage(Image):
 
         """
         Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
+        Image.set_wcs(self.eqpos, self.sky, self.name)
 
 
 class SourceImage(ModelImage):
@@ -433,7 +438,7 @@ class RatioImage(Image):
 
         """
         Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
+        Image.set_wcs(self.eqpos, self.sky, self.name)
 
 
 class ResidImage(Image):
@@ -497,7 +502,7 @@ class ResidImage(Image):
 
         """
         Image.image(self, self.y, shape, newframe, tile)
-        Image.set_wcs((self.eqpos, self.sky, self.name))
+        Image.set_wcs(self.eqpos, self.sky, self.name)
 
 
 class PSFImage(DataImage):

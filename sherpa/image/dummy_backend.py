@@ -18,6 +18,15 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+"""The no-op backend when DS9 is not available.
+
+.. versionchanged:: 4.19.0
+   The API has slightly changed to better match the DS9 version
+   (types have been added and the arguments sent to the `wcs` routine
+   have changed.
+
+"""
+
 import numpy as np
 
 from sherpa.astro.io.wcs import WCS
@@ -74,13 +83,21 @@ def image(array: np.ndarray,
     pass
 
 
-def wcs(keys: tuple[WCS | None, WCS | None, str]) -> None:
+def wcs(eqpos: WCS | None,
+        sky: WCS | None,
+        name: str
+        ) -> None:
     """Send the WCS information to the image viewer.
+
+    .. versionchanged:: 4.19.0
+       The arguments have changed.
 
     Parameters
     ----------
-    keys
-       The eqpos and sky transforms, and the name of the display.
+    eqpos, sky : WCS | None
+       The transforms, if available.
+    name : str
+       The name to display.
 
     """
     pass
